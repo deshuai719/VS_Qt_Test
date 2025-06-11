@@ -1,0 +1,27 @@
+# ninja log v6
+4561	5028	7713413040103317	MNIC.exe	41d50f723d8eefc4
+481	4292	7713412999284896	CMakeFiles/MNIC.dir/src/MNIC.cpp.obj	fb8941a8566bc242
+58	438	7713412998245296	MNIC_autogen/timestamp	87d2e79b49989ca0
+58	438	7713412998245296	D:/AAA_Work_Code_Space/MNIC_VS/out/build/debug/MNIC_autogen/timestamp	87d2e79b49989ca0
+58	438	7713412998245296	MNIC_autogen/mocs_compilation.cpp	87d2e79b49989ca0
+484	1103	7713412999315054	CMakeFiles/MNIC.dir/src/SamplingDataGenerate.cpp.obj	95deb81cf90f4f39
+488	2479	7713412999369998	CMakeFiles/MNIC.dir/src/SocketWZ.cpp.obj	bb93347748f84d49
+58	438	7713412998245296	D:/AAA_Work_Code_Space/MNIC_VS/out/build/debug/MNIC_autogen/mocs_compilation.cpp	87d2e79b49989ca0
+473	720	7713412999210277	CMakeFiles/MNIC.dir/src/LogProcess.cpp.obj	889cd259f2812a49
+442	4319	7713412998900237	CMakeFiles/MNIC.dir/src/CentralWindow.cpp.obj	a9ebcfb248a99b1f
+495	1130	7713412999421028	CMakeFiles/MNIC.dir/src/TestCondition.cpp.obj	e4c8ea5a7bcfb807
+469	1100	7713412999159799	CMakeFiles/MNIC.dir/src/FluidCtrl.cpp.obj	2a9b2f294cfd2c71
+450	1046	7713412998950044	CMakeFiles/MNIC.dir/src/DeviceCheckResult.cpp.obj	c45b06245d2507bd
+498	1146	7713412999471512	CMakeFiles/MNIC.dir/src/ToolWZ.cpp.obj	1c28873359e64796
+439	4561	7713412998854771	CMakeFiles/MNIC.dir/MNIC_autogen/mocs_compilation.cpp.obj	494606bbdf340fa5
+461	3040	7713412999099495	CMakeFiles/MNIC.dir/src/FileList.cpp.obj	f7a2f1f2fcdb3823
+444	2938	7713412998900237	CMakeFiles/MNIC.dir/src/ConfigInit.cpp.obj	31a826a08863cce2
+720	4503	7713413001685548	CMakeFiles/MNIC.dir/src/main.cpp.obj	7d79b3ae051590f
+454	4216	7713412999027307	CMakeFiles/MNIC.dir/src/DlgMenuCFG.cpp.obj	b7b1c277c3c30ee4
+464	3059	7713412999129650	CMakeFiles/MNIC.dir/src/FileParsing.cpp.obj	6aa5e7d44413509d
+477	2934	7713412999260376	CMakeFiles/MNIC.dir/src/LogWZ.cpp.obj	5a90c94e21c4916d
+447	3035	7713412998950044	CMakeFiles/MNIC.dir/src/DataConstruct.cpp.obj	6fc3b624b20c8bbc
+491	3730	7713412999390086	CMakeFiles/MNIC.dir/src/TaskWZ.cpp.obj	5a563a11e18310d0
+458	4424	7713412999059344	CMakeFiles/MNIC.dir/src/DlgMenuFile.cpp.obj	18792477e736b872
+45	67	7713412993945754	CMakeFiles/clean.additional	fe00fd6fe1233ba3
+67	84	7713412994202929	clean	94eb5120419ed6fe

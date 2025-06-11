@@ -1,5 +1,6 @@
 #include "MNIC.h"
 #include "LogWZ.hpp"
+#include <QDebug>
 
 MNIC::MNIC(QWidget* parent)
     : QMainWindow(parent)

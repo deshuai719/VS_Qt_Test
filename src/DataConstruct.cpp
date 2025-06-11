@@ -126,12 +126,39 @@ namespace DCWZ{
         return RegCFG;
     }
 
+    //修改
+    //void DataConstruct::UpdateCfgCMD()
+    //{
+    //    CmdRegCFG[0x3e] |= 0xFFu;
+    //    CmdRegCFG[0x3f] |= 0xFFu;
+    //    CmdRegCFG[0x40] |= 0xFFu;
+    //    CmdRegCFG[0x41] |= 0xFFu;
+
+    //    unsigned int DL = RegCFG.GetDL();
+    //    DL |= 0xFFFFFF00u;
+    //    CmdRegCFG[0x3e] &= DL;
+    //    unsigned int DR = RegCFG.GetDR();
+    //    DR |= 0xFFFFFF00u;
+    //    CmdRegCFG[0x3f] &= DR;
+    //    unsigned int AL = RegCFG.GetAL();
+    //    AL |= 0xFFFFFF00u;
+    //    CmdRegCFG[0x40] &= AL;
+    //    unsigned int AR = RegCFG.GetAR();
+    //    AR |= 0xFFFFFF00u;
+    //    CmdRegCFG[0x41] &= AR;
+    //}
+
+	//保留寄存器的高24位不变，低8位根据配置参数更新，动态的将配置参数写入命令包的指定位置
     void DataConstruct::UpdateCfgCMD()
     {
         CmdRegCFG[0x3e] |= 0xFFu;
         CmdRegCFG[0x3f] |= 0xFFu;
         CmdRegCFG[0x40] |= 0xFFu;
         CmdRegCFG[0x41] |= 0xFFu;
+        CmdRegCFG[0x42] |= 0xFFu;
+		CmdRegCFG[0x43] |= 0xFFu;
+		CmdRegCFG[0x44] |= 0xFFu;
+		CmdRegCFG[0x45] |= 0xFFu;
 
         unsigned int DL = RegCFG.GetDL();
         DL |= 0xFFFFFF00u;
@@ -145,6 +172,18 @@ namespace DCWZ{
         unsigned int AR = RegCFG.GetAR();
         AR |= 0xFFFFFF00u;
         CmdRegCFG[0x41] &= AR;
+		unsigned int PL = RegCFG.GetPL();
+		PL |= 0xFFFFFF00u;
+		CmdRegCFG[0x42] &= PL;
+		unsigned int PR = RegCFG.GetPR();
+		PR |= 0xFFFFFF00u;
+		CmdRegCFG[0x43] &= PR;
+		unsigned int HL = RegCFG.GetHL();
+		HL |= 0xFFFFFF00u;
+		CmdRegCFG[0x44] &= HL;
+		unsigned int HR = RegCFG.GetHR();
+		HR |= 0xFFFFFF00u;
+		CmdRegCFG[0x45] &= HR;
     }
 
     const char const* DataConstruct::GetRegCfgCMD()

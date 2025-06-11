@@ -1,4 +1,5 @@
 #include "DlgMenuCFG.hpp"
+#include <QDebug>
 
 namespace MenuSocketCFG{
     ModelItem::ModelItem()

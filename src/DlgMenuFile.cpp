@@ -1,4 +1,5 @@
 #include "DlgMenuFile.hpp"
+#include <QDebug>
 
 namespace DlgMenu{
     ModelItem::ModelItem(){}
@@ -75,16 +76,25 @@ namespace DlgMenu{
 
     bool Model::DelItem(QString Path)
     {
-        for(auto it = Items.begin(); it != Items.end(); ++it)
+		//调试输出，看到可注释下一行
+        qDebug() << "[DEBUG] Model::DelItem called, Path:" << Path;
+        for (auto it = Items.begin(); it != Items.end(); ++it)
         {
-            if(it->FilePath == Path)
+			// 调试输出，看到可注释下一行
+            qDebug() << "[DEBUG] Model::DelItem checking:" << it->FilePath;
+            int row = static_cast<int>(it - Items.begin());
+            if (it->FilePath == Path)
             {
-                beginRemoveRows(QModelIndex(), it - Items.begin() + 1, it - Items.begin() + 1);
+				// 调试输出，看到可注释下一行
+                qDebug() << "[DEBUG] Model::DelItem found, row:" << row;
+                beginRemoveRows(QModelIndex(), row, row);
                 Items.erase(it);
                 endRemoveRows();
                 return true;
             }
         }
+		// 调试输出，看到可注释下一行
+        qDebug() << "[DEBUG] Model::DelItem not found";
         return false;
     }
 
@@ -234,6 +244,8 @@ namespace DlgMenu{
                             Btn = new QPushButton("删除", this);
                             Btn->setGeometry(rect.right() - rect.width() / 10, rect.top() + 2, rect.width() / 10, rect.height() - 3);
                             connect(Btn, &QPushButton::clicked, [this](){
+                                //日志调试输出，看到可注释下一行
+                                qDebug() << "[DEBUG] Delete button clicked, emit DeleteItem:" << HoveredIndex.data(Model::ITEM).value<ModelItem>().FilePath;
                                 ModelItem item = HoveredIndex.data(Model::ITEM).value<ModelItem>();
                                 emit DeleteItem(item.FilePath);
                             });
@@ -436,14 +448,23 @@ namespace DlgMenu{
             reject();
         });
 
-        connect(view, &ListView::DeleteItem, this, [this](QString Path){
-            if(model->DelItem(Path))
+        connect(view, &ListView::DeleteItem, this, [this](QString Path) {
+			// 日志调试输出，看到可注释下一行
+            qDebug() << "[DEBUG] DlgMu::Connect DeleteItem slot called, Path:" << Path;
+            if (model->DelItem(Path))
             {
-                FLST::FileNode<FPWZ::ArgDM>Node (FPWZ::ArgDM(Path, 1), FLST::FileOPT::DEL_FIEL);
+				// 日志调试输出，看到可注释下一行
+                qDebug() << "[DEBUG] model->DelItem returned true";
+                FLST::FileNode<FPWZ::ArgDM>Node(FPWZ::ArgDM(Path, 1), FLST::FileOPT::DEL_FIEL);
                 FileRecord.AddNode(Node);
                 WRITE_DLG_FILE_MENU("model->DelItem(%s)\n", Path.toStdString().c_str());
             }
-        }, Qt::QueuedConnection);
+            else
+            {
+				// 日志调试输出，看到可注释下一行
+                qDebug() << "[DEBUG] model->DelItem returned false";
+            }
+            }, Qt::QueuedConnection);
 
         connect(this, &QDialog::accepted, this, [this](){
             // WRITE_DLG_FILE_MENU("DlgMenu::DlgMu::Connect() accept\n");
@@ -813,10 +834,10 @@ namespace DlgMenuARG{
             painter->drawText(Rc[4], Qt::AlignCenter, "幅度/dB");
             painter->drawText(Rc[5], Qt::AlignCenter, "频率/KHz");
             painter->drawText(Rc[6], Qt::AlignCenter, "持续时间/s");
-            painter->drawText(Rc[7], Qt::AlignCenter, "数字左/dB");
-            painter->drawText(Rc[8], Qt::AlignCenter, "数字右/dB");
-            painter->drawText(Rc[9], Qt::AlignCenter, "模拟左/dB");
-            painter->drawText(Rc[10], Qt::AlignCenter, "模拟右/dB");
+            painter->drawText(Rc[7], Qt::AlignCenter, "Playback/dB");
+            painter->drawText(Rc[8], Qt::AlignCenter, "Headset/dB");
+            painter->drawText(Rc[9], Qt::AlignCenter, "Digital/dB");
+            painter->drawText(Rc[10], Qt::AlignCenter, "PGA/dB");
             painter->drawText(Rc[11], "删除");
 
             painter->restore();
@@ -980,18 +1001,18 @@ namespace DlgMenuARG{
         LArgDB = new QLabel("振幅");//, this);
         LArgFreq = new QLabel("频率");//, this);
         LArgDuration = new QLabel("持续时间");//, this);
-        LArgDL = new QLabel("数字左");
-        LArgDR = new QLabel("数字右");
-        LArgAL = new QLabel("模拟左");
-        LArgAR = new QLabel("模拟右");
+        LArgD = new QLabel("Digital ");
+        LArgA = new QLabel("Analog");
+        LArgP = new QLabel("Playback");
+        LArgH = new QLabel("Headset");
 
         SArgDB = new QSpinBox;//(this);
         SArgFreq = new QSpinBox;//(this);
         SArgDuration = new QSpinBox;//(this);
-        SArgDL = new QDoubleSpinBox;
-        SArgDR = new QDoubleSpinBox;
-        SArgAL = new QDoubleSpinBox;
-        SArgAR = new QDoubleSpinBox;
+        SArgD = new QDoubleSpinBox;
+        SArgA = new QDoubleSpinBox;
+        SArgP = new QDoubleSpinBox;
+        SArgH = new QDoubleSpinBox;
 
         BtnAdd = new QPushButton("添加");//, this);
 
@@ -1020,17 +1041,17 @@ namespace DlgMenuARG{
         LArgDB->        setFixedSize(60, 24);
         LArgFreq->      setFixedSize(60, 24);
         LArgDuration->  setFixedSize(60, 24);
-        LArgDL->        setFixedSize(60, 24);
-        LArgDR->        setFixedSize(60, 24);
-        LArgAL->        setFixedSize(60, 24);
-        LArgAR->        setFixedSize(60, 24);
+        LArgP->        setFixedSize(60, 24);
+        LArgH->        setFixedSize(60, 24);
+        LArgD->        setFixedSize(60, 24);
+        LArgA->        setFixedSize(60, 24);
         SArgDB->        setFixedSize(80, 24);
         SArgFreq->      setFixedSize(80, 24);
         SArgDuration->  setFixedSize(80, 24);
-        SArgDL->        setFixedSize(80, 24);
-        SArgDR->        setFixedSize(80, 24);
-        SArgAL->        setFixedSize(80, 24);
-        SArgAR->        setFixedSize(80, 24);
+        SArgP->        setFixedSize(80, 24);
+        SArgH->        setFixedSize(80, 24);
+        SArgD->        setFixedSize(80, 24);
+        SArgA->        setFixedSize(80, 24);
         BtnAdd->        setFixedSize(80, 24);
         BtnOK->         setFixedSize(80, 24);
         BtnCancel->     setFixedSize(80, 24);
@@ -1038,26 +1059,26 @@ namespace DlgMenuARG{
         SArgDB->setRange(-100, 100);
         SArgFreq->setRange(0, 100);
         SArgDuration->setRange(1, 100);
-        SArgDL->setRange(-96, 30);//
-        SArgDR->setRange(-96, 30);//
-        SArgAL->setRange(-18, 42);//
-        SArgAR->setRange(-18, 42);//
+        SArgP->setRange(-126, 0);//
+        SArgH->setRange(-40, 6);//
+        SArgD->setRange(-96, 30);//
+        SArgA->setRange(-18, 42);//
 
         SArgDB->setSingleStep(1);
         SArgFreq->setSingleStep(1);
         SArgDuration->setSingleStep(1);
-        SArgDL->setSingleStep(1.5);
-        SArgDR->setSingleStep(1.5);
-        SArgAL->setSingleStep(1);
-        SArgAR->setSingleStep(1);
+        SArgP->setSingleStep(1.5);
+        SArgH->setSingleStep(1);
+        SArgD->setSingleStep(1.5);
+        SArgA->setSingleStep(1);
 
         SArgDB->setSuffix("dB");
         SArgFreq->setSuffix("KHz");
         SArgDuration->setSuffix("s");
-        SArgDL->setSuffix("dB");
-        SArgDR->setSuffix("dB");
-        SArgAL->setSuffix("dB");
-        SArgAR->setSuffix("dB");
+        SArgD->setSuffix("dB");
+        SArgA->setSuffix("dB");
+        SArgP->setSuffix("dB");
+        SArgH->setSuffix("dB");
 
         SArgDB->setValue(1);
         SArgFreq->setValue(0);
@@ -1073,17 +1094,17 @@ namespace DlgMenuARG{
         HLArgUp->addWidget(SArgDuration);
         HLArgUp->addStretch();
 
-        HLArgDown->addWidget(LArgDL);
-        HLArgDown->addWidget(SArgDL);
+        HLArgDown->addWidget(LArgP);
+        HLArgDown->addWidget(SArgP);
         HLArgDown->addSpacing(10);
-        HLArgDown->addWidget(LArgDR);
-        HLArgDown->addWidget(SArgDR);
+        HLArgDown->addWidget(LArgH);
+        HLArgDown->addWidget(SArgH);
         HLArgDown->addSpacing(10);
-        HLArgDown->addWidget(LArgAL);
-        HLArgDown->addWidget(SArgAL);
+        HLArgDown->addWidget(LArgD);
+        HLArgDown->addWidget(SArgD);
         HLArgDown->addSpacing(10);
-        HLArgDown->addWidget(LArgAR);
-        HLArgDown->addWidget(SArgAR);
+        HLArgDown->addWidget(LArgA);
+        HLArgDown->addWidget(SArgA);
         HLArgDown->addSpacing(10);
         HLArgDown->addWidget(BtnAdd);
         HLArgDown->addStretch();
@@ -1153,7 +1174,11 @@ namespace DlgMenuARG{
             unsigned char dr = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, DR)).toUInt();
             unsigned char al = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, AL)).toUInt();
             unsigned char ar = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, AR)).toUInt();
-            AddARG(dB, Freq, Dur, dl, dr, al, ar);
+			unsigned char pl = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, PL)).toUInt();
+            unsigned char pr = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, PR)).toUInt();
+			unsigned char hl = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, HL)).toUInt();
+			unsigned char hr = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, HR)).toUInt();
+            AddARG(dB, Freq, Dur, dl, dr, al, ar, pl, pr, hl, hr);
         }
 
         TOOLWZ::stack_wz<TASKWZ::task_type> stack_join;
@@ -1167,14 +1192,15 @@ namespace DlgMenuARG{
     }
 
     void DlgARG::AddARG(double db, unsigned long long freq, unsigned int dur, 
-        unsigned char dl, unsigned char dr, unsigned char al, unsigned char ar)
+        unsigned char dl, unsigned char dr, unsigned char al, unsigned char ar,
+        unsigned char pl, unsigned char pr, unsigned char hl, unsigned char hr)
     {
-        if(model->AddItem(Item(DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG(dl, dr, al, ar)))))
+        if(model->AddItem(Item(DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG(dl, dr, al, ar, pl, pr, hl, hr)))))
         {
-            FLST::FileNode<DCWZ::ARG_RTC_GENERATE> NodeAdd(DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG<unsigned char>(dl, dr, al, ar)), FLST::FileOPT::ADD_FILE);
+            FLST::FileNode<DCWZ::ARG_RTC_GENERATE> NodeAdd(DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG<unsigned char>(dl, dr, al, ar, pl, pr, hl, hr)), FLST::FileOPT::ADD_FILE);
             if(!ArgRecord.AddNode(NodeAdd))
             {
-                FLST::FileNode<DCWZ::ARG_RTC_GENERATE> NodeTB(DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG<unsigned char>(dl, dr, al, ar)), FLST::FileOPT::TO_BOTTOM);
+                FLST::FileNode<DCWZ::ARG_RTC_GENERATE> NodeTB(DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG<unsigned char>(dl, dr, al, ar, pl, pr, hl, hr)), FLST::FileOPT::TO_BOTTOM);
                 ArgRecord.AddNode(NodeTB);
             }
         }
@@ -1185,33 +1211,43 @@ namespace DlgMenuARG{
         char db = SArgDB->value();
         unsigned long long freq = SArgFreq->value() * 1000;
         unsigned int dur = SArgDuration->value();
-        double dl = SArgDL->value();
-        double dr = SArgDR->value();
-        double al = SArgAL->value();
-        double ar = SArgAR->value();
+        double dl = SArgD->value();
+        double dr = SArgD->value();
+        double al = SArgA->value();
+        double ar = SArgA->value();
+		double pl = SArgP->value();
+		double pr = SArgP->value();
+		double hl = SArgH->value();
+		double hr = SArgH->value();
 
         if(freq == 0)
         {
             double dB[4] = { -1.0, -6.0, -12.0, -18 };
             unsigned long long Freq[3] = { 1000, 13000, 25000 };
-            AddARG(dB[DefaultArgListCnt / 3], Freq[DefaultArgListCnt % 3], dur, -(dl - 30) / 1.5, -(dr - 30) / 1.5, al + 12, ar + 12);
+            AddARG(dB[DefaultArgListCnt / 3], Freq[DefaultArgListCnt % 3], dur, (30 - dl) / 1.5, (30 - dr) / 1.5, al + 12, ar + 12, (pl + 126) / 1.5, (pr + 126) / 1.5, hl + 40, hr + 40);
             DefaultArgListCnt = (DefaultArgListCnt + 1) % 12;
         }
         else
         {
-            AddARG(db, freq, dur, -(dl - 30) / 1.5, -(dr - 30) / 1.5, al + 12, ar + 12);
+            AddARG(db, freq, dur, (30 - dl) / 1.5, (30 - dr) / 1.5, al + 12, ar + 12, (pl + 126) / 1.5, (pr + 126) / 1.5, hl + 40, hr + 40);
         }
     }
 
     void DlgARG::UpdateItemVolume(int row)
     {
-        double dl = SArgDL->value();
-        double dr = SArgDR->value();
-        double al = SArgAL->value();
-        double ar = SArgAR->value();
+        double dl = SArgD->value();
+        double dr = SArgD->value();
+        double al = SArgA->value();
+        double ar = SArgA->value();
+        double pl = SArgP->value();
+        double pr = SArgP->value();
+        double hl = SArgH->value();
+        double hr = SArgH->value();
+
 
         DCWZ::ARG_RTC_GENERATE OldARG = model->Items[row - 1].GetArg();
-        DCWZ::ARG_RTC_GENERATE NewARG(model->Items[row - 1].GetArg().GetAudioARG(), DCWZ::ArgRegCFG<unsigned char>(-(dl - 30) / 1.5, -(dr - 30) / 1.5, al + 12, ar + 12));
+        DCWZ::ARG_RTC_GENERATE NewARG(model->Items[row - 1].GetArg().GetAudioARG(), 
+            DCWZ::ArgRegCFG<unsigned char>((30 - dl) / 1.5, (30 - dr) / 1.5, al + 12, ar + 12, (pl +126)/1.5, (pr + 126) / 1.5, hl + 40, hr + 40));
         if(OldARG == NewARG)
         {
             return;

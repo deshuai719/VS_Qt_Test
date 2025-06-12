@@ -128,23 +128,32 @@ namespace DCWZ{
 
     void DataConstruct::UpdateCfgCMD()
     {
-        CmdRegCFG[0x3e] |= 0xFFu;
-        CmdRegCFG[0x3f] |= 0xFFu;
-        CmdRegCFG[0x40] |= 0xFFu;
         CmdRegCFG[0x41] |= 0xFFu;
+        CmdRegCFG[0x42] |= 0xFFu;
+        CmdRegCFG[0x43] |= 0xFFu;
+        CmdRegCFG[0x44] |= 0xFFu;
+        CmdRegCFG[0x45] |= 0xFFu;
+        CmdRegCFG[0x46] |= 0xFFu;
+        CmdRegCFG[0x47] |= 0xFFu;
+        CmdRegCFG[0x48] |= 0xFFu;
 
         unsigned int DL = RegCFG.GetDL();
         DL |= 0xFFFFFF00u;
-        CmdRegCFG[0x3e] &= DL;
+        CmdRegCFG[0x41] &= DL;
+        CmdRegCFG[0x42] &= DL;
         unsigned int DR = RegCFG.GetDR();
         DR |= 0xFFFFFF00u;
-        CmdRegCFG[0x3f] &= DR;
+        CmdRegCFG[0x43] &= DR;
+        CmdRegCFG[0x44] &= DR;
         unsigned int AL = RegCFG.GetAL();
         AL |= 0xFFFFFF00u;
-        CmdRegCFG[0x40] &= AL;
+        CmdRegCFG[0x45] &= AL;
+        CmdRegCFG[0x46] &= AL;
         unsigned int AR = RegCFG.GetAR();
         AR |= 0xFFFFFF00u;
-        CmdRegCFG[0x41] &= AR;
+        CmdRegCFG[0x47] &= AR;
+		CmdRegCFG[0x48] &= AR;
+
     }
 
     const char const* DataConstruct::GetRegCfgCMD()

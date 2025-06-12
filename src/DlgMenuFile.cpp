@@ -1,4 +1,5 @@
 #include "DlgMenuFile.hpp"
+#include <QDebug>
 
 namespace DlgMenu{
     ModelItem::ModelItem(){}
@@ -613,9 +614,9 @@ namespace DlgMenuARG{
         painter->drawText(Rc[5],    Qt::AlignCenter, QString("%1").arg(F / 1000, 3, 'f', 1, '0'));
         painter->drawText(Rc[6],    Qt::AlignCenter, QString("%1").arg(Arg.GetAudioARG().GetDur()));
         double DL = 30 - Arg.GetRegCfgARG().GetDL() * 1.5;
-        double DR = 30 - Arg.GetRegCfgARG().GetDR() * 1.5;
-        double AL = Arg.GetRegCfgARG().GetAL() * 1.0 - 12;
-        double AR = Arg.GetRegCfgARG().GetAR() * 1.0 - 12;
+        double DR = Arg.GetRegCfgARG().GetDR() * 1.0 - 18;
+        double AL = Arg.GetRegCfgARG().GetAL() * 1.5 - 126;
+        double AR = Arg.GetRegCfgARG().GetAR() * 1.0 - 40;
         painter->drawText(Rc[7],    Qt::AlignCenter, QString("%1").arg(DL, 1, 'f', 1, '0'));
         painter->drawText(Rc[8],    Qt::AlignCenter, QString("%1").arg(DR, 1, 'f', 1, '0'));
         painter->drawText(Rc[9],    Qt::AlignCenter, QString("%1").arg(AL, 1, 'f', 1, '0'));
@@ -1047,8 +1048,8 @@ namespace DlgMenuARG{
         SArgFreq->setSingleStep(1);
         SArgDuration->setSingleStep(1);
         SArgDL->setSingleStep(1.5);
-        SArgDR->setSingleStep(1.5);
-        SArgAL->setSingleStep(1);
+        SArgDR->setSingleStep(1);
+        SArgAL->setSingleStep(1.5);
         SArgAR->setSingleStep(1);
 
         SArgDB->setSuffix("dB");
@@ -1194,12 +1195,12 @@ namespace DlgMenuARG{
         {
             double dB[4] = { -1.0, -6.0, -12.0, -18 };
             unsigned long long Freq[3] = { 1000, 13000, 25000 };
-            AddARG(dB[DefaultArgListCnt / 3], Freq[DefaultArgListCnt % 3], dur, -(dl - 30) / 1.5, -(dr - 30) / 1.5, al + 12, ar + 12);
+            AddARG(dB[DefaultArgListCnt / 3], Freq[DefaultArgListCnt % 3], dur, -(dl - 30) / 1.5, dr + 18 , (al + 126) / 1.5, ar + 40);
             DefaultArgListCnt = (DefaultArgListCnt + 1) % 12;
         }
         else
         {
-            AddARG(db, freq, dur, -(dl - 30) / 1.5, -(dr - 30) / 1.5, al + 12, ar + 12);
+            AddARG(db, freq, dur, -(dl - 30) / 1.5, dr + 18, (al + 126) / 1.5, ar + 40);
         }
     }
 
@@ -1211,7 +1212,7 @@ namespace DlgMenuARG{
         double ar = SArgAR->value();
 
         DCWZ::ARG_RTC_GENERATE OldARG = model->Items[row - 1].GetArg();
-        DCWZ::ARG_RTC_GENERATE NewARG(model->Items[row - 1].GetArg().GetAudioARG(), DCWZ::ArgRegCFG<unsigned char>(-(dl - 30) / 1.5, -(dr - 30) / 1.5, al + 12, ar + 12));
+        DCWZ::ARG_RTC_GENERATE NewARG(model->Items[row - 1].GetArg().GetAudioARG(), DCWZ::ArgRegCFG<unsigned char>(-(dl - 30) / 1.5, dr + 18, (al + 126) / 1.5, ar + 40));
         if(OldARG == NewARG)
         {
             return;

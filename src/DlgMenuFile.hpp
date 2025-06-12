@@ -203,22 +203,21 @@ namespace DlgMenuARG{
     class DlgARG: public QDialog{
         Q_OBJECT
 
-		//输入显示参数
         QLabel* LArgDB;//dB
         QLabel* LArgFreq;//KHz
         QLabel* LArgDuration;//s
-        QLabel* LArgD;//Digital
-        QLabel* LArgA;//PGA/Analog 
-        QLabel* LArgP;//Playback
-        QLabel* LArgH;//Headset
+        QLabel* LArgDL;//DL
+        QLabel* LArgDR;//DR
+        QLabel* LArgAL;//AL
+        QLabel* LArgAR;//AR
 
         QSpinBox* SArgDB;
         QSpinBox* SArgFreq;
         QSpinBox* SArgDuration;
-        QDoubleSpinBox* SArgD;
-        QDoubleSpinBox* SArgA;
-        QDoubleSpinBox* SArgP;
-        QDoubleSpinBox* SArgH;
+        QDoubleSpinBox* SArgDL;
+        QDoubleSpinBox* SArgDR;
+        QDoubleSpinBox* SArgAL;
+        QDoubleSpinBox* SArgAR;
 
         QPushButton* BtnAdd;
 
@@ -255,7 +254,7 @@ namespace DlgMenuARG{
         void Connect();
         void InitARG();
 
-        void AddARG(double, unsigned long long, unsigned int, unsigned char, unsigned char, unsigned char, unsigned char, unsigned char, unsigned char, unsigned char, unsigned char);
+        void AddARG(double, unsigned long long, unsigned int, unsigned char, unsigned char, unsigned char, unsigned char); 
 
     public slots: void AddArg();
     public slots: void UpdateItemVolume(int);

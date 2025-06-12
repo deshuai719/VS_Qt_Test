@@ -58,13 +58,9 @@ namespace DCWZ{
         T DigitalRight;
         T AnalogLeft;
         T AnalogRight;
-		T PlaybackLeft;
-		T PlaybackRight;
-		T HeadsetLeft;
-		T HeadsetRight;
     public:
         ArgRegCFG();
-        ArgRegCFG(T dl, T dr, T al, T ar ,T pl ,T pr , T hl , T hr);
+        ArgRegCFG(T dl, T dr, T al, T ar);
         ArgRegCFG(const ArgRegCFG<T>& a);
         ~ArgRegCFG();
 
@@ -74,55 +70,31 @@ namespace DCWZ{
         inline void SetDR(T dr);
         inline void SetAL(T al);
         inline void SetAR(T ar);
-		inline void SetPL(T pl);
-		inline void SetPR(T pr);
-		inline void SetHL(T hl);
-		inline void SetHR(T hr);
         inline T GetDL() const;
         inline T GetDR() const;
         inline T GetAL() const;
         inline T GetAR() const;
-		inline T GetPL() const;
-		inline T GetPR() const;
-		inline T GetHL() const;
-        inline T GetHR() const;
-
     };
 
     template<typename T>
     ArgRegCFG<T>::ArgRegCFG()
-        :DigitalLeft(0), DigitalRight(0), AnalogLeft(0), AnalogRight(0),
-		PlaybackLeft(0), PlaybackRight(0), HeadsetLeft(0), HeadsetRight(0)
+        :DigitalLeft(0), DigitalRight(0), AnalogLeft(0), AnalogRight(0)
     {}
 
     template<typename T>
-    ArgRegCFG<T>::ArgRegCFG(T dl, T dr, T al, T ar, T pl, T pr, T hl, T hr)
-        :DigitalLeft(dl), DigitalRight(dr), AnalogLeft(al), AnalogRight(ar),
-		PlaybackLeft(pl), PlaybackRight(pr), HeadsetLeft(hl), HeadsetRight(hr)
+    ArgRegCFG<T>::ArgRegCFG(T dl, T dr, T al, T ar)
+        :DigitalLeft(dl), DigitalRight(dr), AnalogLeft(al), AnalogRight(ar)
     {}
 
     template<typename T>
     ArgRegCFG<T>::ArgRegCFG(const ArgRegCFG<T>& a)
-        :DigitalLeft(a.DigitalLeft), DigitalRight(a.DigitalRight), AnalogLeft(a.AnalogLeft), AnalogRight(a.AnalogRight),
-		 PlaybackLeft(a.PlaybackLeft), PlaybackRight(a.PlaybackRight), HeadsetLeft(a.HeadsetLeft), HeadsetRight(a.HeadsetRight)
+        :DigitalLeft(a.DigitalLeft), DigitalRight(a.DigitalRight), AnalogLeft(a.AnalogLeft), AnalogRight(a.AnalogRight)
     {}
 
     template<typename T>
     ArgRegCFG<T>::~ArgRegCFG()
     {}
 
-    //修改
-   /* template<typename T>
-    void ArgRegCFG<T>::operator=(const ArgRegCFG<T>& a)
-    {
-        DigitalLeft = a.GetDL();
-        DigitalRight = a.GetDR();
-        AnalogLeft = a.GetAL();
-        AnalogRight = a.GetAR();
-
-    }*/
-
-
     template<typename T>
     void ArgRegCFG<T>::operator=(const ArgRegCFG<T>& a)
     {
@@ -130,17 +102,12 @@ namespace DCWZ{
         DigitalRight = a.GetDR();
         AnalogLeft = a.GetAL();
         AnalogRight = a.GetAR();
-        PlaybackLeft = a.GetPL();
-        PlaybackRight = a.GetPR();
-        HeadsetLeft = a.GetHL();
-        HeadsetRight = a.GetHR();
     }
 
     template<typename T>
     bool ArgRegCFG<T>::operator==(const ArgRegCFG<T>& a) const
     {
-        return DigitalLeft == a.GetDL() && DigitalRight == a.GetDR() && AnalogLeft == a.GetAL() && AnalogRight == a.GetAR() 
-            && PlaybackLeft == a.GetPL() && PlaybackRight == a.GetPR() && HeadsetLeft == a.GetPL() && HeadsetRight == a.GetPR();
+        return DigitalLeft == a.GetDL() && DigitalRight == a.GetDR() && AnalogLeft == a.GetAL() && AnalogRight == a.GetAR();
     }
 
     template<typename T>
@@ -168,30 +135,6 @@ namespace DCWZ{
     }
 
     template<typename T>
-    void ArgRegCFG<T>::SetPL(T pl)
-    {
-        PlaybackLeft = pl;
-    }
-
-    template<typename T>
-    void ArgRegCFG<T>::SetPR(T pr)
-    {
-        PlaybackRight = pr;
-    }
-
-    template<typename T>
-    void ArgRegCFG<T>::SetHL(T hl)
-    {
-        HeadsetLeft = hl;
-    }
-
-    template<typename T>
-    void ArgRegCFG<T>::SetHR(T hr)
-    {
-        HeadsetRight = hr;
-    }
-
-    template<typename T>
     T ArgRegCFG<T>::GetDL() const
     {
         return DigitalLeft;
@@ -213,30 +156,6 @@ namespace DCWZ{
     T ArgRegCFG<T>::GetAR() const
     {
         return AnalogRight;
-    }
-
-    template<typename T>
-    T ArgRegCFG<T>::GetPL() const
-    {
-        return PlaybackLeft;
-    }
-
-    template<typename T>
-    T ArgRegCFG<T>::GetPR() const
-    {
-        return PlaybackRight;
-    }
-
-    template<typename T>
-    T ArgRegCFG<T>::GetHL() const
-    {
-        return HeadsetLeft;
-    }
-
-    template<typename T>
-    T ArgRegCFG<T>::GetHR() const
-    {
-        return HeadsetRight;
     }
 
 //数据构造基类

@@ -1,0 +1,73 @@
+# Visual Studio
+.vs/
+*.vcxproj.user
+*.suo
+*.user
+*.VC.db
+*.opensdf
+*.sdf
+*.cache
+*.db
+*.opendb
+*.pdb
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake-build-*/
+build*/
+out/
+Testing/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+
+# Qt Creator
+*.pro.user*
+*.qbs.user*
+*.qmake.stash
+*.autosave
+
+# Qt generated
+*.moc
+moc_*.cpp
+moc_*.h
+ui_*.h
+qrc_*.cpp
+*.qmlc
+*.jsc
+
+# Compiled Object files
+*.obj
+*.o
+*.lo
+*.la
+*.al
+*.libs
+*.so
+*.dylib
+*.dll
+*.exe
+*.exp
+*.idb
+*.lib
+
+# Project generated files
+*.app
+*.xcodeproj
+*.xcworkspace
+*.sln
+*.ipch
+
+# Logs and temp
+*.log
+*.tmp
+*.temp
+
+# Others
+.DS_Store
+Thumbs.db
+.idea/
+*.iml

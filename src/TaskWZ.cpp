@@ -1,4 +1,5 @@
 #include "TaskWZ.hpp"
+#include <QDebug>
 
 namespace TASKWZ{
 
@@ -918,7 +919,7 @@ void TaskDataSend::run()
 			// 	Node->GetData()->GetRegCFG().GetDL(), Node->GetData()->GetRegCFG().GetDR(),
 			// 	Node->GetData()->GetRegCFG().GetAL(), Node->GetData()->GetRegCFG().GetAR());
 			Node->GetData()->UpdateCfgCMD();
-			SOCKWZ::SockGlob::Send((char*)DCWZ::DataConstruct::GetRegCfgCMD(), 0x51 * 4);
+			SOCKWZ::SockGlob::Send((char*)DCWZ::DataConstruct::GetRegCfgCMD(), 0x51 * 4 + 1);
 			// WRITE_TASK_DATA_SEND_DBG("Send RegCfg\n");
 			WRITE_LOG_UP_RECORD("\n[本组参数下发开始:%04d]\n", i + 1);
 			TaskChipStatParsing::bPackLogRecord = true;

@@ -1,4 +1,5 @@
 #include "DataConstruct.hpp"
+#include <cstdio>
 
 namespace DCWZ{
 
@@ -154,6 +155,11 @@ namespace DCWZ{
         CmdRegCFG[0x47] &= AR;
 		CmdRegCFG[0x48] &= AR;
 
+		unsigned int chksum_head_all = TOOLWZ::AccVerify((char*)(CmdRegCFG + 1), 320);
+        CmdRegCFG[0x51] = chksum_head_all;
+
+
+
     }
 
     const char const* DataConstruct::GetRegCfgCMD()
@@ -164,12 +170,12 @@ namespace DCWZ{
     void DataConstruct::InitCmdRegCFG()
     {
         FRAME_HEAD_STAR(CmdRegCFG)->msgID = 0xA0;
-        FRAME_HEAD_STAR(CmdRegCFG)->rev = 0;
+        FRAME_HEAD_STAR(CmdRegCFG)->rev = 0xF;
         FRAME_HEAD_STAR(CmdRegCFG)->ctlFractstop = 0;
         FRAME_HEAD_STAR(CmdRegCFG)->ctlFractStrt = 0;
         FRAME_HEAD_STAR(CmdRegCFG)->ctlFractMode = 0;
         FRAME_HEAD_STAR(CmdRegCFG)->reserved_base = 0;
-        FRAME_HEAD_STAR(CmdRegCFG)->siglen = 0x140;
+        FRAME_HEAD_STAR(CmdRegCFG)->siglen = 0x141;
 
         PTR_DN_ARG_A0(CmdRegCFG + 1)->data_bound_num8b = 4;
         PTR_DN_ARG_A0(CmdRegCFG + 1)->read_flash2ram = 0;
@@ -180,10 +186,10 @@ namespace DCWZ{
         PTR_DN_ARG_A0(CmdRegCFG + 1)->addr_start = 0x0;
         PTR_DN_ARG_A0(CmdRegCFG + 1)->ram_id = 0x1e;
         PTR_DN_ARG_A0(CmdRegCFG + 1)->reserved3 = 0;
-        PTR_DN_ARG_A0(CmdRegCFG + 1)->chksum_head = TOOLWZ::AccVerify((char*)(CmdRegCFG + 1), 8);
+		PTR_DN_ARG_A0(CmdRegCFG + 1)->chksum_head = TOOLWZ::AccVerify((char*)(CmdRegCFG + 1), 8);//计算头部校验和（累加取法校验和）
     }
 
-    unsigned int DataConstruct::CmdRegCFG[0x51] = {
+    unsigned int DataConstruct::CmdRegCFG[0x52] = {
         0x00000000,
         0x00000000,
         0x00000000,
@@ -264,9 +270,10 @@ namespace DCWZ{
         0x01A10000,
         0x01A10C00,
         0x01A10D00,
-        0x03A10E00
+        0x03A10E00,
+       
     };
-
+    
     /*
         mif文件数据构造类
     */

@@ -180,7 +180,7 @@ namespace DCWZ{
         static const char const* GetRegCfgCMD();
         static void InitCmdRegCFG();
 
-        static unsigned int CmdRegCFG[0x51];
+        static unsigned int CmdRegCFG[0x52];
     };
 
     class DC_DN_MNIC_64K : public DataConstruct{

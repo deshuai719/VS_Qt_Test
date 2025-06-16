@@ -35,6 +35,9 @@ void worker::create(task_wz* t, worker_type typ)
 	}
 }
 
+
+//bool TaskDataSend::ReadyToSendFirstPack = false;//新增变量，判断是否可以发送第一个包
+
 bool worker::execute()
 {
 	switch (type)
@@ -527,8 +530,14 @@ void task_dispatch::run()
 				TaskChipStatParsing::QueueChipStatParsing.front(Data);
 				break;	
 			case 0xa0:
-				// WRITE_TASK_DISPATCH_DBG("0xa0 recived\n");
-				TaskVersionParsing::QueueVeriosnParsing.front(Data);
+			
+				//auto arg = PTR_ARG_UP_A0(Data.GetData().get() + HEAD_DATA_LEN);//新增 0xa0帧解析
+				//if (arg->ram_id == 0x1e && arg->chk_fail == 0 && arg->cmd_ack == 1) //新增 0xa0帧解析成功
+					// WRITE_TASK_DISPATCH_DBG("0xa0 recived\n");
+				
+					TaskVersionParsing::QueueVeriosnParsing.front(Data);
+				
+			
 			default:
 				break;
 			}			
@@ -898,8 +907,10 @@ void TaskDataSend::run()
 	OPEN_LOG_UP_RECORD(LogUpRecord.log);
 	emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_START, StatisticMode::STATISTICS_A_MIF));
 	SemaWaitForUI.acquire(1);
+
 	// DCR::DeviceCheckResultGlobal->Init();
 	// DCR::DeviceCheckResultGlobal->SetCheckCount(TestCount);
+
 	if(DCWZ::DataMana::DataListGlobal.GetHead() == nullptr)
 	{
 		emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_OVER, StatisticMode::STATISTICS_A_MIF));
@@ -929,6 +940,8 @@ void TaskDataSend::run()
 				DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(i);
 				// WRITE_TASK_DATA_SEND_DBG("GetPackInfo(i) After\n");
 				// WRITE_TASK_DATA_SEND_DBG("Fluid 0 = %llx, PackLen = %lld\n", FCT::FluidCtrlGlob->FluidLoad(0), Pack.GetSegAll().GetLen());
+				//if (i == 0 && !ReadyToSendFirstPack)//新增：首包未准备好不发送
+				//	continue; //新增： 未收到参数A0回包，不发首包
 				if(FCT::FluidCtrlGlob->FluidCheckUpdate(0, Pack.GetSegAll().GetLen(), FLUID_SIZE_INDEX0 / 4) == FCT::FluidCheckRes::FLUID_SATISFY)
 				{
 					// WRITE_TASK_DATA_SEND_DBG("Fluid Val = %lld, Send Data Len = %lld\n", FCT::FluidCtrlGlob->FluidLoad(0), Pack.GetSegAll().GetLen());
@@ -936,6 +949,8 @@ void TaskDataSend::run()
 					SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());
 					// WRITE_TASK_DATA_SEND_INFO_VERIFY(Pack.GetPackData(), Pack.GetSegAll().GetLen());
 					// WRITE_TASK_DATA_SEND_DBG("Send Pack\n");
+					//if (i == 0)                       //新增：首包发送后清除标志
+					//	ReadyToSendFirstPack = false; //新增 首包发出后清除标志
 #else
 					std::this_thread::sleep_for(std::chrono::milliseconds(10));
 #endif
@@ -1016,6 +1031,7 @@ void TaskVersionParsing::init()
 	Loop = true;
 }
 
+
 void TaskVersionParsing::run()
 {
 	OPEN_TASK_VERSION_GET_DBG(LogTaskVersionGet.txt);
@@ -1042,10 +1058,10 @@ void TaskVersionParsing::run()
 	PTR_DN_ARG_A0(DataDown.GetData().get() + HEAD_DATA_LEN)->chksum_head = TOOLWZ::AccVerify(DataDown.GetData().get() + HEAD_DATA_LEN, 8);
 	// WRITE_TASK_VERSION_GET_DBG("chksum_head = 0X%x\n", PTR_DN_ARG_A0(DataDown.GetData().get() + HEAD_DATA_LEN)->chksum_head);
 	RcvData DataUp;
-	while(Loop)
+	while(Loop)																		//只要 Loop 为 true，就循环执行。
 	{
-		SOCKWZ::SockGlob::Send(DataDown.GetData().get(), DataDown.GetLen());
-		for(int i = 0; i < 100; i++)
+		SOCKWZ::SockGlob::Send(DataDown.GetData().get(), DataDown.GetLen());		//发送下行数据包，请求获取版本号（0xa0包）
+		for(int i = 0; i < 100; i++)												//最多尝试100次从版本号解析队列 QueueVeriosnParsing 取出上行数据包（DataUp）
 		{
 			QueueVeriosnParsing.rear(DataUp);
 			if(DataUp.GetData())
@@ -1053,8 +1069,8 @@ void TaskVersionParsing::run()
 				WRITE_TASK_VERSION_GET_DBG("ram_id = %d, chk_fail = %d, cmd_ack = %d\n",
 					PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->ram_id,
 					PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->chk_fail,
-					PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->cmd_ack);
-				if(PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->ram_id == 24
+					PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->cmd_ack);		//如果成功取到数据，打印调试信息，显示 ram_id、chk_fail、cmd_ack 字段的值。
+				if(PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->ram_id == 24     
 				&& PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->chk_fail == 0
 				&& PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->cmd_ack == 1)
 				{

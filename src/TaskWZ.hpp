@@ -316,6 +316,7 @@ public:
 	bool Loop;
 	long long TestCount;//测试次数
 	static QSemaphore SemaWaitForUI;
+	static bool ReadyToSendFirstPack;//是否准备好发送第一个包
 signals:
 	void MsgOfStartEnd(MsgToCentralWt m);
 };

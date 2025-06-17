@@ -40,26 +40,26 @@ void worker::create(task_wz* t, worker_type typ)
 
 bool worker::execute()
 {
-	switch (type)
+	switch (type)                                                // 根据当前 worker 的类型，决定如何执行任务
 	{
 	case ON_IDLE:
-		break;
+		break;                                                   // 空闲状态，不做任何事，直接跳出 switch
 	case EXECUTE_THREAD:
 	{
-		std::thread t(worker_manager::task_callback_func, &task);
-		th.swap(t);
-		return true;
+		std::thread t(worker_manager::task_callback_func, &task);// 创建一个新线程，执行 worker_manager::task_callback_func，参数为当前 worker 的 task
+		th.swap(t);                                              // 把新线程对象 t 赋值给成员变量 th（管理线程生命周期）
+		return true;                                             // 返回 true，表示已启动线程
 	}
 	case EXECUTE_NO_THREAD:
 	case JOIN_TASK_BY_TYPE:
 	case END_TASK_BY_TYPE:
-		task.addr->run();
-		return true;
+		task.addr->run();                                        // 这几种类型都直接在当前线程中执行 task 的 run() 方法
+		return true;                                             // 返回 true，表示已执行
 	case END_ALL_TASK:
-		task.addr->run();
-		return false;
+		task.addr->run();                                        // 结束所有任务时，也直接执行 run()，但返回 false
+		return false;                                            // 返回 false，表示特殊结束
 	default:
-		break;
+		break;                                                   // 其他未知类型，不做任何事
 	}
 }
 
@@ -73,59 +73,60 @@ task_type worker::task_typ()
 
 void worker::join()
 {
-	if (task.exist())
+	if (task.exist())                    // 1. 如果当前 worker 持有有效任务（task 不为空）
 	{
-		switch (type)
+		switch (type)                    // 2. 根据 worker 当前的类型，决定如何处理
 		{
 		case ON_IDLE:
-			break;
+			break;                       // 3. 如果是空闲状态，不做任何操作
 		case EXECUTE_THREAD:
-			if (th.joinable())
+			if (th.joinable())           // 4. 如果是线程执行模式，并且线程对象 th 可 join
 			{
-				th.join();
+				th.join();               // 5. 等待线程执行结束（阻塞当前线程，直到 th 线程结束）
 			}
-			task.clear();
-			type = worker_type::ON_IDLE;
+			task.clear();                // 6. 清理 task（释放任务资源）
+			type = worker_type::ON_IDLE; // 7. 设置 worker 状态为 ON_IDLE
 			break;
 		case EXECUTE_NO_THREAD:
 		case JOIN_TASK_BY_TYPE:
 		case END_TASK_BY_TYPE:
 		case END_ALL_TASK:
-			task.clear();
-			type = worker_type::ON_IDLE;
+			task.clear();                // 8. 这些类型下，直接清理 task
+			type = worker_type::ON_IDLE; // 9. 设置 worker 状态为 ON_IDLE
 			break;
 		default:
-			break;
+			break;                       // 10. 其他未知类型，不做任何操作
 		}
 	}
 }
 
+//安全地关闭并回收任务资源
 void worker::close()
 {
-	if (task.exist())
+	if (task.exist())                    // 1. 判断当前 worker 是否持有有效任务（task 不为空）
 	{
-		switch (type)
+		switch (type)                    // 2. 根据 worker 当前的类型，决定如何关闭任务
 		{
 		case ON_IDLE:
-			break;
+			break;                       // 3. 如果是空闲状态，不做任何操作
 		case EXECUTE_THREAD:
-			task.get()->close();
-			if (th.joinable())
+			task.get()->close();         // 4. 如果是线程执行模式，先调用任务对象的 close() 方法（通知任务停止）
+			if (th.joinable())           // 5. 如果线程对象 th 可 join（线程还在运行）
 			{
-				th.join();
+				th.join();               // 6. 等待线程执行结束（阻塞当前线程，直到 th 线程结束）
 			}
-			task.clear();
-			type = worker_type::ON_IDLE;
+			task.clear();                // 7. 清理 task（释放任务资源）
+			type = worker_type::ON_IDLE; // 8. 设置 worker 状态为 ON_IDLE
 			break;
 		case EXECUTE_NO_THREAD:
 		case JOIN_TASK_BY_TYPE:
 		case END_TASK_BY_TYPE:
 		case END_ALL_TASK:
-			task.clear();
-			type = worker_type::ON_IDLE;
+			task.clear();                // 9. 这些类型下，直接清理 task
+			type = worker_type::ON_IDLE; // 10. 设置 worker 状态为 ON_IDLE
 			break;
 		default:
-			break;
+			break;                       // 11. 其他未知类型，不做任何操作
 		}
 	}
 }
@@ -166,12 +167,13 @@ void worker_manager::begin_task_system()//��UI�߳�ִ��
 	}
 }
 
-void worker_manager::end_task_system()//��UI�߳�ִ��
+//实现了任务系统的安全关闭，通过统一调度和资源回收，确保所有任务和线程都能被有序终止，避免资源泄漏和线程悬挂。
+void worker_manager::end_task_system()                             // UI线程执行
 {
-	if (workers.exist())
+	if (workers.exist())                                           // 1. 判断当前是否有worker存在（即任务系统已初始化）
 	{
-		TOOLWZ::stack_wz<task_type> stack_end;
-		stack_end.push(task_type::TASK_JOIN);
+		TOOLWZ::stack_wz<task_type> stack_end;                     // 2. 创建一个任务类型的栈，用于存放需要结束的任务类型
+		stack_end.push(task_type::TASK_JOIN);                      // 3. 依次将所有需要结束的任务类型压入栈
 		stack_end.push(task_type::TASK_END);
 		stack_end.push(task_type::TASK_DISPATCH);
 		stack_end.push(task_type::TASK_RCV);
@@ -182,102 +184,106 @@ void worker_manager::end_task_system()//��UI�߳�ִ��
 		stack_end.push(task_type::TASK_VERSION_PARSING);
 		stack_end.push(task_type::TASK_GENERAL);
 
-		create(new task_end(stack_end), worker_type::END_ALL_TASK);
-		join(task_type::TASK_MANAGER);//��task_manager����close�ǽ�ֹ��
-		close(task_type::TASK_END);//�ոմ�����task_end����end�Լ�����������Ҫ�ֶ�end
-		//��ʱ�����߳̽���
-		cnt = 0;
-		queue_worker.clear();
-		stack_idle_index.reset();
-		stack_end.clear();
+		create(new task_end(stack_end), worker_type::END_ALL_TASK);// 4. 创建一个 task_end 任务，类型为 END_ALL_TASK，交由 worker 管理
+		join(task_type::TASK_MANAGER);                             // 5. 等待 task_manager 类型的任务全部结束（join会阻塞直到所有相关worker结束）
+		close(task_type::TASK_END);                                // 6. 关闭所有 task_end 类型的任务（确保 task_end 彻底结束）
+                                                                   // 7. 清理worker管理器的内部状态
+		cnt = 0;                                                   // 8. worker计数归零
+		queue_worker.clear();                                      // 9. 清空worker队列
+		stack_idle_index.reset();                                  // 10. 重置空闲worker索引栈
+		stack_end.clear();                                         // 11. 清空本地的stack_end栈
 	}
 }
 
-void worker_manager::create(task_wz* t, worker_type typ)//ui�߳�
+//实现了任务的分配与 worker 复用，优先复用空闲 worker，避免重复分配，保证任务调度的高效与线程安全。
+void worker_manager::create(task_wz* t, worker_type typ)//ui线程
 {
 
-	if (workers.exist())
+	if (workers.exist())                                // 1. 判断 worker 池是否已初始化（即有可用 worker）
 	{
-		if (t)
+		if (t)                                          // 2. 判断传入的任务指针 t 是否有效
 		{
-			if (stack_idle_index.empty())
+			if (stack_idle_index.empty())               // 3. 如果空闲 worker 索引栈为空，说明没有可复用的 worker
 			{
-				workers.addr[cnt].create(t, typ);
-				queue_worker.front(cnt);
-				cnt++;
-                Semaphore.release(1);
+				workers.addr[cnt].create(t, typ);       // 4. 用当前计数 cnt 位置的 worker 创建新任务
+				queue_worker.front(cnt);                // 5. 把该 worker 的索引放入队列头，等待调度
+				cnt++;                                  // 6. worker 数量加一
+                Semaphore.release(1);                   // 7. 信号量+1，唤醒等待的调度线程
 			}
-			else
+			else                                        // 8. 如果有空闲 worker 可复用
 			{
 				int index;
-				stack_idle_index.pop(index);
-				workers.addr[index].create(t, typ);
-				queue_worker.front(index);
-                Semaphore.release(1);
+				stack_idle_index.pop(index);            // 9. 从空闲栈弹出一个可用 worker 的索引
+				workers.addr[index].create(t, typ);     // 10. 用该 worker 创建新任务
+				queue_worker.front(index);              // 11. 把该 worker 的索引放入队列头，等待调度
+                Semaphore.release(1);                   // 12. 信号量+1，唤醒等待的调度线程
 			}
 		}
 	}
-	t = 0;
+	t = 0;                                              // 13. 置 t 为 0，防止外部误用（无实际内存释放，仅清空指针）
 }
 
-bool worker_manager::execute()//type:task_manager-UI�߳�, ��������-task_manager�߳�
+//实现了任务调度的核心流程，通过信号量和队列机制，安全、高效地分配和执行任务，并对正在运行的 worker 进行类型化管理，便于后续的资源回收和系统维护。
+bool worker_manager::execute()                                          // type: task_manager/UI线程, 也可在task_manager线程中调用
 {
-	if (workers.exist())
+	if (workers.exist())                                                // 1. 判断 worker 池是否已初始化（即有可用 worker）
 	{
-        Semaphore.acquire(1);
-		int index(0);
-		queue_worker.rear(index);
-		bool ret = workers.addr[index].execute();
-		stack_running_type[workers.addr[index].task_typ()].push(index);
-		return ret;
+		Semaphore.acquire(1);                                           // 2. 等待信号量（信号量减1），如果为0则阻塞，直到有新任务可调度
+		int index(0);                                                   // 3. 定义一个索引变量 index，初始为0
+		queue_worker.rear(index);                                       // 4. 从 worker 队列尾部取出一个 worker 的索引（即将要执行的 worker）
+		bool ret = workers.addr[index].execute();                       // 5. 调用该 worker 的 execute() 方法，执行任务，返回执行结果
+		stack_running_type[workers.addr[index].task_typ()].push(index); // 6. 将该 worker 的索引按任务类型压入“正在运行”栈，便于后续管理和回收
+		return ret;                                                     // 7. 返回任务执行结果（true/false）
 	}
-	return false;
+	return false;                                                       // 8. 如果 worker 池未初始化，直接返回 false
 }
 
-void worker_manager::join(task_type typ)//type:task_manager-UI�߳�, ��������-task_manager�߳�
+//实现了任务的等待和回收，通过栈结构管理正在运行的任务，确保任务能够被正确地 join 或 close，避免资源泄漏和线程悬挂。
+void worker_manager::join(task_type typ)          //type:task_manager-UI线程, 也可在task_manager线程中调用
 {
-	if (workers.exist())
+	if (workers.exist())                          // 1. 判断 worker 池是否已初始化（即有可用 worker）
 	{
-		while (!stack_running_type[typ].empty()) {
+		while (!stack_running_type[typ].empty()) {// 2. 只要该类型的“正在运行”栈不为空，就循环处理
 			int index;
-			stack_running_type[typ].pop(index);
-			workers.addr[index].join();
-			stack_idle_index.push(index);
+			stack_running_type[typ].pop(index);   // 3. 从该类型的“正在运行”栈弹出一个 worker 索引
+			workers.addr[index].join();           // 4. 调用该 worker 的 join() 方法，等待其任务完成并回收资源
+			stack_idle_index.push(index);         // 5. 将该 worker 的索引压入空闲 worker 栈，便于后续复用
 		}
 	}
 }
 
-void worker_manager::close(task_type typ)//task_end��task_manager��ִ��
+void worker_manager::close(task_type typ)          //task_end或task_manager调用
 {
-	if (workers.exist())
+	if (workers.exist())                           // 1. 判断 worker 池是否已初始化（即有可用 worker）
 	{
-		while (!stack_running_type[typ].empty()) {
+		while (!stack_running_type[typ].empty()) { // 2. 只要该类型的“正在运行”栈不为空，就循环处理
 			int index;
-			stack_running_type[typ].pop(index);
-			workers.addr[index].close();
-			stack_idle_index.push(index);
+			stack_running_type[typ].pop(index);    // 3. 从该类型的“正在运行”栈弹出一个 worker 的索引
+			workers.addr[index].close();           // 4. 调用该 worker 的 close() 方法，安全关闭并回收该 worker 的任务资源
+			stack_idle_index.push(index);          // 5. 将该 worker 的索引压入空闲 worker 栈，便于后续复用
 		}
 	}
 }
 
-void worker_manager::clear()//ui�̵߳��ã�ȷ�������߳̽����������ڴ�
+//实现了指定类型任务的批量安全关闭，确保所有该类型的 worker 都被正确 close，资源被安全回收，并将 worker 重新放入空闲池，便于后续复用。
+void worker_manager::clear()                    //ui线程调用，确保所有任务和线程已结束后释放内存
 {
-	if (cnt == 0)
+	if (cnt == 0)                               // 1. 只有当当前 worker 数量为 0 时才允许清理（确保没有任务在运行）
 	{
-		workers.clear();
-		stack_idle_index.clear();
-		for (int i = 0; i < TASK_TYPE_NUM; i++)
+		workers.clear();                        // 2. 清空 worker 池，释放所有 worker 对象的内存
+		stack_idle_index.clear();               // 3. 清空空闲 worker 索引栈
+		for (int i = 0; i < TASK_TYPE_NUM; i++) // 4. 遍历所有任务类型
 		{
-			stack_running_type[i].clear();
+			stack_running_type[i].clear();      // 5. 清空每种任务类型对应的“正在运行”worker索引栈
 		}
 	}
 }
 
 void worker_manager::task_callback_func(TOOLWZ::data_wz<task_wz, 20, task_destruct>* t)
 {
-	t->addr->init();
-	t->addr->run();
-	t = 0;
+	t->addr->init();							 // 1. 调用任务对象的 init() 方法，进行任务初始化
+	t->addr->run();								// 2. 调用任务对象的 run() 方法，执行任务的主要逻辑
+	t = 0;										// 3. 将指针 t 置为 0（仅清空本地指针，不释放内存，防止误用）
 }
 
 TOOLWZ::data_wz<worker, sizeof(worker), worker_destruct> worker_manager::workers;
@@ -298,11 +304,11 @@ void task_manager::init() {}
 
 void task_manager::run()
 {
-	while (1)
+	while (1)                           // 1. 无限循环，持续调度任务
 	{
-		if (!worker_manager::execute())
+		if (!worker_manager::execute()) // 2. 调用 worker_manager::execute() 执行一个任务，如果返回 false（无任务可执行）
 		{
-			break;
+			break;                      // 3. 跳出循环，结束任务管理器的 run
 		}
 	}
 }
@@ -327,11 +333,11 @@ void task_join::init()
 
 void task_join::run()
 {
-	while (!stack_join_type.empty())
+	while (!stack_join_type.empty()) // 1. 只要 join 类型栈不为空
 	{
 		task_type typ;
-		stack_join_type.pop(typ);
-		worker_manager::join(typ);
+		stack_join_type.pop(typ);    // 2. 弹出一个任务类型
+		worker_manager::join(typ);   // 3. 等待该类型的所有任务完成（join）
 	}
 }
 
@@ -352,11 +358,11 @@ void task_end::init() {}
 
 void task_end::run()
 {
-	while (!stack_end_type.empty())
+	while (!stack_end_type.empty()) // 1. 只要 end 类型栈不为空
 	{
 		task_type typ;
-		stack_end_type.pop(typ);
-		worker_manager::close(typ);
+		stack_end_type.pop(typ);    // 2. 弹出一个任务类型
+		worker_manager::close(typ); // 3. 关闭该类型的所有任务（close）
 	}
 }
 
@@ -419,41 +425,46 @@ void task_rcv::init()
 
 void task_rcv::run()
 {
-	OPEN_TASK_RCV_DBG(LogTaskRcv.txt);
-#ifndef TEST_WITHOUT_BOARD //DataFrameWz.hpp
-	while(Loop)
+	OPEN_TASK_RCV_DBG(LogTaskRcv.txt);                               // 1. 打开接收任务的调试日志文件
+
+#ifndef TEST_WITHOUT_BOARD                                           // 2. 如果没有定义 TEST_WITHOUT_BOARD（即实际硬件环境）
+	while (Loop)                                                     // 3. 只要 Loop 为 true，就持续循环接收数据
 	{
-		RcvData Data(800);
-		int res = SOCKWZ::SockGlob::Recv(Data.GetData().get(), 800);
-		if(res == SOCKET_ERROR)
+		RcvData Data(800);                                           // 4. 创建一个长度为800字节的接收数据对象 Data
+		int res = SOCKWZ::SockGlob::Recv(Data.GetData().get(), 800); // 5. 从全局Socket接收数据，最多接收800字节，返回实际接收长度res
+
+		if (res == SOCKET_ERROR)                                     // 6. 如果接收出错
 		{
-			if(Loop == true)
+			if (Loop == true)                                        // 7. 如果Loop仍为true（任务未被要求关闭）
 			{
-				// WRITE_TASK_RCV_DBG("Socket Error Continue\n");
-				continue;
+                                                                     // WRITE_TASK_RCV_DBG("Socket Error Continue\n");
+				continue;                                            // 8. 继续下一次循环，尝试重新接收
 			}
-			else
+			else                                                     // 9. 如果Loop为false（任务被要求关闭）
 			{
-				WRITE_TASK_RCV_DBG("Socket Error Break\n");
-				Data.Clear();
-				break;
+				WRITE_TASK_RCV_DBG("Socket Error Break\n");          // 10. 记录调试日志
+				Data.Clear();                                        // 11. 清理Data对象
+				break;                                               // 12. 跳出循环，结束任务
 			}
 		}
-		else
+		else                                                         // 13. 如果接收成功
 		{
-			WRITE_TASK_RCV_DBG("Data recived, Len = %d\n", res);
+			WRITE_TASK_RCV_DBG("Data recived, Len = %d\n", res);     // 14. 记录接收到的数据长度
 		}
-		Data.SetLen(res);
-		QueueRcv.front(Data);
-		Data.Clear();
+		Data.SetLen(res);                                            // 15. 设置Data对象的实际数据长度
+		QueueRcv.front(Data);                                        // 16. 将Data对象放入接收队列的队首，供后续任务处理
+		Data.Clear();                                                // 17. 清理Data对象，释放内存
 	}
+                                                                     // 18. 循环结束后，日志关闭在函数结尾
 	WRITE_TASK_RCV_DBG("Cycle Over Loop = %d", Loop);
 #else
-	int sec(0);
-	while(Loop)
+	int sec(0);                                                      // 1. 定义一个整型变量 sec，初始为0，用于模拟时间戳
+	while (Loop)                                                     // 2. 只要 Loop 为 true，就持续循环（模拟数据接收）
 	{
-		std::this_thread::sleep_for(std::chrono::microseconds(100));
-		RcvData Data(800);
+		std::this_thread::sleep_for(std::chrono::microseconds(100)); // 3. 每次循环延时100微秒，模拟数据接收间隔
+		RcvData Data(800);                                           // 4. 创建一个长度为800字节的 RcvData 对象 Data
+
+                                                                     // 5. 设置数据包头部各字段，模拟一个0x28类型的数据包
 		FRAME_HEAD_STAR(Data.GetData().get())->msgID = 0x28;
 		FRAME_HEAD_STAR(Data.GetData().get())->rev = 0;
 		FRAME_HEAD_STAR(Data.GetData().get())->ctlFractstop = 0;
@@ -462,6 +473,7 @@ void task_rcv::run()
 		FRAME_HEAD_STAR(Data.GetData().get())->reserved_base = 0;
 		FRAME_HEAD_STAR(Data.GetData().get())->siglen = 784;
 
+                                                                     // 6. 设置数据包体的各字段，模拟芯片状态信息
 		PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->timeStamp_8ms = sec;
 		PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac = 2048;
 		PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->mnic_online = 0xFFFFFFFF;
@@ -469,9 +481,11 @@ void task_rcv::run()
 		PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->fpga_heat = 60;
 		PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->dbg_dn_aic = 0;
 		PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->cnt_dn_aic = 0;
-		for(int i = 0; i < 8; i++)
+
+                                                                     // 7. 填充每个芯片的ADC信息，8组，每组12个Info
+		for (int i = 0; i < 8; i++)
 		{
-			for(int j = 0; j < 12; j++)
+			for (int j = 0; j < 12; j++)
 			{
 				PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->MNICx4_ADC_INFO_ARR[i].Info[j].sinad = 33;
 				PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->MNICx4_ADC_INFO_ARR[i].Info[j].reserved = 0;
@@ -480,25 +494,28 @@ void task_rcv::run()
 				PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->MNICx4_ADC_INFO_ARR[i].Info[j].rms = 30;
 			}
 		}
-		Data.SetLen(788);
-		QueueRcv.front(Data);
-		Data.Clear();
+
+		Data.SetLen(788);                                            // 8. 设置Data对象的实际数据长度为788字节（模拟有效数据长度）
+		QueueRcv.front(Data);                                        // 9. 将Data对象放入接收队列的队首，供后续任务处理
+		Data.Clear();                                                // 10. 清理Data对象，释放内存
 	}
 #endif
 
-	CLOSE_TASK_RCV_DBG();
+	CLOSE_TASK_RCV_DBG();                                            // 11. 关闭调试日志
 }
 
 void task_rcv::close()
 {
-	WRITE_TASK_RCV_DBG("task_rcv::close\n");
-	Loop = false;
+	WRITE_TASK_RCV_DBG("task_rcv::close\n"); // 1. 写调试日志，记录关闭操作
+	Loop = false;                           // 2. 设置 Loop 为 false，通知 run() 循环安全退出
 }
 
 void task_rcv::clear()
 {
-	QueueRcv.clear();
+	QueueRcv.clear(); // 1. 清空接收数据队列，释放所有队列内的 RcvData 对象
 }
+
+
 
 TOOLWZ::queue<RcvData, 500, RcvDataDestruct> task_rcv::QueueRcv;
 
@@ -510,35 +527,26 @@ task_dispatch::~task_dispatch() {}
 
 void task_dispatch::init()
 {
-	Loop = true;
+	Loop = true; // 1. 初始化时将 Loop 设为 true，表示任务可以正常运行
 }
 
 void task_dispatch::run()
 {
-	OPEN_TASK_DISPATCH_DBG(LogTaskDispatch.txt);
-	while(Loop)
+	OPEN_TASK_DISPATCH_DBG(LogTaskDispatch.txt);                      // 打开调试日志
+	while(Loop)                                                       // 只要 Loop 为 true，就一直循环
 	{
 		RcvData Data;
-		task_rcv::QueueRcv.rear(Data);
-		if(Data.GetData().get())
+		task_rcv::QueueRcv.rear(Data);                                // 从接收队列取出一个数据包（尾部出队）
+		if(Data.GetData().get())                                      // 如果数据有效
 		{
-			// WRITE_TASK_DISPATCH_DBG("Data recived, MsgId = %x\n", FRAME_HEAD_STAR(Data.GetData().get())->msgID);
-			switch (FRAME_HEAD_STAR(Data.GetData().get())->msgID)
+			switch (FRAME_HEAD_STAR(Data.GetData().get())->msgID)     // 读取数据包头部的 msgID 字段，判断数据类型
 			{
 			case 0x28:
-				// WRITE_TASK_DISPATCH_DBG("0x28 recived\n");
-				TaskChipStatParsing::QueueChipStatParsing.front(Data);
-				break;	
+				TaskChipStatParsing::QueueChipStatParsing.front(Data);// 如果是 0x28 类型的数据包，放入芯片状态解析队列
+				break;
 			case 0xa0:
-			
-				//auto arg = PTR_ARG_UP_A0(Data.GetData().get() + HEAD_DATA_LEN);//新增 0xa0帧解析
-				//if (arg->ram_id == 0x1e && arg->chk_fail == 0 && arg->cmd_ack == 1) //新增 0xa0帧解析成功
-					// WRITE_TASK_DISPATCH_DBG("0xa0 recived\n");
-				
-					TaskVersionParsing::QueueVeriosnParsing.front(Data);
-				
-			
-			default:
+				TaskVersionParsing::QueueVeriosnParsing.front(Data);  // 如果是 0xa0 类型的数据包，放入版本号解析队列
+			default:                                                  // 其他类型的数据包不处理
 				break;
 			}			
 		}
@@ -578,68 +586,62 @@ void TaskChipStatParsing::run()
 	while(Loop)
 	{
 		RcvData Data;
-		QueueChipStatParsing.rear(Data);
-		// WRITE_TASK_0X28_PARSING("Get Data From Que\n");
+		QueueChipStatParsing.rear(Data);// 从队列尾部取出一个数据包
 		if(Data.GetData().get())
 		{
-			// WRITE_TASK_0X28_PARSING("Data EXist\n");
-			if(FRAME_HEAD_STAR(Data.GetData().get())->msgID == 0x28)
+			if(FRAME_HEAD_STAR(Data.GetData().get())->msgID == 0x28)// 判断数据包类型是否为0x28（芯片状态包）
 			{
-				// WRITE_TASK_0X28_PARSING("0x28 recived\n");
-				FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac);
-				// WRITE_TASK_0X28_PARSING("Fluid 0 = %lld\n", FCT::FluidCtrlGlob->FluidLoad(0));
-				// WRITE_TASK_0X28_PARSING("Temperature Chip:%u\n", PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->fpga_heat);
-				DCR::DeviceCheckResultGlobal->SetTemperatureInner(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->fpga_heat);
-				// WRITE_TASK_0X28_PARSING("Temperature Env:%u\n", PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->ds18b20_16b);
-				DCR::DeviceCheckResultGlobal->SetTemperatureEnv(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->ds18b20_16b);
-				DCR::DeviceCheckResultGlobal->SetUpPackCount(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->timeStamp_8ms);
+				FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac);// 更新流控缓存
+				DCR::DeviceCheckResultGlobal->SetTemperatureInner(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->fpga_heat); // 更新芯片内部温度
+				DCR::DeviceCheckResultGlobal->SetTemperatureEnv(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->ds18b20_16b);// 更新环境温度
+				DCR::DeviceCheckResultGlobal->SetUpPackCount(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->timeStamp_8ms); // 更新上行包计数
+
+				// 如果启用包日志记录，写入一条记录
 				if(bPackLogRecord)
 				{
 					WRITE_LOG_UP_PACK_RECORD(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount(), DCR::DeviceCheckResultGlobal->GetUpPackCount());
 				}
+				// 遍历所有板卡和芯片
 				for(int i = 0; i < 8; i++)
 				{
 					for(int j = 0; j < 4; j++)
 					{
+						// 获取在线状态
 						unsigned int IfOnline = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->mnic_online;
 						bool ChipIfOnline = DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline();
+						// 更新在线状态
 						DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetIfOnline(GET_BIT_U32(IfOnline, i * 4 + j));
+						// 如果当前芯片在线
 						if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline())
 						{
-							// WRITE_TASK_0X28_PARSING("Board:%d Chip:%d Online Current\n", i, j);
+							// 如果之前不在线，在线芯片数加一
 							if(!ChipIfOnline)
 							{
-								// WRITE_TASK_0X28_PARSING("Board:%d Chip:%d Offline Ever\n", i, j);
 								DCR::DeviceCheckResultGlobal->ChipOnlineNumInc();
 							}
+							// 三组通道的检测结果
 							bool Res[3]{ true, true, true };
 							unsigned short Sinad[3]{ 0 }, Vpp[3]{ 0 }, Rms[3]{ 0 };
+							// 第一组通道参数
 							Sinad[0] = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->MNICx4_ADC_INFO_ARR[i].Info[j * 2].sinad;
 							Vpp[0] = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->MNICx4_ADC_INFO_ARR[i].Info[j * 2].vpp;
 							Rms[0] = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->MNICx4_ADC_INFO_ARR[i].Info[j * 2].rms;
 							DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).UpdateRangeSINAD(Sinad[0]);
 							Res[0] &= DCR::DeviceCheckResultGlobal->GetCondition()[0].CheckAll(Sinad[0], Vpp[0], Rms[0]);
-							// WRITE_TASK_0X28_PARSING("Codec Left Siand = %u, Vpp = %u, RMS = %u, %s\n", Sinad, Vpp, Rms, Res ? "true" : "false");
-							// WRITE_TASK_0X28_PARSING("Codec Left Siand Left = %d, Sinad Right = %d\n", 
-							// 	DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetRangeSINAD().GetLeft(),
-							// 	DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetRangeSINAD().GetRight());
+							// 第二组通道参数
 							Sinad[1] = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->MNICx4_ADC_INFO_ARR[i].Info[j * 2 + 1].sinad;
 							Vpp[1] = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->MNICx4_ADC_INFO_ARR[i].Info[j * 2 + 1].vpp;
 							Rms[1] = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->MNICx4_ADC_INFO_ARR[i].Info[j * 2 + 1].rms;
 							DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).UpdateRangeSINAD(Sinad[1]);
 							Res[1] &= DCR::DeviceCheckResultGlobal->GetCondition()[0].CheckAll(Sinad[1], Vpp[1], Rms[1]);
-							// WRITE_TASK_0X28_PARSING("Codec Right Siand = %u, Vpp = %u, RMS = %u, %s\n", Sinad, Vpp, Rms, Res ? "true" : "false");
-							// WRITE_TASK_0X28_PARSING("Codec Left Siand Left = %d, Sinad Right = %d\n", 
-							// 	DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetRangeSINAD().GetLeft(),
-							// 	DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetRangeSINAD().GetRight());
+							// 第三组通道参数
 							Sinad[2] = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->MNICx4_ADC_INFO_ARR[i].Info[8 + j].sinad;
 							Vpp[2] = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->MNICx4_ADC_INFO_ARR[i].Info[8 + j].vpp;
 							Rms[2] = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->MNICx4_ADC_INFO_ARR[i].Info[8 + j].rms;
 							Res[2] &= DCR::DeviceCheckResultGlobal->GetCondition()[1].CheckAll(Sinad[2], Vpp[2], Rms[2]);
-							// WRITE_TASK_0X28_PARSING("AdPow Siand = %u, Vpp = %u, RMS = %u, %s\n\n", Sinad, Vpp, Rms, Res ? "true" : "false");
-							// if(Res)WRITE_TASK_0X28_PARSING("Res = true\n", true);
 							DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).CheckPacksOfMifInc(Res[0] & Res[1] & Res[2]);
 
+							// 如果启用芯片日志记录，写入详细记录
 							if(bPackLogRecord)
 							{
 								WRITE_LOG_UP_CHIP_RECORD(i + 1, j + 1,
@@ -648,12 +650,12 @@ void TaskChipStatParsing::run()
 									TCOND::TestCondition::SinadTransfer(Sinad[2]), Vpp[2], Rms[2], Res[2] ? " TRUE" : "FALSE");
 							}
 						}
-						else
+						else// 当前芯片不在线
 						{
-							// WRITE_TASK_0X28_PARSING("Board:%d Chip:%d Offline Current\n", i, j);
+							// 如果之前在线，在线芯片数减一
 							if(ChipIfOnline)
 							{
-								// WRITE_TASK_0X28_PARSING("Board:%d Chip:%d Online Ever\n", i, j);
+								// 连续有效包数清零
 								DCR::DeviceCheckResultGlobal->ChipOnlineNumDec();
 							}
 							DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetCheckPacksOfMif(0);
@@ -662,9 +664,9 @@ void TaskChipStatParsing::run()
 				}
 			}
 		}
-		Data.Clear();
+		Data.Clear();// 清理数据，释放内存
 	}
-	CLOSE_TASK_0X28_PARSING();
+	CLOSE_TASK_0X28_PARSING();// 关闭调试日志
 }
 
 void TaskChipStatParsing::close()
@@ -685,10 +687,13 @@ bool TaskChipStatParsing::bPackLogRecord(false);
 MsgToCentralWt::MsgToCentralWt()
 {}
 
+// 构造函数，接收两个参数：测试状态 s 和统计模式 m，分别赋值给成员变量 Stat 和 Mode
 MsgToCentralWt::MsgToCentralWt(TestStat s, StatisticMode m)
 	:Stat(s), Mode(m)
 {}
 
+// 拷贝构造函数，用另一个 MsgToCentralWt 对象 cp 初始化本对象
+// Stat 通过 cp.GetStat() 获取，Mode 通过 cp.GetMode() 获取
 MsgToCentralWt::MsgToCentralWt(const MsgToCentralWt& cp)
 	:Stat(cp.GetStat()), Mode(cp.GetMode())
 {}
@@ -716,60 +721,60 @@ void TaskTestStatistics::init()
 
 void TaskTestStatistics::run()
 {
-	OPEN_TASK_STATISTICS_DBG(LogTaskStatistics.txt);
-	WRITE_TASK_STATISTICS_DBG("TaskTestStatistics::run()\n");
+	OPEN_TASK_STATISTICS_DBG(LogTaskStatistics.txt);// 打开调试日志
+	WRITE_TASK_STATISTICS_DBG("TaskTestStatistics::run()\n");// 写入调试日志
 	while (Loop)
 	{
-		StatisticMode Mode(StatisticMode::MODE_DEFAULT);
-		QueueStatistcsMODE.rear(Mode);
-		switch (Mode)
+		StatisticMode Mode(StatisticMode::MODE_DEFAULT);// 定义统计模式变量，初始为 MODE_DEFAULT
+		QueueStatistcsMODE.rear(Mode);// 从统计模式队列取出一个统计模式
+		switch (Mode)// 根据不同的统计模式进行处理
 		{
 		case MODE_DEFAULT:
-			// WRITE_TASK_STATISTICS_DBG("MODE DEFAULT\n");
+			// 默认模式，不做任何处理
 			break;
 		case STATISTICS_A_MIF:
 			WRITE_TASK_STATISTICS_DBG("Mode :STATISTICS_A_MIF\n");
+			// 遍历所有板卡和芯片
 			for(int i = 0; i < 8; i ++)
 			{
 				for(int j = 0; j < 4; j++)
 				{
-					// WRITE_TASK_STATISTICS_DBG("Satisfied pack num: %d, Valid num: %d\n", DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMif(), ContinousValidNum);
+					// 判断该芯片的连续有效包数是否小于要求
 					if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMif() < ContinousValidNum)
 					{
 						WRITE_TASK_STATISTICS_DBG("Check Result A Mif: False\n");
+						// 如果之前检测结果为 true，需要更新统计
 						if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckResult())
 						{
-							DCR::DeviceCheckResultGlobal->ChipSatisfiedNumDec();
+							DCR::DeviceCheckResultGlobal->ChipSatisfiedNumDec();// 满足芯片数减一
 							if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline())
 							{
-								// WRITE_TASK_STATISTICS_DBG("Previous result a mif: True\n");
+								// 如果芯片在线，不满足芯片数加一
 								DCR::DeviceCheckResultGlobal->ChipUnSatisfiedNumInc();
 							}
 						}
+						// 更新检测结果为 false
 						DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).UpdateCheckResult(false);
 					}
 					else
 					{
 						WRITE_TASK_STATISTICS_DBG("Check Result A Mif: True\n");
-						// if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline() 
-						// 	&& DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckResult())
-						// {
-						// 	DCR::DeviceCheckResultGlobal->ChipSatisfiedNumInc();
-						// }
+						// 检测结果为 true
 						DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).UpdateCheckResult(true);
 					}
-					// DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetCheckPacksOfMif(0);
-					// DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetChipTestStat(DCR::WAITING_FOR_TESTING);
 				}
 			}
+			// 统计完成后，发出统计结果信号
 			emit MsgOfStatistics(MsgToCentralWt(TestStat::TEST_RUNNING, StatisticMode::STATISTICS_A_MIF));
 			break;
 		case STATISTICS_A_TIME:
 			WRITE_TASK_STATISTICS_DBG("Mode :STATISTICS_A_TIME\n");
+			// 遍历所有板卡和芯片
 			for(int i = 0; i < 8; i++)
 			{
 				for(int j = 0; j < 4; j++)
 				{
+					// 如果检测结果为 true，累计满足次数
 					if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckResult())
 					{
 						WRITE_TASK_STATISTICS_DBG("A TIME Res True\n");
@@ -777,9 +782,11 @@ void TaskTestStatistics::run()
 					}
 				}
 			}
+			// 统计完成后，发出统计结果信号
 			emit MsgOfStatistics(MsgToCentralWt(TestStat::TEST_RUNNING, StatisticMode::STATISTICS_A_TIME));
 			break;
 		default:
+			// 其他未知模式，不做处理
 			break;
 		}
 	}
@@ -808,27 +815,27 @@ TaskDataConstruct::~TaskDataConstruct() { clear(); }
 void TaskDataConstruct::init()
 {}
 
-void TaskDataConstruct::run()
+void TaskDataConstruct::run()                                                                               // 任务主循环，处理文件链表中的每个节点
 {
 	OPEN_TASK_CONSTRUCT_DBG(LogTaskConstruct.txt);
-	for(auto it = FileList.GetHead(); it != nullptr; it = it->GetNext())
+	for(auto it = FileList.GetHead(); it != nullptr; it = it->GetNext())                                    // 遍历文件链表的每个节点
 	{
-		switch(it->GetOpt())
+		switch(it->GetOpt())                                                                                // 根据节点的操作类型进行处理
 		{
 		case FLST::FileOPT::ADD_FILE:
-			WRITE_TASK_CONSTRUCT_DBG("AddNode(), Path:%s\n", it->GetData().GetPath().toStdString().c_str());
-			DCWZ::DataMana::DataListGlobal.AddNode(it->GetData());
-			WRITE_TASK_CONSTRUCT_DBG("AddNode Complete\n");
+			WRITE_TASK_CONSTRUCT_DBG("AddNode(), Path:%s\n", it->GetData().GetPath().toStdString().c_str());// 日志记录：添加节点
+			DCWZ::DataMana::DataListGlobal.AddNode(it->GetData());                                          // 向全局数据链表添加节点
+			WRITE_TASK_CONSTRUCT_DBG("AddNode Complete\n");                                                 // 日志记录：添加完成
 			break;
-		case FLST::FileOPT::DEL_FIEL:
+		case FLST::FileOPT::DEL_FIEL:                                                                       // 从全局数据链表删除节点
 			DCWZ::DataMana::DataListGlobal.DelNode(it->GetData());
 			break;
-		default:
+		default:                                                                                            // 其他操作类型不处理
 			break;
 		}
 	}
-	FileList.Clear();
-	CLOSE_TASK_CONSTRUCT_DBG();
+	FileList.Clear();                                                                                       // 清空本地文件链表
+	CLOSE_TASK_CONSTRUCT_DBG();                                                                             // 关闭调试日志
 }
 
 void TaskDataConstruct::close()
@@ -850,32 +857,39 @@ TaskDataConstructARG::~TaskDataConstructARG()
 	clear();
 }
 
+//
 void TaskDataConstructARG::init(){}
 
 void TaskDataConstructARG::run()
 {
 	OPEN_TASK_CONSTRUCT_ARG_DBG(LogTaskConstructArg.txt);
+	// 遍历参数链表 ArgList 的每个节点
 	for(auto it = ArgList.GetHead(); it != nullptr; it = it->GetNext())
 	{
-		switch (it->GetOpt())
+		switch (it->GetOpt())// 根据节点的操作类型进行处理
 		{
 		case FLST::FileOPT::ADD_FILE:
+			// 向全局数据链表添加节点
 			DCWZ::DataMana::DataListGlobal.AddNode(it->GetData());
 			WRITE_TASK_CONSTRUCT_ARG_DBG("run(), ADD_FILE\n");
 			break;
 		case FLST::FileOPT::DEL_FIEL:
+			// 从全局数据链表删除节点
 			DCWZ::DataMana::DataListGlobal.DelNode(it->GetData());
 			WRITE_TASK_CONSTRUCT_ARG_DBG("run(), DEL_FILE\n");
 			break;
 		case FLST::FileOPT::EXCHANGE:
+			// 交换全局数据链表中的两个节点
 			DCWZ::DataMana::DataListGlobal.Exchange(it->GetData(), it->GetExchg());
 			WRITE_TASK_CONSTRUCT_ARG_DBG("run(), EXCHANGE\n");
 			break;
 		case FLST::FileOPT::TO_BOTTOM:
+			// 将指定节点移动到全局数据链表底部
 			DCWZ::DataMana::DataListGlobal.ToBottom(it->GetData());
 			WRITE_TASK_CONSTRUCT_ARG_DBG("run, TO_BOTTOM\n");
 			break;
 		default:
+			// 其他操作类型不处理
 			break;
 		}
 	}

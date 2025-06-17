@@ -660,48 +660,49 @@ namespace CWD{
 
     void CentralWidget::StartTest()
     {
-        WRITE_CENTRAL_WIDGET_DBG("StartTest(), Enter\n");        
-        if(StatOfBtnStart)
+        WRITE_CENTRAL_WIDGET_DBG("StartTest(), Enter\n");                                                                           // 写调试日志，记录进入StartTest函数
+
+        if (StatOfBtnStart)                                                                                                         // 如果当前是“开始测试”状态（按钮未被按下，准备开始测试）
         {
-            PTestedNum.setText("0");
-            TOOLWZ::stack_wz<TASKWZ::task_type> stack_join;
-            stack_join.push(TASKWZ::task_type::TASK_END);
-            stack_join.push(TASKWZ::task_type::TASK_JOIN);
-            stack_join.push(TASKWZ::TASK_DATA_CONSTRUCT);
-            // if(TaskSend)
-            // {
-            //     WRITE_CENTRAL_WIDGET_DBG("TaskSend != nullptr\n");
-            //     stack_join.push(TASKWZ::TASK_DATA_SEND);
-            //     disconnect(TaskSend, &TASKWZ::TaskDataSend::MsgOfStartEnd, this, &CentralWidget::UpdateCheckResult);
-            //     TaskSend = nullptr;
-            // }
-            stack_join.push(TASKWZ::TASK_DATA_SEND);
-            CREATE_TASK_JOIN(stack_join);
-            TaskSend = new TASKWZ::TaskDataSend(PTestNum.toPlainText().toInt());
-            connect(TaskSend, &TASKWZ::TaskDataSend::MsgOfStartEnd, this, &CentralWidget::UpdateCheckResult, Qt::QueuedConnection);
-            TASKWZ::worker_manager::create(TaskSend, TASKWZ::worker_type::EXECUTE_THREAD);
-            StatOfBtnStart = false;
-            BtnStartTest.setText("结束测试");
+            PTestedNum.setText("0");                                                                                                // 已测试次数清零，界面显示为0
+            TOOLWZ::stack_wz<TASKWZ::task_type> stack_join;                                                                         // 创建一个任务类型栈，用于后续批量join任务
+            stack_join.push(TASKWZ::task_type::TASK_END);                                                                           // 压入“结束任务”类型
+            stack_join.push(TASKWZ::task_type::TASK_JOIN);                                                                          // 压入“join任务”类型
+            stack_join.push(TASKWZ::TASK_DATA_CONSTRUCT);                                                                           // 压入“数据构建任务”类型
+
+            stack_join.push(TASKWZ::TASK_DATA_SEND);                                                                                // 压入“数据发送任务”类型
+            CREATE_TASK_JOIN(stack_join);                                                                                           // 创建一个join任务，批量等待上述所有类型的任务完成
+            TaskSend = new TASKWZ::TaskDataSend(PTestNum.toPlainText().toInt());                                                    // 创建数据发送任务对象，参数为界面输入的测试次数
+            connect(TaskSend, &TASKWZ::TaskDataSend::MsgOfStartEnd, this, &CentralWidget::UpdateCheckResult, Qt::QueuedConnection); // 连接TaskSend的“测试开始/结束”信号到界面结果更新槽函数
+            TASKWZ::worker_manager::create(TaskSend, TASKWZ::worker_type::EXECUTE_THREAD);                                          // 将TaskSend任务交给任务管理器调度（以线程方式执行）
+            StatOfBtnStart = false;                                                                                                 // 状态切换为“测试中”
+            BtnStartTest.setText("结束测试");                                                                                           // 按钮文本切换为“结束测试”
         }
         else
-        {    
-            std::unique_lock lock(mtx);
-            Clock->stop();        
-            if(TaskSend)
+        {
+                                                                                                        // 如果当前是“结束测试”状态（按钮已按下，准备结束测试）
+
+            std::unique_lock lock(mtx);                                                                 // 加锁，保证线程安全
+            Clock->stop();                                                                              // 停止计时器
+            if (TaskSend)                                                                               // 如果TaskSend存在，断开信号连接，关闭任务并释放对象
             {
                 disconnect(TaskSend, &TASKWZ::TaskDataSend::MsgOfStartEnd, this, &CentralWidget::UpdateCheckResult);
                 TaskSend->close();
                 TaskSend = nullptr;
             }
-            TOOLWZ::stack_wz<TASKWZ::task_type> stack_end;
-            stack_end.push(TASKWZ::TASK_DATA_SEND);
-            CREATE_TASK_END(stack_end);
-            StatOfBtnStart = true;
-            BtnStartTest.setText("开始测试");
-            LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", "./LOG/LogUpRecordProcessed.log");
-            lock.unlock();
+
+            TOOLWZ::stack_wz<TASKWZ::task_type> stack_end;                                              // 创建一个任务类型栈，用于批量结束任务
+
+            stack_end.push(TASKWZ::TASK_DATA_SEND);                                                     // 压入“数据发送任务”类型
+
+            CREATE_TASK_END(stack_end);                                                                 // 创建一个end任务，批量关闭上述类型的任务
+
+            StatOfBtnStart = true;                                                                      // 状态切换为“未测试”
+            BtnStartTest.setText("开始测试");                                                               // 按钮文本切换为“开始测试”
+            LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", "./LOG/LogUpRecordProcessed.log"); // 处理日志文件（原始日志转为处理后日志）
+            lock.unlock();                                                                              // 解锁
         }
-        WRITE_CENTRAL_WIDGET_DBG("StartTest(), End\n");
+        WRITE_CENTRAL_WIDGET_DBG("StartTest(), End\n");                                                 // 写调试日志，记录离开StartTest函数
     }
 
     void CentralWidget::OpenLog()

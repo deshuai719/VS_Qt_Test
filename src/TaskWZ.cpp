@@ -544,8 +544,18 @@ void task_dispatch::run()
 			case 0x28:
 				TaskChipStatParsing::QueueChipStatParsing.front(Data);// 如果是 0x28 类型的数据包，放入芯片状态解析队列
 				break;
-			case 0xa0:
-				TaskVersionParsing::QueueVeriosnParsing.front(Data);  // 如果是 0xa0 类型的数据包，放入版本号解析队列
+				/*新增：分发过程中进行ram_id的判断*/
+			case  0xa0:
+			{
+				auto ram_id = PTR_ARG_UP_A0(Data.GetData().get() + HEAD_DATA_LEN)->ram_id;//在分发过程添加ram_id的判断
+				if (ram_id == 24)
+					TaskVersionParsing::QueueVeriosnParsing.front(Data);
+				else if (ram_id == 0x1e)
+					TaskDataSend::QueueParamAck.front(Data);
+				// 其他ram_id可根据需要处理
+				break;
+			}
+				// 其他ram_id可根据需要处理
 			default:                                                  // 其他类型的数据包不处理
 				break;
 			}			
@@ -916,72 +926,81 @@ void TaskDataSend::init()
 
 void TaskDataSend::run()
 {
-	OPEN_TASK_DATA_SEND_DBG(LogTaskDataSend.txt);
-	OPEN_TASK_DATA_SEND_INFO_VERIFY(LogTaskDataSendInfoVerify.txt);
-	OPEN_LOG_UP_RECORD(LogUpRecord.log);
-	emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_START, StatisticMode::STATISTICS_A_MIF));
-	SemaWaitForUI.acquire(1);
+	OPEN_TASK_DATA_SEND_DBG(LogTaskDataSend.txt);                                                               // 1. 打开数据发送任务的调试日志文件
+	OPEN_TASK_DATA_SEND_INFO_VERIFY(LogTaskDataSendInfoVerify.txt);                                             // 2. 打开数据发送信息校验日志
+	OPEN_LOG_UP_RECORD(LogUpRecord.log);                                                                        // 3. 打开上报记录日志
+	emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_START, StatisticMode::STATISTICS_A_MIF));                  // 4. 发送测试开始信号
+	SemaWaitForUI.acquire(1);                                                                                   // 5. 等待UI信号量，确保UI准备好
 
-	// DCR::DeviceCheckResultGlobal->Init();
-	// DCR::DeviceCheckResultGlobal->SetCheckCount(TestCount);
-
-	if(DCWZ::DataMana::DataListGlobal.GetHead() == nullptr)
+	if (DCWZ::DataMana::DataListGlobal.GetHead() == nullptr)                                                    // 6. 如果数据链表为空
 	{
-		emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_OVER, StatisticMode::STATISTICS_A_MIF));
-		CLOSE_TASK_DATA_SEND_DBG();
-		return;
+		emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_OVER, StatisticMode::STATISTICS_A_MIF));               // 7. 发送测试结束信号
+		CLOSE_TASK_DATA_SEND_DBG();                                                                             // 8. 关闭调试日志
+		return;                                                                                                 // 9. 直接返回
 	}
-	while(Loop && TestCount--)
-	{	
-		WRITE_TASK_DATA_SEND_DBG("TestCount = %lld\n", TestCount);
-		WRITE_LOG_UP_RECORD("\n[本次参数下发开始:%04d]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1);
-		std::shared_ptr<DCWZ::DataNode> Node = DCWZ::DataMana::DataListGlobal.GetHead();
-		for(int i = 0; Node != nullptr && Loop; Node = Node->GetNext(), i++)
+	while (Loop && TestCount--)                                                                                 // 10. 主循环，Loop为true且TestCount大于0时循环
+	{
+		WRITE_TASK_DATA_SEND_DBG("TestCount = %lld\n", TestCount);                                              // 11. 记录当前测试次数
+		WRITE_LOG_UP_RECORD("\n[本次参数下发开始:%04d]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1); // 12. 记录本次参数下发开始
+		std::shared_ptr<DCWZ::DataNode> Node = DCWZ::DataMana::DataListGlobal.GetHead();                        // 13. 获取数据链表头节点
+		for (int i = 0; Node != nullptr && Loop; Node = Node->GetNext(), i++)                                   // 14. 遍历所有数据节点
 		{
-			WRITE_TASK_DATA_SEND_DBG("Send Node\n");
-			// WRITE_TASK_DATA_SEND_DBG("dB = %f, Freq = %llu, DL = %x, DR = %x, AL = %x, AR = %x\n", 
-			// 	Node->GetData()->GetSDG().GetArg().GetDB(), Node->GetData()->GetSDG().GetArg().GetFreq(),
-			// 	Node->GetData()->GetRegCFG().GetDL(), Node->GetData()->GetRegCFG().GetDR(),
-			// 	Node->GetData()->GetRegCFG().GetAL(), Node->GetData()->GetRegCFG().GetAR());
-			Node->GetData()->UpdateCfgCMD();
-			SOCKWZ::SockGlob::Send((char*)DCWZ::DataConstruct::GetRegCfgCMD(), 0x51 * 4 + 1);
-			// WRITE_TASK_DATA_SEND_DBG("Send RegCfg\n");
-			WRITE_LOG_UP_RECORD("\n[本组参数下发开始:%04d]\n", i + 1);
-			TaskChipStatParsing::bPackLogRecord = true;
-			for(int i = 0; i < Node->GetData()->GetSendNum(); )
+			WRITE_TASK_DATA_SEND_DBG("Send Node\n");                                                            // 15. 记录发送节点日志
+			Node->GetData()->UpdateCfgCMD();                                                                    // 16. 更新节点的配置命令
+			SOCKWZ::SockGlob::Send((char*)DCWZ::DataConstruct::GetRegCfgCMD(), 0x51 * 4 + 1);                   // 17. 发送配置命令
+
+			/*新增：在发送0x38数据包前执行收0xAO回包代码*/
+			bool ackReceived = false;
+			for (int tryCount = 0; tryCount < 100 && Loop; ++tryCount) // 最多等1秒
 			{
-				// WRITE_TASK_DATA_SEND_DBG("GetPackInfo(i) Before\n");
-				DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(i);
-				// WRITE_TASK_DATA_SEND_DBG("GetPackInfo(i) After\n");
-				// WRITE_TASK_DATA_SEND_DBG("Fluid 0 = %llx, PackLen = %lld\n", FCT::FluidCtrlGlob->FluidLoad(0), Pack.GetSegAll().GetLen());
-				//if (i == 0 && !ReadyToSendFirstPack)//新增：首包未准备好不发送
-				//	continue; //新增： 未收到参数A0回包，不发首包
-				if(FCT::FluidCtrlGlob->FluidCheckUpdate(0, Pack.GetSegAll().GetLen(), FLUID_SIZE_INDEX0 / 4) == FCT::FluidCheckRes::FLUID_SATISFY)
+				RcvData DataUp;
+				TaskDataSend::QueueParamAck.rear(DataUp); // 取回包（确保你的0xA0回包都进了这个队列）
+				if (DataUp.GetData())
 				{
-					// WRITE_TASK_DATA_SEND_DBG("Fluid Val = %lld, Send Data Len = %lld\n", FCT::FluidCtrlGlob->FluidLoad(0), Pack.GetSegAll().GetLen());
-#ifndef TEST_WITHOUT_BOARD
-					SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());
-					// WRITE_TASK_DATA_SEND_INFO_VERIFY(Pack.GetPackData(), Pack.GetSegAll().GetLen());
-					// WRITE_TASK_DATA_SEND_DBG("Send Pack\n");
-					//if (i == 0)                       //新增：首包发送后清除标志
-					//	ReadyToSendFirstPack = false; //新增 首包发出后清除标志
-#else
-					std::this_thread::sleep_for(std::chrono::milliseconds(10));
-#endif
-					i++;
+					auto argUp = PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN);
+					if (argUp->ram_id == 0x1e && argUp->chk_fail == 0 && argUp->cmd_ack == 1)
+					{
+						ackReceived = true;
+						break;
+					}
 				}
-				if(!Loop)
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			}
+			if (!ackReceived)
+			{
+				WRITE_TASK_DATA_SEND_DBG("No 0xA0 ACK received, aborting this group!\n");
+				break; // 或 return，或继续重试，视你的业务需求
+			}
+
+
+			WRITE_LOG_UP_RECORD("\n[本组参数下发开始:%04d]\n", i + 1);                                          // 18. 记录本组参数下发开始
+			TaskChipStatParsing::bPackLogRecord = true;                                                         // 19. 启用芯片包日志记录
+			for (int i = 0; i < Node->GetData()->GetSendNum(); )                                                // 20. 发送每个数据包
+			{
+				DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(i);                                         // 21. 获取第i个包的信息
+                // 判断流控是否满足，满足则发送
+				if (FCT::FluidCtrlGlob->FluidCheckUpdate(0, Pack.GetSegAll().GetLen(), FLUID_SIZE_INDEX0 / 4) == FCT::FluidCheckRes::FLUID_SATISFY)
+				{
+#ifndef TEST_WITHOUT_BOARD
+					SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());                      // 22. 发送数据包
+#else
+					std::this_thread::sleep_for(std::chrono::milliseconds(10));                                 // 23. 模拟发送延时
+#endif
+					i++;                                                                                        // 24. 发送下一个包
+				}
+				if (!Loop)                                                                                      // 25. 如果Loop为false，提前退出
 				{
 					WRITE_TASK_DATA_SEND_DBG("break\n");
 					break;
 				}
 			}
 			WRITE_TASK_DATA_SEND_DBG("Get Fluid\n");
-			for(; FCT::FluidCtrlGlob->FluidLoad(0) < FLUID_SIZE_INDEX0; )
+                                                                                                                // 等待缓冲区清空
+			for (; FCT::FluidCtrlGlob->FluidLoad(0) < FLUID_SIZE_INDEX0; )
 			{
-				if(Loop)
+				if (Loop)
 				{
-					std::this_thread::sleep_for(std::chrono::duration<long long, std::ratio<1, 100>>(1));
+					std::this_thread::sleep_for(std::chrono::duration<long long, std::ratio<1, 100>>(1));       // 26. 等待流控
 				}
 				else
 				{
@@ -989,35 +1008,34 @@ void TaskDataSend::run()
 					break;
 				}
 			}
-			WRITE_LOG_UP_RECORD("\n[本组参数下发结束:%04d]\n", i + 1);
-			TaskChipStatParsing::bPackLogRecord = false;
+			WRITE_LOG_UP_RECORD("\n[本组参数下发结束:%04d]\n", i + 1);                                          // 27. 记录本组参数下发结束
+			TaskChipStatParsing::bPackLogRecord = false;                                                        // 28. 关闭芯片包日志记录
 			WRITE_TASK_DATA_SEND_DBG("Fluid Buffer Empty\n");
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
-			TaskTestStatistics::ContinousValidNum = Node->GetData()->GetDuration() * 125 - 2;
-			StatisticMode Mode = TASKWZ::StatisticMode::STATISTICS_A_MIF;
-			TaskTestStatistics::QueueStatistcsMODE.front(Mode);
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));                                         // 29. 等待10ms
+			TaskTestStatistics::ContinousValidNum = Node->GetData()->GetDuration() * 125 - 2;                   // 30. 设置连续有效包数
+			StatisticMode Mode = TASKWZ::StatisticMode::STATISTICS_A_MIF;                                       // 31. 设置统计模式
+			TaskTestStatistics::QueueStatistcsMODE.front(Mode);                                                 // 32. 推送统计模式到队列
 			WRITE_TASK_DATA_SEND_DBG("Semaphore Release Statistics a mif\n");
-			SemaWaitForUI.acquire(1);
+			SemaWaitForUI.acquire(1);                                                                           // 33. 等待UI信号量，等待统计完成
 			WRITE_TASK_DATA_SEND_DBG("Semaphore Acquire Statistics a mif\n");
 		}
-		// DCR::DeviceCheckResultGlobal->CheckCompletedCountInc();
-		StatisticMode Mode = TASKWZ::StatisticMode::STATISTICS_A_TIME;
-		TaskTestStatistics::QueueStatistcsMODE.front(Mode);
+                                                                                                                // DCR::DeviceCheckResultGlobal->CheckCompletedCountInc();
+		StatisticMode Mode = TASKWZ::StatisticMode::STATISTICS_A_TIME;                                          // 34. 设置统计模式为A_TIME
+		TaskTestStatistics::QueueStatistcsMODE.front(Mode);                                                     // 35. 推送统计模式到队列
 
 		WRITE_TASK_DATA_SEND_DBG("Semaphore Release Statistics a time\n");
-		SemaWaitForUI.acquire(1);
+		SemaWaitForUI.acquire(1);                                                                               // 36. 等待UI信号量，等待统计完成
 		WRITE_TASK_DATA_SEND_DBG("Semaphore Acquire Statistics a time\n");
-		WRITE_LOG_UP_RECORD("\n[本次参数下发结束:%04d]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount());
+		WRITE_LOG_UP_RECORD("\n[本次参数下发结束:%04d]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount());     // 37. 记录本次参数下发结束
 	}
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_OVER, StatisticMode::STATISTICS_A_MIF));
+	std::this_thread::sleep_for(std::chrono::milliseconds(100));                                                // 38. 等待100ms
+	emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_OVER, StatisticMode::STATISTICS_A_MIF));                   // 39. 发送测试结束信号
 	WRITE_TASK_DATA_SEND_DBG("emit MsgOfStartEnd(TEST_OVER)\n");
-	// std::this_thread::sleep_for(std::chrono::milliseconds(500));
-	SemaWaitForUI.acquire(1);
+	SemaWaitForUI.acquire(1);                                                                                   // 40. 等待UI信号量，确保UI处理完毕
 	WRITE_TASK_DATA_SEND_DBG("Semaphore Acquire Over\n");
-	CLOSE_LOG_UP_RECORD();
-	CLOSE_TASK_DATA_SEND_DBG();
-	CLOSE_TASK_DATA_SEND_INFO_VERIFY();
+	CLOSE_LOG_UP_RECORD();                                                                                      // 41. 关闭上报记录日志
+	CLOSE_TASK_DATA_SEND_DBG();                                                                                 // 42. 关闭调试日志
+	CLOSE_TASK_DATA_SEND_INFO_VERIFY();                                                                         // 43. 关闭信息校验日志
 }
 
 void TaskDataSend::close()
@@ -1030,6 +1048,8 @@ void TaskDataSend::clear()
 {}
 
 QSemaphore TaskDataSend::SemaWaitForUI(0);
+
+TOOLWZ::queue<RcvData, 500, RcvDataDestruct> TaskDataSend::QueueParamAck;//新增：用于接收0xA0参数下发回包的队列定义
 
 //版本号解析
 
@@ -1048,18 +1068,20 @@ void TaskVersionParsing::init()
 
 void TaskVersionParsing::run()
 {
-	OPEN_TASK_VERSION_GET_DBG(LogTaskVersionGet.txt);
+	OPEN_TASK_VERSION_GET_DBG(LogTaskVersionGet.txt);                                                                                      // 1. 打开版本号获取任务的调试日志文件
 
-	//读取版本号
+                                                                                                                                           //读取版本号
 
-	RcvData DataDown(12);
-	FRAME_HEAD_STAR(DataDown.GetData().get())->msgID = 0xa0;
+	RcvData DataDown(12);                                                                                                                  // 2. 创建一个长度为12字节的下行数据包对象 DataDown
+	FRAME_HEAD_STAR(DataDown.GetData().get())->msgID = 0xa0;                                                                               // 3. 设置包头 msgID 为 0xa0（版本号请求）
 	FRAME_HEAD_STAR(DataDown.GetData().get())->rev = 0xf;
 	FRAME_HEAD_STAR(DataDown.GetData().get())->ctlFractstop = 0;
 	FRAME_HEAD_STAR(DataDown.GetData().get())->ctlFractStrt = 0;
 	FRAME_HEAD_STAR(DataDown.GetData().get())->ctlFractMode = 0;
 	FRAME_HEAD_STAR(DataDown.GetData().get())->reserved_base = 0;
-	FRAME_HEAD_STAR(DataDown.GetData().get())->siglen = 8;
+	FRAME_HEAD_STAR(DataDown.GetData().get())->siglen = 8;                                                                                 // 4. 有效数据长度为8字节
+
+                                                                                                                                           // 5. 设置包体参数，构造A0命令
 	PTR_DN_ARG_A0(DataDown.GetData().get() + HEAD_DATA_LEN)->data_bound_num8b = 1;
 	PTR_DN_ARG_A0(DataDown.GetData().get() + HEAD_DATA_LEN)->read_flash2ram = 0;
 	PTR_DN_ARG_A0(DataDown.GetData().get() + HEAD_DATA_LEN)->read_ram = 1;
@@ -1069,56 +1091,54 @@ void TaskVersionParsing::run()
 	PTR_DN_ARG_A0(DataDown.GetData().get() + HEAD_DATA_LEN)->addr_start = 0xd0;
 	PTR_DN_ARG_A0(DataDown.GetData().get() + HEAD_DATA_LEN)->ram_id = 24;
 	PTR_DN_ARG_A0(DataDown.GetData().get() + HEAD_DATA_LEN)->reserved3 = 0;
-	PTR_DN_ARG_A0(DataDown.GetData().get() + HEAD_DATA_LEN)->chksum_head = TOOLWZ::AccVerify(DataDown.GetData().get() + HEAD_DATA_LEN, 8);
-	// WRITE_TASK_VERSION_GET_DBG("chksum_head = 0X%x\n", PTR_DN_ARG_A0(DataDown.GetData().get() + HEAD_DATA_LEN)->chksum_head);
-	RcvData DataUp;
-	while(Loop)																		//只要 Loop 为 true，就循环执行。
+	PTR_DN_ARG_A0(DataDown.GetData().get() + HEAD_DATA_LEN)->chksum_head = TOOLWZ::AccVerify(DataDown.GetData().get() + HEAD_DATA_LEN, 8); // 6. 计算并设置校验和
+
+                                                                                                                                           // WRITE_TASK_VERSION_GET_DBG("chksum_head = 0X%x\n", ...);
+
+	RcvData DataUp;                                                                                                                        // 7. 创建一个上行数据包对象 DataUp
+
+	while (Loop)                                                                                                                           // 8. 只要 Loop 为 true，就循环执行
 	{
-		SOCKWZ::SockGlob::Send(DataDown.GetData().get(), DataDown.GetLen());		//发送下行数据包，请求获取版本号（0xa0包）
-		for(int i = 0; i < 100; i++)												//最多尝试100次从版本号解析队列 QueueVeriosnParsing 取出上行数据包（DataUp）
+		SOCKWZ::SockGlob::Send(DataDown.GetData().get(), DataDown.GetLen());                                                               // 9. 发送下行数据包，请求获取版本号
+
+		for (int i = 0; i < 100; i++)                                                                                                      // 10. 最多尝试100次从队列取出上行数据包
 		{
-			QueueVeriosnParsing.rear(DataUp);
-			if(DataUp.GetData())
+			QueueVeriosnParsing.rear(DataUp);                                                                                              // 11. 从版本号解析队列取出数据包
+			if (DataUp.GetData())                                                                                                          // 12. 如果取到数据
 			{
 				WRITE_TASK_VERSION_GET_DBG("ram_id = %d, chk_fail = %d, cmd_ack = %d\n",
 					PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->ram_id,
 					PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->chk_fail,
-					PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->cmd_ack);		//如果成功取到数据，打印调试信息，显示 ram_id、chk_fail、cmd_ack 字段的值。
-				if(PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->ram_id == 24     
-				&& PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->chk_fail == 0
-				&& PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->cmd_ack == 1)
+					PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->cmd_ack);                                                       // 13. 打印调试信息
+
+                                                                                                                                           // 14. 判断是否为有效的版本号应答包
+				if (PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->ram_id == 24
+					&& PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->chk_fail == 0
+					&& PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->cmd_ack == 1)
 				{
-					WRITE_TASK_VERSION_GET_DBG("Data[0] = 0x%02x Data[1] = 0x%02x Data[2] = 0x%02x Data[3] = 0x%02x Data[4] = 0x%02x Data[5] = 0x%02x Data[6] = 0x%02x Data[7] = 0x%02x\n",
-						((unsigned char*)(DataUp.GetData().get() + HEAD_DATA_LEN))[0], 
-						((unsigned char*)(DataUp.GetData().get() + HEAD_DATA_LEN))[1], 
-						((unsigned char*)(DataUp.GetData().get() + HEAD_DATA_LEN))[2], 
-						((unsigned char*)(DataUp.GetData().get() + HEAD_DATA_LEN))[3],
-						((unsigned char*)(DataUp.GetData().get() + HEAD_DATA_LEN))[4],
-						((unsigned char*)(DataUp.GetData().get() + HEAD_DATA_LEN))[5], 
-						((unsigned char*)(DataUp.GetData().get() + HEAD_DATA_LEN))[6], 
-						((unsigned char*)(DataUp.GetData().get() + HEAD_DATA_LEN))[7]);
-					Version.SEC = PTR_VERSION_UP(DataUp.GetData().get() + 12)->SEC;
+					WRITE_TASK_VERSION_GET_DBG("Data[0] = 0x%02x ... Data[7] = 0x%02x\n", ...);                                            // 15. 打印数据内容
+					Version.SEC = PTR_VERSION_UP(DataUp.GetData().get() + 12)->SEC;                                                        // 16. 解析并保存版本号各字段
 					Version.MIN = PTR_VERSION_UP(DataUp.GetData().get() + 12)->MIN;
 					Version.HOUR = PTR_VERSION_UP(DataUp.GetData().get() + 12)->HOUR;
 					Version.DAY = PTR_VERSION_UP(DataUp.GetData().get() + 12)->DAY;
 					Version.MONTH = PTR_VERSION_UP(DataUp.GetData().get() + 12)->MONTH;
 					Version.YEAR = PTR_VERSION_UP(DataUp.GetData().get() + 12)->YEAR;
 					Version.VER = PTR_VERSION_UP(DataUp.GetData().get() + 12)->VER;
-					emit UpdateBoardVersion();
-					Loop = false;
+					emit UpdateBoardVersion();                                                                                             // 17. 发送信号，通知界面更新版本号
+					Loop = false;                                                                                                          // 18. 退出循环
 					break;
 				}
-					//切换到外部源
 
+                                                                                                                                           // 19. 如果不是有效应答，切换到外部源并重试
 				uint8_t SwitchingLocalSRC[14] = { 0xA0, 0x0F, 0x0A, 0x00, 0x81, 0x15, 0x01, 0x00, 0x50, 0x00, 0x18, 0x00, 0x02, 0xFD };
 				SOCKWZ::SockGlob::Send((char*)SwitchingLocalSRC, 14);
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));                                                               // 20. 等待100ms后重试
 			}
 		}
 	}
-	DataDown.Clear();
-	DataUp.Clear();
-	CLOSE_TASK_VERSION_GET_DBG();
+	DataDown.Clear();                                                                                                                      // 21. 清理下行数据对象
+	DataUp.Clear();                                                                                                                        // 22. 清理上行数据对象
+	CLOSE_TASK_VERSION_GET_DBG();                                                                                                          // 23. 关闭调试日志
 }
 
 void TaskVersionParsing::close()

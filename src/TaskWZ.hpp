@@ -314,6 +314,7 @@ public:
 	void clear();
 
 	bool Loop;
+	static TOOLWZ::queue<RcvData, 500, RcvDataDestruct> QueueParamAck;//新增参数下发配置队列
 	long long TestCount;//测试次数
 	static QSemaphore SemaWaitForUI;
 	static bool ReadyToSendFirstPack;//是否准备好发送第一个包

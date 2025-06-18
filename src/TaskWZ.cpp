@@ -1,7 +1,9 @@
 #include "TaskWZ.hpp"
 #include <QDebug>
+#include <atomic>
 
-namespace TASKWZ{
+namespace TASKWZ
+{
 
 task_wz::task_wz() :QObject(), type(TASK_EMPTY) {}
 
@@ -555,7 +557,7 @@ void task_dispatch::run()
 				// 其他ram_id可根据需要处理
 				break;
 			}
-				// 其他ram_id可根据需要处理
+				
 			default:                                                  // 其他类型的数据包不处理
 				break;
 			}			
@@ -596,16 +598,16 @@ void TaskChipStatParsing::run()
 	while(Loop)
 	{
 		RcvData Data;
-		QueueChipStatParsing.rear(Data);// 从队列尾部取出一个数据包
+		QueueChipStatParsing.rear(Data);                                                                                             // 从队列尾部取出一个数据包
 		if(Data.GetData().get())
 		{
-			if(FRAME_HEAD_STAR(Data.GetData().get())->msgID == 0x28)// 判断数据包类型是否为0x28（芯片状态包）
+			if(FRAME_HEAD_STAR(Data.GetData().get())->msgID == 0x28)                                                                 // 判断数据包类型是否为0x28（芯片状态包）
 			{
-				FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac);// 更新流控缓存
+				FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac);            // 更新流控缓存
 				DCR::DeviceCheckResultGlobal->SetTemperatureInner(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->fpga_heat); // 更新芯片内部温度
-				DCR::DeviceCheckResultGlobal->SetTemperatureEnv(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->ds18b20_16b);// 更新环境温度
-				DCR::DeviceCheckResultGlobal->SetUpPackCount(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->timeStamp_8ms); // 更新上行包计数
-
+				DCR::DeviceCheckResultGlobal->SetTemperatureEnv(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->ds18b20_16b); // 更新环境温度
+				DCR::DeviceCheckResultGlobal->SetUpPackCount(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->timeStamp_8ms);  // 更新上行包计数
+				ReadyForSend38.store(true, std::memory_order_release);                                                               // 新增：收到0x28包后设置标志
 				// 如果启用包日志记录，写入一条记录
 				if(bPackLogRecord)
 				{
@@ -731,73 +733,63 @@ void TaskTestStatistics::init()
 
 void TaskTestStatistics::run()
 {
-	OPEN_TASK_STATISTICS_DBG(LogTaskStatistics.txt);// 打开调试日志
-	WRITE_TASK_STATISTICS_DBG("TaskTestStatistics::run()\n");// 写入调试日志
+	OPEN_TASK_STATISTICS_DBG(LogTaskStatistics.txt);                                                                   // 打开调试日志
+	WRITE_TASK_STATISTICS_DBG("TaskTestStatistics::run()\n");                                                          // 写入调试日志
 	while (Loop)
 	{
-		StatisticMode Mode(StatisticMode::MODE_DEFAULT);// 定义统计模式变量，初始为 MODE_DEFAULT
-		QueueStatistcsMODE.rear(Mode);// 从统计模式队列取出一个统计模式
-		switch (Mode)// 根据不同的统计模式进行处理
+		StatisticMode Mode(StatisticMode::MODE_DEFAULT);                                                               // 定义统计模式变量，初始为 MODE_DEFAULT
+		QueueStatistcsMODE.rear(Mode);                                                                                 // 从统计模式队列取出一个统计模式
+		switch (Mode)                                                                                                  // 根据不同的统计模式进行处理
 		{
-		case MODE_DEFAULT:
-			// 默认模式，不做任何处理
+		case MODE_DEFAULT:                                                                                             // 默认模式，不做任何处理
 			break;
 		case STATISTICS_A_MIF:
-			WRITE_TASK_STATISTICS_DBG("Mode :STATISTICS_A_MIF\n");
-			// 遍历所有板卡和芯片
+			WRITE_TASK_STATISTICS_DBG("Mode :STATISTICS_A_MIF\n");                                                     // 遍历所有板卡和芯片
 			for(int i = 0; i < 8; i ++)
 			{
 				for(int j = 0; j < 4; j++)
 				{
-					// 判断该芯片的连续有效包数是否小于要求
-					if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMif() < ContinousValidNum)
+					//打印统计的连续有效包数
+					qDebug() << "Board" << i << "Chip" << j << "连续有效包数:"<< DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMif()<< "要求:" << ContinousValidNum;
+					if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMif() < ContinousValidNum)// 判断该芯片的连续有效包数是否小于要求
 					{
 						WRITE_TASK_STATISTICS_DBG("Check Result A Mif: False\n");
-						// 如果之前检测结果为 true，需要更新统计
-						if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckResult())
+						if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckResult())                    // 如果之前检测结果为 true，需要更新统计
 						{
-							DCR::DeviceCheckResultGlobal->ChipSatisfiedNumDec();// 满足芯片数减一
+							DCR::DeviceCheckResultGlobal->ChipSatisfiedNumDec();                                       // 满足芯片数减一
 							if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline())
 							{
-								// 如果芯片在线，不满足芯片数加一
-								DCR::DeviceCheckResultGlobal->ChipUnSatisfiedNumInc();
+								DCR::DeviceCheckResultGlobal->ChipUnSatisfiedNumInc();                                 // 如果芯片在线，不满足芯片数加一
 							}
 						}
-						// 更新检测结果为 false
-						DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).UpdateCheckResult(false);
+						DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).UpdateCheckResult(false);               // 更新检测结果为 false
 					}
 					else
 					{
 						WRITE_TASK_STATISTICS_DBG("Check Result A Mif: True\n");
-						// 检测结果为 true
-						DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).UpdateCheckResult(true);
+						DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).UpdateCheckResult(true);                // 检测结果为 true
 					}
 				}
 			}
-			// 统计完成后，发出统计结果信号
-			emit MsgOfStatistics(MsgToCentralWt(TestStat::TEST_RUNNING, StatisticMode::STATISTICS_A_MIF));
+			emit MsgOfStatistics(MsgToCentralWt(TestStat::TEST_RUNNING, StatisticMode::STATISTICS_A_MIF)); // 统计完成后，发出统计结果信号
 			break;
 		case STATISTICS_A_TIME:
 			WRITE_TASK_STATISTICS_DBG("Mode :STATISTICS_A_TIME\n");
-			// 遍历所有板卡和芯片
-			for(int i = 0; i < 8; i++)
+			for(int i = 0; i < 8; i++)                                                                     // 遍历所有板卡和芯片
 			{
 				for(int j = 0; j < 4; j++)
 				{
-					// 如果检测结果为 true，累计满足次数
-					if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckResult())
+					if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckResult())            // 如果检测结果为 true，累计满足次数
 					{
 						WRITE_TASK_STATISTICS_DBG("A TIME Res True\n");
 						DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).CheckSatisfiedCountInc();
 					}
 				}
 			}
-			// 统计完成后，发出统计结果信号
-			emit MsgOfStatistics(MsgToCentralWt(TestStat::TEST_RUNNING, StatisticMode::STATISTICS_A_TIME));
+			emit MsgOfStatistics(MsgToCentralWt(TestStat::TEST_RUNNING, StatisticMode::STATISTICS_A_TIME));// 统计完成后，发出统计结果信号
 			break;
 		default:
-			// 其他未知模式，不做处理
-			break;
+			break;                                                                                         // 其他未知模式，不做处理
 		}
 	}
 	CLOSE_TASK_STATISTICS_DBG();
@@ -949,12 +941,13 @@ void TaskDataSend::run()
 			Node->GetData()->UpdateCfgCMD();                                                                    // 16. 更新节点的配置命令
 			SOCKWZ::SockGlob::Send((char*)DCWZ::DataConstruct::GetRegCfgCMD(), 0x51 * 4 + 1);                   // 17. 发送配置命令
 
-			/*新增：在发送0x38数据包前执行收0xAO回包代码*/
+
+			/**********************新增：在发送0x38数据包前执行检测收0xAO回包代码************************/
 			bool ackReceived = false;
-			for (int tryCount = 0; tryCount < 100 && Loop; ++tryCount) // 最多等1秒
+			for (int tryCount = 0; tryCount < 100 && Loop; ++tryCount)                  // 最多等1秒
 			{
 				RcvData DataUp;
-				TaskDataSend::QueueParamAck.rear(DataUp); // 取回包（确保你的0xA0回包都进了这个队列）
+				TaskDataSend::QueueParamAck.rear(DataUp);                               // 取回包（确保你的0xA0回包都进了这个队列）
 				if (DataUp.GetData())
 				{
 					auto argUp = PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN);
@@ -964,17 +957,85 @@ void TaskDataSend::run()
 						break;
 					}
 				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(10));
+				std::this_thread::sleep_for(std::chrono::milliseconds(320));            //硬件配置后会有一定时间的缓慢上升期，默认20ms，最大320ms
 			}
 			if (!ackReceived)
 			{
 				WRITE_TASK_DATA_SEND_DBG("No 0xA0 ACK received, aborting this group!\n");
-				break; // 或 return，或继续重试，视你的业务需求
+				break;                                                                  // 或 return，或继续重试，视你的业务需求
+			}
+
+			/*******************在收到0xA0回包后，等待配置完成后的第一个0x28包**************************/
+			TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release); // 先清零
+			bool got28 = false;
+			for (int wait28 = 0; wait28 < 200 && Loop; ++wait28) // 最多等2秒
+			{ 
+				if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) {
+					got28 = true;
+					break;
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			}
+			if (!got28) {
+				WRITE_TASK_DATA_SEND_DBG("No 0x28 status packet received after config, aborting!\n");
+				break;
 			}
 
 
 			WRITE_LOG_UP_RECORD("\n[本组参数下发开始:%04d]\n", i + 1);                                          // 18. 记录本组参数下发开始
 			TaskChipStatParsing::bPackLogRecord = true;                                                         // 19. 启用芯片包日志记录
+//			/**********************新增：前20个包手动定时发送************************/ 
+//			const int PRE_SEND_COUNT = 20; // 前20个包手动定时发送
+//			const int PRE_SEND_BURST = 2;  // 第一次连续发2个
+//			const int PRE_SEND_INTERVAL_MS = 8; // 8ms间隔
+//
+//			int totalSendNum = Node->GetData()->GetSendNum();
+//			int i = 0;
+//
+//			// 第一次连续发2个，填半满
+//			for (int burst = 0; burst < PRE_SEND_BURST && i < totalSendNum; ++burst, ++i) 
+//			{
+//#ifndef TEST_WITHOUT_BOARD
+//				SOCKWZ::SockGlob::Send(Node->GetData()->GetPackInfo(i).GetPackData(), Node->GetData()->GetPackInfo(i).GetSegAll().GetLen());
+//#else
+//				std::this_thread::sleep_for(std::chrono::milliseconds(10));
+//#endif
+//			}
+//
+//			// 剩下的前20个包，8ms间隔手动发
+//			for (; i < PRE_SEND_COUNT && i < totalSendNum; ++i) 
+//			{
+//#ifndef TEST_WITHOUT_BOARD
+//				SOCKWZ::SockGlob::Send(Node->GetData()->GetPackInfo(i).GetPackData(), Node->GetData()->GetPackInfo(i).GetSegAll().GetLen());
+//#else
+//				std::this_thread::sleep_for(std::chrono::milliseconds(10));
+//#endif
+//				std::this_thread::sleep_for(std::chrono::milliseconds(PRE_SEND_INTERVAL_MS));
+//			}
+//
+//			// 后续包，恢复流控判断
+//			for (; i < totalSendNum; )
+//			{
+//				DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(i);
+//				if (FCT::FluidCtrlGlob->FluidCheckUpdate(0, Pack.GetSegAll().GetLen(), FLUID_SIZE_INDEX0 / 4) == FCT::FluidCheckRes::FLUID_SATISFY) 
+//				{
+//#ifndef TEST_WITHOUT_BOARD
+//					SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());
+//#else
+//					std::this_thread::sleep_for(std::chrono::milliseconds(10));
+//#endif
+//					i++;
+//				}
+//				else 
+//				{
+//					std::this_thread::sleep_for(std::chrono::milliseconds(1));// 如果流控不满足，短暂sleep，避免CPU空转
+//				}
+//				if (!Loop) 
+//				{
+//					WRITE_TASK_DATA_SEND_DBG("break\n");
+//					break;
+//				}
+//			}
 			for (int i = 0; i < Node->GetData()->GetSendNum(); )                                                // 20. 发送每个数据包
 			{
 				DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(i);                                         // 21. 获取第i个包的信息
@@ -993,6 +1054,7 @@ void TaskDataSend::run()
 					WRITE_TASK_DATA_SEND_DBG("break\n");
 					break;
 				}
+				//std::this_thread::sleep_for(std::chrono::milliseconds(1));										// 1ms延时
 			}
 			WRITE_TASK_DATA_SEND_DBG("Get Fluid\n");
                                                                                                                 // 等待缓冲区清空
@@ -1049,7 +1111,10 @@ void TaskDataSend::clear()
 
 QSemaphore TaskDataSend::SemaWaitForUI(0);
 
-TOOLWZ::queue<RcvData, 500, RcvDataDestruct> TaskDataSend::QueueParamAck;//新增：用于接收0xA0参数下发回包的队列定义
+TOOLWZ::queue<RcvData, 500, RcvDataDestruct> TaskDataSend::QueueParamAck;                                       //新增：用于接收0xA0参数下发回包的队列定义
+std::atomic<bool> TaskChipStatParsing::ReadyForSend38{ false };                                                 // 新增：用于标志是否准备好发送0x38状态包
+
+
 
 //版本号解析
 

@@ -11,6 +11,7 @@
 #include "FluidCtrl.hpp"
 #include "ConfigInit.hpp"
 #include "LogProcess.hpp"
+#include <atomic>
 
 #define MAX_TASK_NUM 50
 
@@ -218,6 +219,7 @@ public:
 	bool Loop;
 	static TOOLWZ::queue<RcvData, 500, RcvDataDestruct> QueueChipStatParsing;
 	static bool bPackLogRecord;//是否记录log
+	static std::atomic<bool> ReadyForSend38;//新增：在28解析线程中确认是否准备好发送38包
 };
 
 #define CREATE_TASK_MNIC_PARSING	TASKWZ::worker_manager::create(new TASKWZ::TaskChipStatParsing(), TASKWZ::worker_type::EXECUTE_THREAD);

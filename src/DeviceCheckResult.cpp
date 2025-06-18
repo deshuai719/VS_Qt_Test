@@ -122,25 +122,27 @@ namespace DCR{
         }
     }
 
+    //动态统计一次测试过程中 SINAD 的最大最小值区间。
     void ChipCheckResult::UpdateRangeSINAD(unsigned short sinad)
     {
-        short res = TCOND::TestCondition::SinadTransfer(sinad);
-        if(res < SINAD_VALID_VALUE_MIN)
+        short res = TCOND::TestCondition::SinadTransfer(sinad); // 将原始sinad值转换为实际dB值（如有缩放或偏移）
+        if (res < SINAD_VALID_VALUE_MIN) // 如果转换后的值小于有效阈值（无效或异常数据），则不处理
         {
-            return;
+            return; // 直接返回
         }
-        if(RangeSINAD.GetLeft() == RangeSINAD.GetRight() && RangeSINAD.GetLeft() == 0)
+        if (RangeSINAD.GetLeft() == RangeSINAD.GetRight() && RangeSINAD.GetLeft() == 0) // 如果区间未初始化（首次赋值）
         {
-            RangeSINAD.SetRange(res, res);
+            RangeSINAD.SetRange(res, res); // 用当前值初始化区间
         }
-        else if(res < RangeSINAD.GetLeft())
+        else if (res < RangeSINAD.GetLeft()) // 如果当前值比区间左端更小
         {
-            RangeSINAD.SetRange(res, RangeSINAD.GetRight());
+            RangeSINAD.SetRange(res, RangeSINAD.GetRight()); // 更新左端为当前值
         }
-        else if(res > RangeSINAD.GetRight())
+        else if (res > RangeSINAD.GetRight()) // 如果当前值比区间右端更大
         {
-            RangeSINAD.SetRange(RangeSINAD.GetLeft(), res);
-        }        
+            RangeSINAD.SetRange(RangeSINAD.GetLeft(), res); // 更新右端为当前值
+        }
+        // 如果当前值在区间内，不做任何操作
     }
 
     //设备检测结果类

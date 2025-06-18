@@ -544,14 +544,14 @@ namespace MenuSocketCFG{
     void DialogSockCFG::InitUI()
     {
         model = new Model;
-        // model->AddItem(ModelItem(AddrType::LOCAL_IP, "192.167.2.111"));
-        // model->AddItem(ModelItem(AddrType::LOCAL_PORT, "8254"));
-        // model->AddItem(ModelItem(AddrType::DEVICE_IP, "192.167.2.67"));
-        // model->AddItem(ModelItem(AddrType::DEVICE_PORT, "8204"));
-        // model->AddItem(ModelItem(AddrType::LOCAL_IP, CFGI::IniFileCFGGlobal->   ReadINI(CFGI::INI_NET_CFG, "NETADDR/LocalIP").toString()));
-        // model->AddItem(ModelItem(AddrType::LOCAL_PORT, CFGI::IniFileCFGGlobal-> ReadINI(CFGI::INI_NET_CFG, "NETADDR/LocalPort").toString()));
-        // model->AddItem(ModelItem(AddrType::DEVICE_IP, CFGI::IniFileCFGGlobal->  ReadINI(CFGI::INI_NET_CFG, "NETADDR/DeviceIP").toString()));
-        // model->AddItem(ModelItem(AddrType::DEVICE_PORT, CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_NET_CFG, "NETADDR/DevicePort").toString()));
+        /* model->AddItem(ModelItem(AddrType::LOCAL_IP, "192.167.2.140"));
+         model->AddItem(ModelItem(AddrType::LOCAL_PORT, "8254"));
+         model->AddItem(ModelItem(AddrType::DEVICE_IP, "192.167.2.240"));
+         model->AddItem(ModelItem(AddrType::DEVICE_PORT, "8204"));*/
+        /* model->AddItem(ModelItem(AddrType::LOCAL_IP, CFGI::IniFileCFGGlobal->   ReadINI(CFGI::INI_NET_CFG, "NETADDR/LocalIP").toString()));
+         model->AddItem(ModelItem(AddrType::LOCAL_PORT, CFGI::IniFileCFGGlobal-> ReadINI(CFGI::INI_NET_CFG, "NETADDR/LocalPort").toString()));
+         model->AddItem(ModelItem(AddrType::DEVICE_IP, CFGI::IniFileCFGGlobal->  ReadINI(CFGI::INI_NET_CFG, "NETADDR/DeviceIP").toString()));
+         model->AddItem(ModelItem(AddrType::DEVICE_PORT, CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_NET_CFG, "NETADDR/DevicePort").toString()));*/
         
         model->AddItem(ModelItem(AddrType::LOCAL_IP, CFGI::IniFileCFGGlobal->   ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalIP").toString()));
         model->AddItem(ModelItem(AddrType::LOCAL_PORT, CFGI::IniFileCFGGlobal-> ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalPort").toString()));
@@ -1146,7 +1146,7 @@ namespace MenuSINADCFG{
         SpinSinadADPOWLeft->setRange(-128, 128);
         SpinSinadADPOWLeft->setSingleStep(1);
         SpinSinadADPOWLeft->setSuffix("dB");
-        SpinSinadADPOWLeft->setValue(60);
+        SpinSinadADPOWLeft->setValue(20);
         SpinSinadADPOWRight = new QSpinBox(this);
         SpinSinadADPOWRight->setFixedSize(100, 24);
         SpinSinadADPOWRight->setRange(-128, 128);

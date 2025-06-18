@@ -1,5 +1,6 @@
 #include "CentralWindow.hpp"
 
+
 namespace CWD{
 
     Range::Range()

@@ -25,6 +25,7 @@ void MNIC::InitMenuBar()
     setMenuBar(MenuBar);
 }
 
+
 void MNIC::InitFileMenu()
 {
     FileMenu = new QMenu("文件", this);

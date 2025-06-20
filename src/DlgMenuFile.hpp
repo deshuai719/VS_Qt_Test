@@ -12,7 +12,7 @@
 #include <QListView>
 #include <QHoverEvent>
 #include <QPlainTextEdit>
-#include <QVboxLayout>
+#include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGroupBox>
 #include <QOverload>
@@ -128,8 +128,11 @@ namespace DlgMenu{
 };
 
 namespace DlgMenuARG{
+
     class Item{
         DCWZ::ARG_RTC_GENERATE Arg;
+        TCOND::TestCondition JudgeCondCodec;
+        TCOND::TestCondition JudgeCondAdpow; // 新增：每条Item独立的判定条件
     public:
         Item();
         Item(DCWZ::ARG_RTC_GENERATE);
@@ -140,6 +143,11 @@ namespace DlgMenuARG{
         void operator=(const Item& as);
         bool operator==(const Item& cmp) const;
         bool operator!=(const Item& cmp) const;
+        /***********新增：分别存储两组条件**************/
+        void SetJudgeCondCodec(const TCOND::TestCondition& cond) { JudgeCondCodec = cond; }
+        void SetJudgeCondAdpow(const TCOND::TestCondition& cond) { JudgeCondAdpow = cond; }
+        TCOND::TestCondition GetJudgeCondCodec() const { return JudgeCondCodec; }
+        TCOND::TestCondition GetJudgeCondAdpow() const { return JudgeCondAdpow; }
         void Paint(QPainter* painter, const QStyleOptionViewItem& option, int row);
     };
 
@@ -220,6 +228,7 @@ namespace DlgMenuARG{
         QDoubleSpinBox* SArgAR;
 
         QPushButton* BtnAdd;
+        //QPushButton* BtnLoadTxt;//新增：从文件配置参数
 
         Model* model;
         Delegate* delegate;
@@ -255,8 +264,12 @@ namespace DlgMenuARG{
         void InitARG();
 
         void AddARG(double, unsigned long long, unsigned int, unsigned char, unsigned char, unsigned char, unsigned char); 
+		//void LoadArgsFromTxt(const QString& filePath);//新增：从文件加载配置参数
+		//void AddArgsFromArray(const ArgParam* arr, int count);//新增：声明一个批量添加配置参数的函数
+
 
     public slots: void AddArg();
+    //public slots: void LoadArgsFromTxtSlot();//新增：声明槽函数
     public slots: void UpdateItemVolume(int);
     public slots: void DelArg(Item);
     public slots: void ShiftUp(int);

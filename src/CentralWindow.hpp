@@ -20,6 +20,7 @@
 #include <QApplication>
 #include <QRandomGenerator>
 #include <QTimer>
+#include "TestCondition.hpp"
 #include "TaskWZ.hpp"
 
 #define VERSION_NUM "圆芯Codec测试软件2503111002--V0"
@@ -67,7 +68,7 @@ namespace CWD{
         void Paint(QPainter*, const QStyleOptionViewItem&, int);
     };
 
-    Q_DECLARE_METATYPE(Item)
+    Q_DECLARE_METATYPE(CWD::Item)
 
     class Model: public QAbstractListModel{
         Q_OBJECT

@@ -172,7 +172,8 @@ namespace MenuSocketCFG{
 };
 
 namespace MenuSINADCFG{
-    class TabFocusEventFilter: public QObject{
+    class TabFocusEventFilter: public QObject
+    {
         Q_OBJECT
     public:
         using QObject::QObject;
@@ -268,7 +269,11 @@ namespace MenuSINADCFG{
     public:
         DialogSinadCFG(QWidget* parent = nullptr);
         ~DialogSinadCFG();
+        TCOND::TestCondition GetCodecTestCondition() const;
+        TCOND::TestCondition GetAdpowTestCondition() const;//新增：获取测试条件
+        void SetTestCondition(const TCOND::TestCondition& codecCond, const TCOND::TestCondition& adpowCond); // 新增:设置判定条件的接口，双参数
     }; 
+   
 };
 
 #endif // _DLGMENUCFG_HPP_

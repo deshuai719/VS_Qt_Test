@@ -966,95 +966,51 @@ void TaskDataSend::run()
 			}
 
 			/*******************在收到0xA0回包后，等待配置完成后的第一个0x28包**************************/
-			TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release); // 先清零
-			bool got28 = false;
-			for (int wait28 = 0; wait28 < 200 && Loop; ++wait28) // 最多等2秒
-			{ 
-				if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) {
-					got28 = true;
-					break;
-				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(10));
-			}
-			if (!got28) {
-				WRITE_TASK_DATA_SEND_DBG("No 0x28 status packet received after config, aborting!\n");
-				break;
-			}
+			//TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release); // 先清零
+			//bool got28 = false;
+			//for (int wait28 = 0; wait28 < 200 && Loop; ++wait28) // 最多等2秒
+			//{ 
+			//	if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) {
+			//		got28 = true;
+			//		break;
+			//	}
+			//	std::this_thread::sleep_for(std::chrono::milliseconds(2));
+			//}
+			//if (!got28) {
+			//	WRITE_TASK_DATA_SEND_DBG("No 0x28 status packet received after config, aborting!\n");
+			//	break;
+			//}
 
 
 			WRITE_LOG_UP_RECORD("\n[本组参数下发开始:%04d]\n", i + 1);                                          // 18. 记录本组参数下发开始
 			TaskChipStatParsing::bPackLogRecord = true;                                                         // 19. 启用芯片包日志记录
-//			/**********************新增：前20个包手动定时发送************************/ 
-//			const int PRE_SEND_COUNT = 20; // 前20个包手动定时发送
-//			const int PRE_SEND_BURST = 2;  // 第一次连续发2个
-//			const int PRE_SEND_INTERVAL_MS = 8; // 8ms间隔
-//
-//			int totalSendNum = Node->GetData()->GetSendNum();
-//			int i = 0;
-//
-//			// 第一次连续发2个，填半满
-//			for (int burst = 0; burst < PRE_SEND_BURST && i < totalSendNum; ++burst, ++i) 
-//			{
-//#ifndef TEST_WITHOUT_BOARD
-//				SOCKWZ::SockGlob::Send(Node->GetData()->GetPackInfo(i).GetPackData(), Node->GetData()->GetPackInfo(i).GetSegAll().GetLen());
-//#else
-//				std::this_thread::sleep_for(std::chrono::milliseconds(10));
-//#endif
-//			}
-//
-//			// 剩下的前20个包，8ms间隔手动发
-//			for (; i < PRE_SEND_COUNT && i < totalSendNum; ++i) 
-//			{
-//#ifndef TEST_WITHOUT_BOARD
-//				SOCKWZ::SockGlob::Send(Node->GetData()->GetPackInfo(i).GetPackData(), Node->GetData()->GetPackInfo(i).GetSegAll().GetLen());
-//#else
-//				std::this_thread::sleep_for(std::chrono::milliseconds(10));
-//#endif
-//				std::this_thread::sleep_for(std::chrono::milliseconds(PRE_SEND_INTERVAL_MS));
-//			}
-//
-//			// 后续包，恢复流控判断
-//			for (; i < totalSendNum; )
-//			{
-//				DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(i);
-//				if (FCT::FluidCtrlGlob->FluidCheckUpdate(0, Pack.GetSegAll().GetLen(), FLUID_SIZE_INDEX0 / 4) == FCT::FluidCheckRes::FLUID_SATISFY) 
-//				{
-//#ifndef TEST_WITHOUT_BOARD
-//					SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());
-//#else
-//					std::this_thread::sleep_for(std::chrono::milliseconds(10));
-//#endif
-//					i++;
-//				}
-//				else 
-//				{
-//					std::this_thread::sleep_for(std::chrono::milliseconds(1));// 如果流控不满足，短暂sleep，避免CPU空转
-//				}
-//				if (!Loop) 
-//				{
-//					WRITE_TASK_DATA_SEND_DBG("break\n");
-//					break;
-//				}
-//			}
+
 			for (int i = 0; i < Node->GetData()->GetSendNum(); )                                                // 20. 发送每个数据包
 			{
-				DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(i);                                         // 21. 获取第i个包的信息
-                // 判断流控是否满足，满足则发送
-				if (FCT::FluidCtrlGlob->FluidCheckUpdate(0, Pack.GetSegAll().GetLen(), FLUID_SIZE_INDEX0 / 4) == FCT::FluidCheckRes::FLUID_SATISFY)
-				{
+				/*if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) 
+				{*/
+					DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(i);                                         // 21. 获取第i个包的信息
+					// 判断流控是否满足，满足则发送
+					if (FCT::FluidCtrlGlob->FluidCheckUpdate(0, Pack.GetSegAll().GetLen(), FLUID_SIZE_INDEX0 / 4) == FCT::FluidCheckRes::FLUID_SATISFY)
+					{
 #ifndef TEST_WITHOUT_BOARD
-					SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());                      // 22. 发送数据包
+						SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());                      // 22. 发送数据包
 #else
-					std::this_thread::sleep_for(std::chrono::milliseconds(10));                                 // 23. 模拟发送延时
+						std::this_thread::sleep_for(std::chrono::milliseconds(10));                                 // 23. 模拟发送延时
 #endif
-					i++;                                                                                        // 24. 发送下一个包
-				}
+						i++;                                                                                        // 24. 发送下一个包
+						TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release); // 发送后清零
+					}
+				/*}*/
+				//else
+				//{
+				//	std::this_thread::sleep_for(std::chrono::milliseconds(1));										// 流控不满足时进行1ms延时
+				//}
 				if (!Loop)                                                                                      // 25. 如果Loop为false，提前退出
 				{
 					WRITE_TASK_DATA_SEND_DBG("break\n");
 					break;
 				}
-				//std::this_thread::sleep_for(std::chrono::milliseconds(1));										// 1ms延时
 			}
 			WRITE_TASK_DATA_SEND_DBG("Get Fluid\n");
                                                                                                                 // 等待缓冲区清空
@@ -1074,7 +1030,7 @@ void TaskDataSend::run()
 			TaskChipStatParsing::bPackLogRecord = false;                                                        // 28. 关闭芯片包日志记录
 			WRITE_TASK_DATA_SEND_DBG("Fluid Buffer Empty\n");
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));                                         // 29. 等待10ms
-			TaskTestStatistics::ContinousValidNum = Node->GetData()->GetDuration() * 125 - 2;                   // 30. 设置连续有效包数
+			TaskTestStatistics::ContinousValidNum = Node->GetData()->GetDuration() * 125 - 1;                   // 30. 设置连续有效包数
 			StatisticMode Mode = TASKWZ::StatisticMode::STATISTICS_A_MIF;                                       // 31. 设置统计模式
 			TaskTestStatistics::QueueStatistcsMODE.front(Mode);                                                 // 32. 推送统计模式到队列
 			WRITE_TASK_DATA_SEND_DBG("Semaphore Release Statistics a mif\n");

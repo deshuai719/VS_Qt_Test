@@ -6,13 +6,15 @@
 #include <sstream>
 #include <algorithm>
 
+
 namespace LPWZ{
 
 class LogProcessor {
-    typedef struct{
+    struct ChipRes {
         std::string Res;
         std::vector<std::string> chipData;
-    } ChipRes;
+        int validCount = 0; // 有效包数
+    } ;
 public:
     // 处理日志文件
     void processLog(const std::string& inputFile, const std::string& outputFile) {
@@ -41,10 +43,13 @@ public:
                 inParameterBlock = false;
                 
                 // 输出排序后的芯片数据
-                for (const auto& pair : chipData) {
+                for (const auto& pair : chipData) 
+                {
                     outFile << pair.first << ", "; // 芯片编号
-                    outFile << "Res:" << pair.second.Res << "\n"; // 芯片结果
-                    for (const auto& data : pair.second.chipData) {
+                    outFile << "Res:" << pair.second.Res << "，"; // 芯片结果
+                    outFile << " 有效包数：" << pair.second.validCount << "\n";//新增，有效包数结果
+                    for (const auto& data : pair.second.chipData) 
+                    {
                         outFile << data << "\n";
                     }
                 }
@@ -80,11 +85,18 @@ public:
                                 line.insert(bracketPos + 1, "Timstamp:" + currentTimestamp + ", ");
                             }
                             size_t resultPos = line.find("FALSE");
-                            if(resultPos != std::string::npos) {
+                            if (resultPos != std::string::npos) {
                                 isRes = false;
                             }
                             // chipLines.push_back(line);
                             chipRes.chipData.push_back(line);
+
+                            //新增：添加判断Res：true数量的自增量
+                            if (line.find("Res: TRUE") != std::string::npos)
+                            {
+                                chipRes.validCount++;
+                            }
+              
                         }
                     }
                     

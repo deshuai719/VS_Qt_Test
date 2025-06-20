@@ -1,5 +1,12 @@
 #include "DlgMenuFile.hpp"
+#include "DlgMenuCFG.hpp"
 #include <QDebug>
+#include <QFileDialog>
+#include <QFile>
+#include <QTextStream>
+#include <QVector>
+#include <QMessageBox>
+#include <QRegularExpression>
 
 namespace DlgMenu{
     ModelItem::ModelItem(){}
@@ -546,6 +553,8 @@ namespace DlgMenuARG{
         return Arg;
     }
 
+   
+
     void Item::operator=(const Item& a)
     {
         Arg = a.GetArg();
@@ -814,10 +823,10 @@ namespace DlgMenuARG{
             painter->drawText(Rc[4], Qt::AlignCenter, "幅度/dB");
             painter->drawText(Rc[5], Qt::AlignCenter, "频率/KHz");
             painter->drawText(Rc[6], Qt::AlignCenter, "持续时间/s");
-            painter->drawText(Rc[7], Qt::AlignCenter, "数字左/dB");
-            painter->drawText(Rc[8], Qt::AlignCenter, "数字右/dB");
-            painter->drawText(Rc[9], Qt::AlignCenter, "模拟左/dB");
-            painter->drawText(Rc[10], Qt::AlignCenter, "模拟右/dB");
+            painter->drawText(Rc[7], Qt::AlignCenter, "Digital/dB");
+            painter->drawText(Rc[8], Qt::AlignCenter, "PGA/dB");
+            painter->drawText(Rc[9], Qt::AlignCenter, "Playback/dB");
+            painter->drawText(Rc[10], Qt::AlignCenter, "Headset/dB");
             painter->drawText(Rc[11], "删除");
 
             painter->restore();
@@ -981,10 +990,10 @@ namespace DlgMenuARG{
         LArgDB = new QLabel("振幅");//, this);
         LArgFreq = new QLabel("频率");//, this);
         LArgDuration = new QLabel("持续时间");//, this);
-        LArgDL = new QLabel("数字左");
-        LArgDR = new QLabel("数字右");
-        LArgAL = new QLabel("模拟左");
-        LArgAR = new QLabel("模拟右");
+        LArgDL = new QLabel("Digital");
+        LArgDR = new QLabel("PGA");
+        LArgAL = new QLabel("Playback");
+        LArgAR = new QLabel("Headset");
 
         SArgDB = new QSpinBox;//(this);
         SArgFreq = new QSpinBox;//(this);
@@ -995,6 +1004,7 @@ namespace DlgMenuARG{
         SArgAR = new QDoubleSpinBox;
 
         BtnAdd = new QPushButton("添加");//, this);
+        //BtnLoadTxt = new QPushButton("文件配置");//新增：实例化文件配置按钮
 
         model = new Model;//(this);
         delegate = new Delegate;//(this);
@@ -1033,6 +1043,7 @@ namespace DlgMenuARG{
         SArgAL->        setFixedSize(80, 24);
         SArgAR->        setFixedSize(80, 24);
         BtnAdd->        setFixedSize(80, 24);
+		//BtnLoadTxt->    setFixedSize(80, 24);//新增：实例化文件配置按钮
         BtnOK->         setFixedSize(80, 24);
         BtnCancel->     setFixedSize(80, 24);
         
@@ -1072,6 +1083,7 @@ namespace DlgMenuARG{
         HLArgUp->addSpacing(10);
         HLArgUp->addWidget(LArgDuration);
         HLArgUp->addWidget(SArgDuration);
+		//HLArgDown->addWidget(BtnLoadTxt);//新增：添加文件配置按钮
         HLArgUp->addStretch();
 
         HLArgDown->addWidget(LArgDL);
@@ -1116,6 +1128,8 @@ namespace DlgMenuARG{
     void DlgARG::Connect()
     {
         connect(BtnAdd, &QPushButton::clicked, this, &DlgARG::AddArg);
+
+		//connect(BtnLoadTxt, &QPushButton::clicked, this, &DlgARG::LoadArgsFromTxtSlot); //新增：连接文件配置按钮
 
         connect(listView, &ListView::UpdateItemVolume, this, &DlgARG::UpdateItemVolume);
 
@@ -1191,9 +1205,9 @@ namespace DlgMenuARG{
         double al = SArgAL->value();
         double ar = SArgAR->value();
 
-        if(freq == 0)
+        if(freq == 0)//如果初始频率为零则循环添加数据
         {
-            double dB[4] = { -1.0, -6.0, -12.0, -18 };
+            double dB[4] = { -1.0, -7.0, -13.0, -19.0 };
             unsigned long long Freq[3] = { 1000, 13000, 25000 };
             AddARG(dB[DefaultArgListCnt / 3], Freq[DefaultArgListCnt % 3], dur, -(dl - 30) / 1.5, dr + 18 , (al + 126) / 1.5, ar + 40);
             DefaultArgListCnt = (DefaultArgListCnt + 1) % 12;
@@ -1204,9 +1218,76 @@ namespace DlgMenuARG{
         }
     }
 
+    /************新增*****************/
+    //void DlgARG::LoadArgsFromTxtSlot()
+    //{
+    //    QString filePath = QFileDialog::getOpenFileName(this, "选择TXT文件", ".", "Text Files (*.txt);;All Files (*.*)");
+    //    if (!filePath.isEmpty()) {
+    //        LoadArgsFromTxt(filePath); // 你实现的批量导入函数
+    //    }
+    //}
+
+    //void DlgARG::LoadArgsFromTxt(const QString& filePath)
+    //{
+    //    QFile file(filePath);
+    //    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    //        QMessageBox::warning(this, "文件打开失败", "无法打开指定的TXT文件！");
+    //        return;
+    //    }
+
+    //    QVector<ArgParam> params;
+    //    QTextStream in(&file);
+    //    while (!in.atEnd()) {
+    //        QString line = in.readLine();
+    //        if (line.trimmed().isEmpty()) continue;
+
+    //        QStringList tokens = line.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
+    //        if (tokens.size() < 7) continue; // 跳过无效行
+
+    //        ArgParam param;
+    //        param.dB = tokens[0].toDouble();
+    //        param.Freq = tokens[1].toULongLong();
+    //        param.Dur = tokens[2].toUInt();
+    //        param.dl = static_cast<unsigned char>(tokens[3].toUInt());
+    //        param.dr = static_cast<unsigned char>(tokens[4].toUInt());
+    //        param.al = static_cast<unsigned char>(tokens[5].toUInt());
+    //        param.ar = static_cast<unsigned char>(tokens[6].toUInt());
+    //        params.append(param);
+    //    }
+    //    file.close();
+
+    //    if (!params.isEmpty()) {
+    //        AddArgsFromArray(params.data(), params.size());
+    //    }
+    //}
+
+
+
+
+    //void DlgARG::AddArgsFromArray(const ArgParam* arr, int count)
+    //{
+    //    for (int i = 0; i < count; ++i) {
+    //        AddARG(arr[i].dB, arr[i].Freq, arr[i].Dur, arr[i].dl, arr[i].dr, arr[i].al, arr[i].ar);
+    //    }
+    //}//新增：批量添加参数的具体实现
+
+
     void DlgARG::UpdateItemVolume(int row)
     {
-        double dl = SArgDL->value();
+        MenuSINADCFG::DialogSinadCFG dlg(this);
+        // 分别取出 codec/adpow 的判定条件
+        const TCOND::TestCondition& codecCond = model->Items[row - 1].GetJudgeCondCodec();
+        const TCOND::TestCondition& adpowCond = model->Items[row - 1].GetJudgeCondAdpow();
+        dlg.SetTestCondition(codecCond, adpowCond);
+        if (dlg.exec() == QDialog::Accepted) {
+            // 分别获取并保存两组条件
+            TCOND::TestCondition newCodecCond = dlg.GetCodecTestCondition();
+            TCOND::TestCondition newAdpowCond = dlg.GetAdpowTestCondition();
+            model->Items[row - 1].SetJudgeCondCodec(newCodecCond);
+            model->Items[row - 1].SetJudgeCondAdpow(newAdpowCond);
+        }
+    }
+       /* double dl = SArgDL->value();
         double dr = SArgDR->value();
         double al = SArgAL->value();
         double ar = SArgAR->value();
@@ -1226,8 +1307,8 @@ namespace DlgMenuARG{
         {
             FLST::FileNodeEXCH<DCWZ::ARG_RTC_GENERATE> NodeExch(NewARG, model->Items[i - 1].GetArg());
             ArgRecord.AddNode(NodeExch);
-        }
-    }
+        }*/
+    
 
     void DlgARG::DelArg(Item im)
     {
@@ -1273,7 +1354,7 @@ namespace DlgMenuARG{
     
     void DlgARG::Recived()
     {
-        // for(int i = 0; i < model->rowCount() - 1; i++)
+        // for(int i = 0; i < model->rowCount() - 1; i++)WriteINI
         // {
         //     WRITE_DLG_MENU_AUDIO_ARG_DBG("DgMenuARG::DlgARG::Recived(), dB = %f, Freq = %llu, DL = %x, DR = %x, AL = %x, AR = %x\n", 
         //         model->Items[i].GetArg().GetAudioARG().GetDB(), model->Items[i].GetArg().GetAudioARG().GetFreq(),

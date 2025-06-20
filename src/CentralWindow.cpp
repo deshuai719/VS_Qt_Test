@@ -711,92 +711,92 @@ namespace CWD{
 
     void CentralWidget::UpdateCheckResult(TASKWZ::MsgToCentralWt msg)
     {
-        WRITE_CENTRAL_WIDGET_DBG("CentralWidget::UpdateCheckResult(), Enter\n");
-        switch (msg.GetStat())
+        WRITE_CENTRAL_WIDGET_DBG("CentralWidget::UpdateCheckResult(), Enter\n");                                          // 记录进入函数
+
+        switch (msg.GetStat())                                                                                            // 根据测试状态分支
         {
         case TASKWZ::TestStat::TEST_START:
-            ClockVal = 0;
-            Clock->start(1000);
-            DCR::DeviceCheckResultGlobal->Init();
-            DCR::DeviceCheckResultGlobal->SetCheckCount(TaskSend->TestCount);
-            TASKWZ::TaskDataSend::SemaWaitForUI.release(1);
+            ClockVal = 0;                                                                                                 // 计时器数值清零
+            Clock->start(1000);                                                                                           // 启动计时器，每秒触发
+            DCR::DeviceCheckResultGlobal->Init();                                                                         // 初始化检测结果
+            DCR::DeviceCheckResultGlobal->SetCheckCount(TaskSend->TestCount);                                             // 设置本次测试总次数
+            TASKWZ::TaskDataSend::SemaWaitForUI.release(1);                                                               // 通知UI可以继续
             break;
         case TASKWZ::TestStat::TEST_RUNNING:
-            WRITE_CENTRAL_WIDGET_DBG("case TESTRUNNING\n");
-            switch (msg.GetMode())
+            WRITE_CENTRAL_WIDGET_DBG("case TESTRUNNING\n");                                                               // 记录调试信息
+            switch (msg.GetMode())                                                                                        // 根据统计模式分支
             {
             case TASKWZ::STATISTICS_A_MIF:
-                WRITE_CENTRAL_WIDGET_DBG("case: STATISTICS_A_MIF Enter\n");
-                for(int i = 0; i < 8; i++)
+                WRITE_CENTRAL_WIDGET_DBG("case: STATISTICS_A_MIF Enter\n");                                               // 记录调试信息
+                for (int i = 0; i < 8; i++)                                                                               // 遍历8块板卡
                 {
-                    for(int j = 0; j < 4; j++)
+                    for (int j = 0; j < 4; j++)                                                                           // 每块4个芯片
                     {
                         Models[i].UpdateItem(j + 1, CWD::Item(
-                            DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline(),
-                            Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckSatisfiedCount(), 
-                                DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()), 
-                            Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetRangeSINAD())
+                            DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline(),                         // 芯片是否在线
+                            Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckSatisfiedCount(),
+                                DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()),                                  // 满足/总次数
+                            Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetRangeSINAD())                 // SINAD范围
                         ));
-                        DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetCheckPacksOfMif(0);
-                        DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetChipTestStat(DCR::WAITING_FOR_TESTING);
+                        DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetCheckPacksOfMif(0);                     // MIF包计数清零
+                        DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetChipTestStat(DCR::WAITING_FOR_TESTING); // 状态设为等待测试
                     }
-                }       
-                WRITE_CENTRAL_WIDGET_DBG("for(for()) after\n");
-                POnlineChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipOnLineNum()));                
-                TASKWZ::TaskDataSend::SemaWaitForUI.release(1);
-                WRITE_CENTRAL_WIDGET_DBG("case: STATISTICS_A_MIF Leave\n");
+                }
+                WRITE_CENTRAL_WIDGET_DBG("for(for()) after\n");                                                           // 记录调试信息
+                POnlineChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipOnLineNum()));              // 更新在线芯片数
+                TASKWZ::TaskDataSend::SemaWaitForUI.release(1);                                                           // 通知UI可以继续
+                WRITE_CENTRAL_WIDGET_DBG("case: STATISTICS_A_MIF Leave\n");                                               // 记录调试信息
                 break;
             case TASKWZ::STATISTICS_A_TIME:
-                WRITE_CENTRAL_WIDGET_DBG("case: STATISTICS_A_TIME\n");
-                for(int i = 0; i < 8; i++)
+                WRITE_CENTRAL_WIDGET_DBG("case: STATISTICS_A_TIME\n");                                                    // 记录调试信息
+                for (int i = 0; i < 8; i++)                                                                               // 遍历8块板卡
                 {
-                    for(int j = 0; j < 4; j++)
+                    for (int j = 0; j < 4; j++)                                                                           // 每块4个芯片
                     {
                         Models[i].UpdateItem(j + 1, CWD::Item(
-                            DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline(),
-                            Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckSatisfiedCount(), 
-                                DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1), 
-                            Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetRangeSINAD())
+                            DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline(),                         // 芯片是否在线
+                            Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckSatisfiedCount(),
+                                DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1),                              // 满足/总次数+1
+                            Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetRangeSINAD())                 // SINAD范围
                         ));
                     }
                 }
-                PTestedNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1));
-
-                POnlineChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipOnLineNum()));
-                PSatisfiedChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipSatisfiedNum()));
-                PRejectionChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipUnSatisfiedNum()));
-                DCR::DeviceCheckResultGlobal->Reset();
-                DCR::DeviceCheckResultGlobal->CheckCompletedCountInc();
-                TASKWZ::TaskDataSend::SemaWaitForUI.release(1);
+                PTestedNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1));        // 更新已测试次数
+                POnlineChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipOnLineNum()));              // 更新在线芯片数
+                PSatisfiedChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipSatisfiedNum()));        // 更新通过芯片数
+                PRejectionChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipUnSatisfiedNum()));      // 更新失败芯片数
+                DCR::DeviceCheckResultGlobal->Reset();                                                                    // 重置检测结果
+                DCR::DeviceCheckResultGlobal->CheckCompletedCountInc();                                                   // 已完成测试数加1
+                TASKWZ::TaskDataSend::SemaWaitForUI.release(1);                                                           // 通知UI可以继续
                 break;
             default:
                 break;
-            }        
+            }
             break;
         case TASKWZ::TestStat::TEST_OVER:
         {
-            WRITE_CENTRAL_WIDGET_DBG("TEST OVER\n");
-            std::unique_lock lock(mtx);
-            Clock->stop();
-            if(TaskSend)
+            WRITE_CENTRAL_WIDGET_DBG("TEST OVER\n");                                                                      // 记录调试信息
+            std::unique_lock lock(mtx);                                                                                   // 加锁，保证线程安全
+            Clock->stop();                                                                                                // 停止计时器
+            if (TaskSend)
             {
-                disconnect(TaskSend, &TASKWZ::TaskDataSend::MsgOfStartEnd, this, &CentralWidget::UpdateCheckResult);
-                TaskSend->close();
-                TaskSend = nullptr;
+                disconnect(TaskSend, &TASKWZ::TaskDataSend::MsgOfStartEnd, this, &CentralWidget::UpdateCheckResult);      // 断开信号
+                TaskSend->close();                                                                                        // 关闭任务
+                TaskSend = nullptr;                                                                                       // 释放对象
             }
-            TOOLWZ::stack_wz<TASKWZ::task_type> stack_end;
-            stack_end.push(TASKWZ::TASK_DATA_SEND);
-            CREATE_TASK_END(stack_end);
-            StatOfBtnStart = true;
-            BtnStartTest.setText("开始测试");
-            LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", "./LOG/LogUpRecordProcessed.log");
-            lock.unlock();
+            TOOLWZ::stack_wz<TASKWZ::task_type> stack_end;                                                                // 创建任务类型栈
+            stack_end.push(TASKWZ::TASK_DATA_SEND);                                                                       // 压入“数据发送任务”
+            CREATE_TASK_END(stack_end);                                                                                   // 批量关闭任务
+            StatOfBtnStart = true;                                                                                        // 状态切换为“未测试”
+            BtnStartTest.setText("开始测试");                                                                                 // 按钮文本切换为“开始测试”
+            LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", "./LOG/LogUpRecordProcessed.log");                   // 处理日志文件
+            lock.unlock();                                                                                                // 解锁
         }
-            break;
+        break;
         default:
             break;
         }
-        WRITE_CENTRAL_WIDGET_DBG("CentralWidget::UpdateCheckResult(), End\n");
+        WRITE_CENTRAL_WIDGET_DBG("CentralWidget::UpdateCheckResult(), End\n");                                            // 记录离开函数
     }
 
     void CentralWidget::UpdateVersion()

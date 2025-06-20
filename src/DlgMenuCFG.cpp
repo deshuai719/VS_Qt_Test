@@ -544,19 +544,19 @@ namespace MenuSocketCFG{
     void DialogSockCFG::InitUI()
     {
         model = new Model;
-        /* model->AddItem(ModelItem(AddrType::LOCAL_IP, "192.167.2.140"));
+         model->AddItem(ModelItem(AddrType::LOCAL_IP, "192.167.2.140"));
          model->AddItem(ModelItem(AddrType::LOCAL_PORT, "8254"));
          model->AddItem(ModelItem(AddrType::DEVICE_IP, "192.167.2.240"));
-         model->AddItem(ModelItem(AddrType::DEVICE_PORT, "8204"));*/
+         model->AddItem(ModelItem(AddrType::DEVICE_PORT, "8204"));
         /* model->AddItem(ModelItem(AddrType::LOCAL_IP, CFGI::IniFileCFGGlobal->   ReadINI(CFGI::INI_NET_CFG, "NETADDR/LocalIP").toString()));
          model->AddItem(ModelItem(AddrType::LOCAL_PORT, CFGI::IniFileCFGGlobal-> ReadINI(CFGI::INI_NET_CFG, "NETADDR/LocalPort").toString()));
          model->AddItem(ModelItem(AddrType::DEVICE_IP, CFGI::IniFileCFGGlobal->  ReadINI(CFGI::INI_NET_CFG, "NETADDR/DeviceIP").toString()));
          model->AddItem(ModelItem(AddrType::DEVICE_PORT, CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_NET_CFG, "NETADDR/DevicePort").toString()));*/
         
-        model->AddItem(ModelItem(AddrType::LOCAL_IP, CFGI::IniFileCFGGlobal->   ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalIP").toString()));
+      /*  model->AddItem(ModelItem(AddrType::LOCAL_IP, CFGI::IniFileCFGGlobal->   ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalIP").toString()));
         model->AddItem(ModelItem(AddrType::LOCAL_PORT, CFGI::IniFileCFGGlobal-> ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalPort").toString()));
         model->AddItem(ModelItem(AddrType::DEVICE_IP, CFGI::IniFileCFGGlobal->  ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/DeviceIP").toString()));
-        model->AddItem(ModelItem(AddrType::DEVICE_PORT, CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/DevicePort").toString()));
+        model->AddItem(ModelItem(AddrType::DEVICE_PORT, CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/DevicePort").toString()));*/
 
         delegate = new Delegate;
         view = new ListView;
@@ -1089,7 +1089,8 @@ namespace MenuSINADCFG{
         CLOSE_DLG_SINADCFG_MENU_DBG();
     }
 
-    void DialogSinadCFG::InitUI()
+    /*****************Sinad的界面配置****************************/
+    void DialogSinadCFG::InitUI()  
     {
         LabelSinadCodec = new QLabel;
         LabelSinadCodec->setText("SINAD阈值/dB");
@@ -1146,7 +1147,7 @@ namespace MenuSINADCFG{
         SpinSinadADPOWLeft->setRange(-128, 128);
         SpinSinadADPOWLeft->setSingleStep(1);
         SpinSinadADPOWLeft->setSuffix("dB");
-        SpinSinadADPOWLeft->setValue(20);
+        SpinSinadADPOWLeft->setValue(0);
         SpinSinadADPOWRight = new QSpinBox(this);
         SpinSinadADPOWRight->setFixedSize(100, 24);
         SpinSinadADPOWRight->setRange(-128, 128);
@@ -1443,4 +1444,35 @@ namespace MenuSINADCFG{
         SpinVppRMSADPOWRight    ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppRMS().GetRight());
     }
 
+    /***********新增：读取条件的实现****************/
+   // DlgMenuCFG.cpp
+    TCOND::TestCondition MenuSINADCFG::DialogSinadCFG::GetCodecTestCondition() const
+    {
+        return Cond ? Cond[0] : TCOND::TestCondition();
+    }
+    TCOND::TestCondition MenuSINADCFG::DialogSinadCFG::GetAdpowTestCondition() const
+    {
+        return Cond ? Cond[1] : TCOND::TestCondition();
+    }
+
+    void MenuSINADCFG::DialogSinadCFG::SetTestCondition(
+        const TCOND::TestCondition& codecCond,
+        const TCOND::TestCondition& adpowCond)
+    {
+        // Codec 区域
+        SpinSinadCodecLeft->setValue(codecCond.GetRangeSINAD().GetLeft());
+        SpinSinadCodecRight->setValue(codecCond.GetRangeSINAD().GetRight());
+        SpinVppPTPCodecLeft->setValue(codecCond.GetRangeVppPTP().GetLeft());
+        SpinVppPTPCodecRight->setValue(codecCond.GetRangeVppPTP().GetRight());
+        SpinVppRMSCodecLeft->setValue(codecCond.GetRangeVppRMS().GetLeft());
+        SpinVppRMSCodecRight->setValue(codecCond.GetRangeVppRMS().GetRight());
+
+        // ADPOW 区域
+        SpinSinadADPOWLeft->setValue(adpowCond.GetRangeSINAD().GetLeft());
+        SpinSinadADPOWRight->setValue(adpowCond.GetRangeSINAD().GetRight());
+        SpinVppPTPADPOWLeft->setValue(adpowCond.GetRangeVppPTP().GetLeft());
+        SpinVppPTPADPOWRight->setValue(adpowCond.GetRangeVppPTP().GetRight());
+        SpinVppRMSADPOWLeft->setValue(adpowCond.GetRangeVppRMS().GetLeft());
+        SpinVppRMSADPOWRight->setValue(adpowCond.GetRangeVppRMS().GetRight());
+    }
 }; // namespace MenuSINADCFG

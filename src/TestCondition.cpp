@@ -71,20 +71,36 @@ namespace TCOND{
         RangeVppRMS = range;
     }
 
-    Range TestCondition::GetRangeSINAD() const
-    {
+    Range& TestCondition::GetRangeSINAD() {
+        return RangeSINAD;
+    }
+    const Range& TestCondition::GetRangeSINAD() const {
         return RangeSINAD;
     }
 
-    Range TestCondition::GetRangeVppPTP() const
-    {
+    Range& TestCondition::GetRangeVppPTP() {
+        return RangeVppPTP;
+    }
+    const Range& TestCondition::GetRangeVppPTP() const {
         return RangeVppPTP;
     }
 
-    Range TestCondition::GetRangeVppRMS() const
-    {
+    Range& TestCondition::GetRangeVppRMS() {
         return RangeVppRMS;
     }
+    const Range& TestCondition::GetRangeVppRMS() const {
+        return RangeVppRMS;
+    }
+
+    //Range TestCondition::GetRangeVppPTP() const
+    //{
+    //    return RangeVppPTP;
+    //}
+
+    //Range TestCondition::GetRangeVppRMS() const
+    //{
+    //    return RangeVppRMS;
+    //}
 
     bool TestCondition::CheckSINAD(unsigned short sinad) const
     {

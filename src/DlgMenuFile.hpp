@@ -144,7 +144,11 @@ namespace DlgMenuARG{
         bool operator==(const Item& cmp) const;
         bool operator!=(const Item& cmp) const;
         /***********新增：分别存储两组条件**************/
-        void SetJudgeCondCodec(const TCOND::TestCondition& cond) { JudgeCondCodec = cond; }
+        void SetJudgeCondCodec(const TCOND::TestCondition& cond) 
+        { 
+            qDebug() << "SetJudgeCondCodec: SINAD_L=" << cond.GetRangeSINAD().GetLeft();
+            JudgeCondCodec = cond; 
+        }
         void SetJudgeCondAdpow(const TCOND::TestCondition& cond) { JudgeCondAdpow = cond; }
         TCOND::TestCondition GetJudgeCondCodec() const { return JudgeCondCodec; }
         TCOND::TestCondition GetJudgeCondAdpow() const { return JudgeCondAdpow; }
@@ -264,6 +268,11 @@ namespace DlgMenuARG{
         void InitARG();
 
         void AddARG(double, unsigned long long, unsigned int, unsigned char, unsigned char, unsigned char, unsigned char); 
+        //新增：重载AddARG
+        void AddARG(double db, unsigned long long freq, unsigned int dur,
+            unsigned char dl, unsigned char dr, unsigned char al, unsigned char ar,
+            const TCOND::TestCondition& codecCond,
+            const TCOND::TestCondition& adpowCond);
 		//void LoadArgsFromTxt(const QString& filePath);//新增：从文件加载配置参数
 		//void AddArgsFromArray(const ArgParam* arr, int count);//新增：声明一个批量添加配置参数的函数
 

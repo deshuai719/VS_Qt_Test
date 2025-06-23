@@ -1,5 +1,6 @@
 #include "DlgMenuFile.hpp"
 #include "DlgMenuCFG.hpp"
+
 #include <QDebug>
 #include <QFileDialog>
 #include <QFile>
@@ -65,6 +66,7 @@ namespace DlgMenu{
 
     bool Model::AddItem(ModelItem item)
     {
+        
         // WRITE_DLG_FILE_MENU("Model::AddItem() Enter\n");
         for(auto it = Items.begin(); it != Items.end(); ++it)
         {
@@ -542,9 +544,18 @@ namespace DlgMenu{
 namespace DlgMenuARG{
     Item::Item(){}
 
-    Item::Item(DCWZ::ARG_RTC_GENERATE a):Arg(a){}
+    Item::Item(DCWZ::ARG_RTC_GENERATE a)
+        :Arg(a),
+        JudgeCondCodec(),   // 默认构造
+        JudgeCondAdpow()    // 默认构造
+    {}
 
-    Item::Item(const Item& cp):Arg(cp.Arg){}
+    Item::Item(const Item& cp)
+        :Arg(cp.Arg),
+		//新增：补全判定条件的拷贝构造函数
+        JudgeCondCodec(cp.JudgeCondCodec),
+        JudgeCondAdpow(cp.JudgeCondAdpow)
+    {}
 
     Item::~Item(){}
 
@@ -558,6 +569,9 @@ namespace DlgMenuARG{
     void Item::operator=(const Item& a)
     {
         Arg = a.GetArg();
+        //新增：补全判定条件的
+        JudgeCondCodec = a.JudgeCondCodec;
+        JudgeCondAdpow = a.JudgeCondAdpow;
     }
 
     bool Item::operator==(const Item& cmp) const
@@ -643,6 +657,7 @@ namespace DlgMenuARG{
 
     bool Model::AddItem(Item item)
     {
+   /*     qDebug() << "Model::AddItem: codecCond.SINAD_L=" << item.GetJudgeCondCodec().GetRangeSINAD().GetLeft();*/
         for(auto mem : Items)
         {
             if(mem == item)
@@ -1168,7 +1183,38 @@ namespace DlgMenuARG{
             unsigned char dr = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, DR)).toUInt();
             unsigned char al = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, AL)).toUInt();
             unsigned char ar = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, AR)).toUInt();
-            AddARG(dB, Freq, Dur, dl, dr, al, ar);
+
+            // 新增：读取判定条件
+            TCOND::TestCondition codecCond, adpowCond;
+            // 新增：codec
+            double codecSinadL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_SINAD_L)).toDouble();
+            double codecSinadR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_SINAD_R)).toDouble();
+     /*       qDebug() << "Codec_SINAD_L:" << codecSinadL;*/
+            codecCond.GetRangeSINAD().SetRange(codecSinadL, codecSinadR);
+
+            double codecVppPTPL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_VppPTP_L)).toDouble();
+            double codecVppPTPR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_VppPTP_R)).toDouble();
+            codecCond.GetRangeVppPTP().SetRange(codecVppPTPL, codecVppPTPR);
+
+            double codecVppRMSL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_VppRMS_L)).toDouble();
+            double codecVppRMSR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_VppRMS_R)).toDouble();
+            codecCond.GetRangeVppRMS().SetRange(codecVppRMSL, codecVppRMSR);
+
+            // 新增： adpow
+            double adpowSinadL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_SINAD_L)).toDouble();
+            double adpowSinadR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_SINAD_R)).toDouble();
+            adpowCond.GetRangeSINAD().SetRange(adpowSinadL, adpowSinadR);
+
+            double adpowVppPTPL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_VppPTP_L)).toDouble();
+            double adpowVppPTPR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_VppPTP_R)).toDouble();
+            adpowCond.GetRangeVppPTP().SetRange(adpowVppPTPL, adpowVppPTPR);
+
+            double adpowVppRMSL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_VppRMS_L)).toDouble();
+            double adpowVppRMSR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_VppRMS_R)).toDouble();
+            adpowCond.GetRangeVppRMS().SetRange(adpowVppRMSL, adpowVppRMSR);
+
+            //qDebug() << "InitARG i=" << i << "Codec_SINAD_L=" << codecSinadL << "Codec_SINAD_R=" << codecSinadR;
+            AddARG(dB, Freq, Dur, dl, dr, al, ar, codecCond, adpowCond);
         }
 
         TOOLWZ::stack_wz<TASKWZ::task_type> stack_join;
@@ -1181,20 +1227,46 @@ namespace DlgMenuARG{
         ArgRecord.BZero();
     }
 
-    void DlgARG::AddARG(double db, unsigned long long freq, unsigned int dur, 
-        unsigned char dl, unsigned char dr, unsigned char al, unsigned char ar)
+    void DlgARG::AddARG(double db, unsigned long long freq, unsigned int dur,
+        unsigned char dl, unsigned char dr, unsigned char al, unsigned char ar,
+        const TCOND::TestCondition& codecCond,
+        const TCOND::TestCondition& adpowCond)
     {
-        if(model->AddItem(Item(DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG(dl, dr, al, ar)))))
+        ////qDebug() << "AddARG: codecCond.SINAD_L=" << codecCond.GetRangeSINAD().GetLeft()
+        //    << "codecCond.SINAD_R=" << codecCond.GetRangeSINAD().GetRight();
+        Item item(DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG(dl, dr, al, ar)));
+        item.SetJudgeCondCodec(codecCond);
+        item.SetJudgeCondAdpow(adpowCond);
+
+        if (model->AddItem(item))
         {
-            FLST::FileNode<DCWZ::ARG_RTC_GENERATE> NodeAdd(DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG<unsigned char>(dl, dr, al, ar)), FLST::FileOPT::ADD_FILE);
-            if(!ArgRecord.AddNode(NodeAdd))
+            FLST::FileNode<DCWZ::ARG_RTC_GENERATE> NodeAdd(
+                DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG<unsigned char>(dl, dr, al, ar)),
+                FLST::FileOPT::ADD_FILE);
+            if (!ArgRecord.AddNode(NodeAdd))
             {
-                FLST::FileNode<DCWZ::ARG_RTC_GENERATE> NodeTB(DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG<unsigned char>(dl, dr, al, ar)), FLST::FileOPT::TO_BOTTOM);
+                FLST::FileNode<DCWZ::ARG_RTC_GENERATE> NodeTB(
+                    DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG<unsigned char>(dl, dr, al, ar)),
+                    FLST::FileOPT::TO_BOTTOM);
                 ArgRecord.AddNode(NodeTB);
             }
         }
+        /*qDebug() << "AddARG: codecCond.SINAD_L=" << codecCond.GetRangeSINAD().GetLeft()
+            << "codecCond.SINAD_R=" << codecCond.GetRangeSINAD().GetRight();*/
     }
 
+    void  DlgARG::AddARG(double db, unsigned long long freq, unsigned int dur,
+        unsigned char dl, unsigned char dr, unsigned char al, unsigned char ar)
+    {
+       
+        // 新增：初始化判定条件（可根据实际情况设定默认值）
+        TCOND::TestCondition defaultCodecCond;  // 你可以自定义默认值
+        TCOND::TestCondition defaultAdpowCond;  // 你可以自定义默认值
+
+        AddARG(db, freq, dur, dl, dr, al, ar, defaultCodecCond, defaultAdpowCond);
+
+    }
+    
     void DlgARG::AddArg()
     {
         char db = SArgDB->value();
@@ -1275,12 +1347,13 @@ namespace DlgMenuARG{
     void DlgARG::UpdateItemVolume(int row)
     {
         MenuSINADCFG::DialogSinadCFG dlg(this);
-        // 分别取出 codec/adpow 的判定条件
+        // 新增：分别取出 codec/adpow 的判定条件
         const TCOND::TestCondition& codecCond = model->Items[row - 1].GetJudgeCondCodec();
+        //qDebug() << "UpdateItemVolume: codecCond.SINAD_L=" << codecCond.GetRangeSINAD().GetLeft();
         const TCOND::TestCondition& adpowCond = model->Items[row - 1].GetJudgeCondAdpow();
         dlg.SetTestCondition(codecCond, adpowCond);
         if (dlg.exec() == QDialog::Accepted) {
-            // 分别获取并保存两组条件
+            // 新增：分别获取并保存两组条件
             TCOND::TestCondition newCodecCond = dlg.GetCodecTestCondition();
             TCOND::TestCondition newAdpowCond = dlg.GetAdpowTestCondition();
             model->Items[row - 1].SetJudgeCondCodec(newCodecCond);
@@ -1381,6 +1454,26 @@ namespace DlgMenuARG{
             CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/DR").arg(i), QString("%1").arg(model->Items[i].GetArg().GetRegCfgARG().GetDR()));
             CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/AL").arg(i), QString("%1").arg(model->Items[i].GetArg().GetRegCfgARG().GetAL()));
             CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/AR").arg(i), QString("%1").arg(model->Items[i].GetArg().GetRegCfgARG().GetAR()));
+
+            //新增： 保存判定条件
+            const TCOND::TestCondition& codecCond = model->Items[i].GetJudgeCondCodec();
+            const TCOND::TestCondition& adpowCond = model->Items[i].GetJudgeCondAdpow();
+
+            // 新增：codec
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/Codec_SINAD_L").arg(i), QString::number(codecCond.GetRangeSINAD().GetLeft()));
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/Codec_SINAD_R").arg(i), QString::number(codecCond.GetRangeSINAD().GetRight()));
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/Codec_VppPTP_L").arg(i), QString::number(codecCond.GetRangeVppPTP().GetLeft()));
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/Codec_VppPTP_R").arg(i), QString::number(codecCond.GetRangeVppPTP().GetRight()));
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/Codec_VppRMS_L").arg(i), QString::number(codecCond.GetRangeVppRMS().GetLeft()));
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/Codec_VppRMS_R").arg(i), QString::number(codecCond.GetRangeVppRMS().GetRight()));
+
+            // 新增：adpow
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/Adpow_SINAD_L").arg(i), QString::number(adpowCond.GetRangeSINAD().GetLeft()));
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/Adpow_SINAD_R").arg(i), QString::number(adpowCond.GetRangeSINAD().GetRight()));
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/Adpow_VppPTP_L").arg(i), QString::number(adpowCond.GetRangeVppPTP().GetLeft()));
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/Adpow_VppPTP_R").arg(i), QString::number(adpowCond.GetRangeVppPTP().GetRight()));
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/Adpow_VppRMS_L").arg(i), QString::number(adpowCond.GetRangeVppRMS().GetLeft()));
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/Adpow_VppRMS_R").arg(i), QString::number(adpowCond.GetRangeVppRMS().GetRight()));
         }
     }
 

@@ -33,9 +33,15 @@ namespace TCOND{
         void SetRangeSINAD(Range range);
         void SetRangeVppPTP(Range range);
         void SetRangeVppRMS(Range range);
-        Range GetRangeSINAD() const;
+        /*Range GetRangeSINAD() const;
         Range GetRangeVppPTP() const;
-        Range GetRangeVppRMS() const;
+        Range GetRangeVppRMS() const;*/
+        Range& GetRangeSINAD();
+        const Range& GetRangeSINAD() const;
+        Range& GetRangeVppPTP();
+        const Range& GetRangeVppPTP() const;
+        Range& GetRangeVppRMS();
+        const Range& GetRangeVppRMS() const;
         bool CheckSINAD(unsigned short sinad) const;
         bool CheckVppPTP(unsigned short vpp) const;
         bool CheckVppRMS(unsigned short rms) const;

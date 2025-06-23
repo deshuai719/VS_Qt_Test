@@ -330,6 +330,8 @@ namespace LWZ{
 
 #define OPEN_LOG_UP_RECORD(path)   LWZ::Log::LogInstance->Init(LOG_UP_RECORD_INDEX, QString(PRE_FILE_DBG + #path).toStdString().c_str())
 #define WRITE_LOG_UP_RECORD(fmt, ...)   LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, fmt, __VA_ARGS__)
+#define WRITE_LOG_UP_PARAM_RECORD(...) LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  下发参数: dB=%.1f, Freq=%llu, Dur=%u, DL=%d, DR=%d, AL=%d, AR=%d\n", __VA_ARGS__)//新增：日志写参数
+#define WRITE_LOG_UP_COND_RECORD(...)  LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  测试条件: Codec SINAD[%.1f,%.1f], VppPTP[%.1f,%.1f], VppRMS[%.1f,%.1f]\n", __VA_ARGS__)//新增：日志写判定条件
 #define WRITE_LOG_UP_PACK_RECORD(...)   LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "\n测试次数：%4d, 时标:%5d\n", __VA_ARGS__)
 #define WRITE_LOG_UP_CHIP_RECORD(...)   LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  芯片编号：J[%d]S[%d]\n    Codec Left [Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s],\n    Codec Right[Siand:%4d, Vpp:%5d, Rms:%5d, Res:%s],\n    AdPow      [Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s]\n", __VA_ARGS__)
 #define CLOSE_LOG_UP_RECORD()   LWZ::Log::LogInstance->Close(LOG_UP_RECORD_INDEX)

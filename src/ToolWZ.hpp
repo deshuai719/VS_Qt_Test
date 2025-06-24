@@ -33,7 +33,8 @@ namespace TOOLWZ{
     	bool empty();
     	bool rear(T& get);
     	bool rear_with_destruct(T& get);
-    	bool front(T& add);
+    	bool front(T& 
+        );
     	bool get_with_overflow(T& get);
     	void add_even_full(T& add);
     	bool get_with_lock(T& get);

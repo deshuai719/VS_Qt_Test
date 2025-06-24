@@ -966,20 +966,20 @@ void TaskDataSend::run()
 			}
 
 			/*******************在收到0xA0回包后，等待配置完成后的第一个0x28包**************************/
-			//TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release); // 先清零
-			//bool got28 = false;
-			//for (int wait28 = 0; wait28 < 200 && Loop; ++wait28) // 最多等2秒
-			//{ 
-			//	if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) {
-			//		got28 = true;
-			//		break;
-			//	}
-			//	std::this_thread::sleep_for(std::chrono::milliseconds(2));
-			//}
-			//if (!got28) {
-			//	WRITE_TASK_DATA_SEND_DBG("No 0x28 status packet received after config, aborting!\n");
-			//	break;
-			//}
+			TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release); // 先清零
+			bool got28 = false;
+			for (int wait28 = 0; wait28 < 200 && Loop; ++wait28) // 最多等2秒
+			{ 
+				if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) {
+					got28 = true;
+					break;
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(2));
+			}
+			if (!got28) {
+				WRITE_TASK_DATA_SEND_DBG("No 0x28 status packet received after config, aborting!\n");
+				break;
+			}
 
 
 			WRITE_LOG_UP_RECORD("\n[本组参数下发开始:%04d]\n", i + 1);                                          // 18. 记录本组参数下发开始

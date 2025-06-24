@@ -146,7 +146,7 @@ namespace DlgMenuARG{
         /***********新增：分别存储两组条件**************/
         void SetJudgeCondCodec(const TCOND::TestCondition& cond) 
         { 
-            qDebug() << "SetJudgeCondCodec: SINAD_L=" << cond.GetRangeSINAD().GetLeft();
+            //qDebug() << "SetJudgeCondCodec: SINAD_L=" << cond.GetRangeSINAD().GetLeft();
             JudgeCondCodec = cond; 
         }
         void SetJudgeCondAdpow(const TCOND::TestCondition& cond) { JudgeCondAdpow = cond; }

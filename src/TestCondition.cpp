@@ -1,4 +1,5 @@
 #include "TestCondition.hpp"
+#include <QDebug> 
 
 namespace TCOND{
     Range::Range()

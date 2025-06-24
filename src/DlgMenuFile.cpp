@@ -662,6 +662,7 @@ namespace DlgMenuARG{
         {
             if(mem == item)
             {
+                qDebug() << "AddItem: 重复，未添加";
                 return false;
             }
         }
@@ -669,6 +670,7 @@ namespace DlgMenuARG{
         beginInsertRows(QModelIndex(), rowCount(), rowCount());
         Items.push_back(item);
         endInsertRows();
+        qDebug() << "AddItem: 成功添加，当前总数" << Items.size();
         return true;
     }
 
@@ -1167,8 +1169,11 @@ namespace DlgMenuARG{
     {
         // int rowCount = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_ARG_RECORD, "NUMBER/rowCount").toInt();
         int rowCount = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, "NUMBER/rowCount").toInt();
+        qDebug() << "rowCount=" << rowCount;
         for(int i = 0; i < rowCount; i++)
         {
+
+            //qDebug() << "正在读取第" << i << "条";
             // double dB = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_ARG_RECORD, KEYITEM(i, DB)).toDouble();
             // unsigned long long Freq = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_ARG_RECORD, KEYITEM(i, Freq)).toULongLong();
             // unsigned int Dur = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_ARG_RECORD, KEYITEM(i, Dur)).toUInt();
@@ -1179,11 +1184,11 @@ namespace DlgMenuARG{
             double dB = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, DB)).toDouble();
             unsigned long long Freq = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Freq)).toULongLong();
             unsigned int Dur = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Dur)).toUInt();
-            unsigned char dl = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, DL)).toUInt();
-            unsigned char dr = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, DR)).toUInt();
-            unsigned char al = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, AL)).toUInt();
-            unsigned char ar = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, AR)).toUInt();
-
+            double dl = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, DL)).toDouble();
+            double dr = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, DR)).toDouble();
+            double al = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, AL)).toDouble();
+            double ar = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, AR)).toDouble();
+            //qDebug() << "dB=" << dB << "Freq=" << Freq << "Dur=" << Dur << "dl=" << (int)dl << "dr=" << (int)dr << "al=" << (int)al << "ar=" << (int)ar;
             // 新增：读取判定条件
             TCOND::TestCondition codecCond, adpowCond;
             // 新增：codec
@@ -1214,7 +1219,9 @@ namespace DlgMenuARG{
             adpowCond.GetRangeVppRMS().SetRange(adpowVppRMSL, adpowVppRMSR);
 
             //qDebug() << "InitARG i=" << i << "Codec_SINAD_L=" << codecSinadL << "Codec_SINAD_R=" << codecSinadR;
-            AddARG(dB, Freq, Dur, dl, dr, al, ar, codecCond, adpowCond);
+            AddARG(dB, Freq, Dur, -(dl - 30) / 1.5, dr + 18, (al + 126) / 1.5, ar + 40, codecCond, adpowCond);
+            // 加在这里
+            qDebug() << "AddARG finished for i=" << i << ", 当前model->Items.size()=" << model->Items.size();
         }
 
         TOOLWZ::stack_wz<TASKWZ::task_type> stack_join;
@@ -1282,13 +1289,15 @@ namespace DlgMenuARG{
             double dB[4] = { -1.0, -7.0, -13.0, -19.0 };
             unsigned long long Freq[3] = { 1000, 13000, 25000 };
             AddARG(dB[DefaultArgListCnt / 3], Freq[DefaultArgListCnt % 3], dur, -(dl - 30) / 1.5, dr + 18 , (al + 126) / 1.5, ar + 40);
+            //AddARG(dB[DefaultArgListCnt / 3], Freq[DefaultArgListCnt % 3], dur, dl, dr, al, ar);
             DefaultArgListCnt = (DefaultArgListCnt + 1) % 12;
         }
         else
         {
+            //AddARG(db, freq, dur, dl, dr, al, ar);
             AddARG(db, freq, dur, -(dl - 30) / 1.5, dr + 18, (al + 126) / 1.5, ar + 40);
         }
-    }
+    } 
 
     /************新增*****************/
     //void DlgARG::LoadArgsFromTxtSlot()
@@ -1425,6 +1434,7 @@ namespace DlgMenuARG{
         }
     }
     
+
     void DlgARG::Recived()
     {
         // for(int i = 0; i < model->rowCount() - 1; i++)WriteINI
@@ -1447,13 +1457,20 @@ namespace DlgMenuARG{
         CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_CENTRALIZE, "NUMBER/rowCount", QString("%1").arg(model->rowCount() - 1));
         for(int i = 0; i < model->rowCount() - 1; i++)
         {
-            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/DB").arg(i), QString("%1").arg(model->Items[i].GetArg().GetAudioARG().GetDB(), 5, 'f', 1, '0'));
+
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/DB").arg(i), QString("%1").arg(model->Items[i].GetArg().GetAudioARG().GetDB()));
             CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/Freq").arg(i), QString("%1").arg(model->Items[i].GetArg().GetAudioARG().GetFreq()));
             CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/Dur").arg(i), QString("%1").arg(model->Items[i].GetArg().GetAudioARG().GetDur()));
-            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/DL").arg(i), QString("%1").arg(model->Items[i].GetArg().GetRegCfgARG().GetDL()));
-            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/DR").arg(i), QString("%1").arg(model->Items[i].GetArg().GetRegCfgARG().GetDR()));
-            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/AL").arg(i), QString("%1").arg(model->Items[i].GetArg().GetRegCfgARG().GetAL()));
-            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/AR").arg(i), QString("%1").arg(model->Items[i].GetArg().GetRegCfgARG().GetAR()));
+            const auto& arg = model->Items[i].GetArg().GetRegCfgARG();
+            double dl_db = 30 - arg.GetDL() * 1.5;
+            double dr_db = arg.GetDR() * 1.0 - 18;
+            double al_db = arg.GetAL() * 1.5 - 126;
+            double ar_db = arg.GetAR() * 1.0 - 40;
+
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/DL").arg(i), QString::number(dl_db));
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/DR").arg(i), QString::number(dr_db));
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/AL").arg(i), QString::number(al_db));
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/AR").arg(i), QString::number(ar_db));
 
             //新增： 保存判定条件
             const TCOND::TestCondition& codecCond = model->Items[i].GetJudgeCondCodec();

@@ -155,6 +155,22 @@ namespace DCWZ{
         CmdRegCFG[0x47] &= AR;
 		CmdRegCFG[0x48] &= AR;
 
+        //// 输出调试信息
+        //qDebug() << "[UpdateCfgCMD] DL =" << static_cast<int>(DL)
+        //    << "DR =" << static_cast<int>(DR)
+        //    << "AL =" << static_cast<int>(AL)
+        //    << "AR =" << static_cast<int>(AR);
+
+        //// 16进制输出
+        //qDebug() << "[UpdateCfgCMD] CmdRegCFG[0x41]=" << QString("0x%1").arg(CmdRegCFG[0x41], 8, 16, QChar('0'))
+        //    << "CmdRegCFG[0x42]=" << QString("0x%1").arg(CmdRegCFG[0x42], 8, 16, QChar('0'))
+        //    << "CmdRegCFG[0x43]=" << QString("0x%1").arg(CmdRegCFG[0x43], 8, 16, QChar('0'))
+        //    << "CmdRegCFG[0x44]=" << QString("0x%1").arg(CmdRegCFG[0x44], 8, 16, QChar('0'))
+        //    << "CmdRegCFG[0x45]=" << QString("0x%1").arg(CmdRegCFG[0x45], 8, 16, QChar('0'))
+        //    << "CmdRegCFG[0x46]=" << QString("0x%1").arg(CmdRegCFG[0x46], 8, 16, QChar('0'))
+        //    << "CmdRegCFG[0x47]=" << QString("0x%1").arg(CmdRegCFG[0x47], 8, 16, QChar('0'))
+        //    << "CmdRegCFG[0x48]=" << QString("0x%1").arg(CmdRegCFG[0x48], 8, 16, QChar('0'));
+
 		unsigned int chksum_head_all = TOOLWZ::AccVerify((char*)(CmdRegCFG + 1), 320);
         CmdRegCFG[0x51] = chksum_head_all;
 

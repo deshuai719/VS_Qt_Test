@@ -2,6 +2,8 @@
 #define _TESTCONDITION_HPP_
 
 #include <memory>
+#include <array>
+#include <QDebug>
 
 namespace TCOND{
 
@@ -14,7 +16,8 @@ namespace TCOND{
         Range(const Range& range);
         ~Range();
 
-        void operator=(const Range& range);
+        //void operator=(const Range& range);
+        Range& operator=(const Range& range);
         void SetRange(int left, int right);
         int GetLeft() const;
         int GetRight() const;
@@ -29,7 +32,7 @@ namespace TCOND{
         TestCondition(const TestCondition& cp);
         ~TestCondition();
 
-        void operator=(const TestCondition& as);
+        TestCondition& operator=(const TestCondition& as);
         void SetRangeSINAD(Range range);
         void SetRangeVppPTP(Range range);
         void SetRangeVppRMS(Range range);
@@ -47,6 +50,7 @@ namespace TCOND{
         bool CheckVppRMS(unsigned short rms) const;
         bool CheckAll(unsigned short sinad, unsigned short vpp, unsigned short rms) const;
         static short SinadTransfer(unsigned short sinad);
+		void Print(const QString& name = QString()) const;//新增：打印条件信息
     };
 };// namespace TCOND
 

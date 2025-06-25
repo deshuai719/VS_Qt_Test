@@ -155,27 +155,8 @@ namespace DCWZ{
         CmdRegCFG[0x47] &= AR;
 		CmdRegCFG[0x48] &= AR;
 
-        //// 输出调试信息
-        //qDebug() << "[UpdateCfgCMD] DL =" << static_cast<int>(DL)
-        //    << "DR =" << static_cast<int>(DR)
-        //    << "AL =" << static_cast<int>(AL)
-        //    << "AR =" << static_cast<int>(AR);
-
-        //// 16进制输出
-        //qDebug() << "[UpdateCfgCMD] CmdRegCFG[0x41]=" << QString("0x%1").arg(CmdRegCFG[0x41], 8, 16, QChar('0'))
-        //    << "CmdRegCFG[0x42]=" << QString("0x%1").arg(CmdRegCFG[0x42], 8, 16, QChar('0'))
-        //    << "CmdRegCFG[0x43]=" << QString("0x%1").arg(CmdRegCFG[0x43], 8, 16, QChar('0'))
-        //    << "CmdRegCFG[0x44]=" << QString("0x%1").arg(CmdRegCFG[0x44], 8, 16, QChar('0'))
-        //    << "CmdRegCFG[0x45]=" << QString("0x%1").arg(CmdRegCFG[0x45], 8, 16, QChar('0'))
-        //    << "CmdRegCFG[0x46]=" << QString("0x%1").arg(CmdRegCFG[0x46], 8, 16, QChar('0'))
-        //    << "CmdRegCFG[0x47]=" << QString("0x%1").arg(CmdRegCFG[0x47], 8, 16, QChar('0'))
-        //    << "CmdRegCFG[0x48]=" << QString("0x%1").arg(CmdRegCFG[0x48], 8, 16, QChar('0'));
-
 		unsigned int chksum_head_all = TOOLWZ::AccVerify((char*)(CmdRegCFG + 1), 320);
         CmdRegCFG[0x51] = chksum_head_all;
-
-
-
     }
 
     const char const* DataConstruct::GetRegCfgCMD()
@@ -429,9 +410,22 @@ namespace DCWZ{
     }
 
     //参数数据构造类
+    DCWZ::ARG_RTC_GENERATE::ARG_RTC_GENERATE()
+        : ArgAudio(), RegCFG(), JudgeCondCodec(), JudgeCondAdpow() {
+    }
 
-    ARG_RTC_GENERATE::ARG_RTC_GENERATE()
-        : ArgAudio(), RegCFG()
+    DCWZ::ARG_RTC_GENERATE::ARG_RTC_GENERATE(SDG::ARG a, ArgRegCFG<unsigned char> regCfg,
+        const TCOND::TestCondition& codecCond,
+        const TCOND::TestCondition& adpowCond)
+        : ArgAudio(a), RegCFG(regCfg), JudgeCondCodec(codecCond), JudgeCondAdpow(adpowCond) {
+    }
+
+    DCWZ::ARG_RTC_GENERATE::ARG_RTC_GENERATE(const ARG_RTC_GENERATE& cp)
+        : ArgAudio(cp.ArgAudio), RegCFG(cp.RegCFG),
+        JudgeCondCodec(cp.JudgeCondCodec), JudgeCondAdpow(cp.JudgeCondAdpow) {
+    }
+    /*ARG_RTC_GENERATE::ARG_RTC_GENERATE()
+        : ArgAudio(), RegCFG(), JudgeCondCodec(), JudgeCondAdpow()
     {}
 
     ARG_RTC_GENERATE::ARG_RTC_GENERATE(SDG::ARG a, ArgRegCFG<unsigned char> regCfg)
@@ -440,20 +434,24 @@ namespace DCWZ{
 
     ARG_RTC_GENERATE::ARG_RTC_GENERATE(const ARG_RTC_GENERATE& cp)
         : ArgAudio(cp.GetAudioARG()), RegCFG(cp.GetRegCfgARG())
-    {}
+    {}*/
 
     ARG_RTC_GENERATE::~ARG_RTC_GENERATE()
     {}
 
-    void ARG_RTC_GENERATE::operator=(const ARG_RTC_GENERATE& as)
+    void DCWZ::ARG_RTC_GENERATE::operator=(const ARG_RTC_GENERATE& as) 
     {
-        // WRITE_DLG_MENU_AUDIO_ARG_DBG("DCWZ::ARG_RTC_GENERATE::operator=(), AudioArg: dB = %f, Freq = %lld\n",
-        //     ArgAudio.GetDB(), ArgAudio.GetFreq());
-        // WRITE_DLG_MENU_AUDIO_ARG_DBG("DCWZ::ARG_RTC_GENERATE::operator=(), as.audioArg: dB = %f, Freq = %lld\n",
-        //     as.GetAudioARG().GetDB(), as.GetAudioARG().GetFreq());
+        ArgAudio = as.ArgAudio;
+        RegCFG = as.RegCFG;
+        JudgeCondCodec = as.JudgeCondCodec;
+        JudgeCondAdpow = as.JudgeCondAdpow;
+    }
+   /* void ARG_RTC_GENERATE::operator=(const ARG_RTC_GENERATE& as)
+    {
+    
         ArgAudio = as.GetAudioARG();
         RegCFG = as.GetRegCfgARG();
-    }
+    }*/
 
     bool ARG_RTC_GENERATE::operator==(const ARG_RTC_GENERATE& as) const
     {

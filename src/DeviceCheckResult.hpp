@@ -70,6 +70,7 @@ namespace DCR{
         void Clear();
         std::unique_ptr<TCOND::TestCondition[]>& GetCondition();        
         ChipCheckResult& GetChipCheckResult(int boardIndex, int chipIndex);
+        void SetCondition(const std::array<TCOND::TestCondition, 2>& conds);            // 新增：设置两组条件（Codec和ADPOW）
         void SetCheckCount(int checkCount);
         void SetCheckCompletedCount(int checkCompletedCount);
         void SetChipOnLineNum(int chipOnLineNum);

@@ -17,10 +17,19 @@ namespace TCOND{
     Range::~Range()
     {}
 
-    void Range::operator=(const Range& range)
+   /* void Range::operator=(const Range& range)
     {
         Left = range.Left;
         Right = range.Right;
+    }*/
+
+    Range& Range::operator=(const Range& range)
+    {
+        if (this != &range) {
+            Left = range.Left;
+            Right = range.Right;
+        }
+        return *this;
     }
 
     void Range::SetRange(int left, int right)
@@ -50,11 +59,13 @@ namespace TCOND{
     TestCondition::~TestCondition()
     {}
 
-    void TestCondition::operator=(const TestCondition& as)
-    {
-        RangeSINAD = as.RangeSINAD;
-        RangeVppPTP = as.RangeVppPTP;
-        RangeVppRMS = as.RangeVppRMS;
+    TestCondition& TestCondition::operator=(const TestCondition& as) {
+        if (this != &as) {
+            RangeSINAD = as.RangeSINAD;
+            RangeVppPTP = as.RangeVppPTP;
+            RangeVppRMS = as.RangeVppRMS;
+        }
+        return *this;
     }
 
     void TestCondition::SetRangeSINAD(Range range)
@@ -135,5 +146,12 @@ namespace TCOND{
             return (sinad - 4096) / 16;
         }
     }
-
+/*******************************新增：打印函数实现*******************************************/
+    void TestCondition::Print(const QString& name) const 
+    {
+        qDebug() << (name.isEmpty() ? "[TestCondition]" : name)
+            << "RangeSINAD:[" << RangeSINAD.GetLeft() << "," << RangeSINAD.GetRight() << "]"
+            << "RangeVppPTP:[" << RangeVppPTP.GetLeft() << "," << RangeVppPTP.GetRight() << "]"
+            << "RangeVppRMS:[" << RangeVppRMS.GetLeft() << "," << RangeVppRMS.GetRight() << "]";
+    }
 }; // namespace TCOND

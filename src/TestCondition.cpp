@@ -36,6 +36,7 @@ namespace TCOND{
     {
         Left = left;
         Right = right;
+        qDebug() << "[Range::SetRange] 设置为:" << Left << Right;
     }
 
     int Range::GetLeft() const
@@ -68,19 +69,23 @@ namespace TCOND{
         return *this;
     }
 
+    
     void TestCondition::SetRangeSINAD(Range range)
     {
         RangeSINAD = range;
+        qDebug() << "[SetRangeSINAD] 设置为:" << range.GetLeft() << range.GetRight();
     }
 
     void TestCondition::SetRangeVppPTP(Range range)
     {
         RangeVppPTP = range;
+        qDebug() << "[SetRangeVppPTP] 设置为:" << range.GetLeft() << range.GetRight();
     }
 
     void TestCondition::SetRangeVppRMS(Range range)
     {
         RangeVppRMS = range;
+        qDebug() << "[SetRangeVppRMS] 设置为:" << range.GetLeft() << range.GetRight();
     }
 
     Range& TestCondition::GetRangeSINAD() {
@@ -132,7 +137,18 @@ namespace TCOND{
 
     bool TestCondition::CheckAll(unsigned short sinad, unsigned short vpp, unsigned short rms) const
     {
-        return CheckSINAD(sinad) && CheckVppPTP(vpp) && CheckVppRMS(rms);
+        //return CheckSINAD(sinad) && CheckVppPTP(vpp) && CheckVppRMS(rms);
+        bool sinadOk = CheckSINAD(sinad);
+        bool vppOk = CheckVppPTP(vpp);
+        bool rmsOk = CheckVppRMS(rms);
+
+        /**********************************新增：检查值是否被正确传入*************************************************/
+       /* qDebug() << "[CheckAll]"
+            << "SINAD:" << sinad << "in [" << RangeSINAD.GetLeft() << "," << RangeSINAD.GetRight() << "]" << (sinadOk ? "OK" : "NG")
+            << "VppPTP:" << vpp << "in [" << RangeVppPTP.GetLeft() << "," << RangeVppPTP.GetRight() << "]" << (vppOk ? "OK" : "NG")
+            << "VppRMS:" << rms << "in [" << RangeVppRMS.GetLeft() << "," << RangeVppRMS.GetRight() << "]" << (rmsOk ? "OK" : "NG");*/
+
+        return sinadOk && vppOk && rmsOk;
     }
 
     short TestCondition::SinadTransfer(unsigned short sinad)

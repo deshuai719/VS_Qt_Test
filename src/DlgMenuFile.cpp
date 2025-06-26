@@ -1241,19 +1241,19 @@ namespace DlgMenuARG{
     {
         ////qDebug() << "AddARG: codecCond.SINAD_L=" << codecCond.GetRangeSINAD().GetLeft()
         //    << "codecCond.SINAD_R=" << codecCond.GetRangeSINAD().GetRight();
-        Item item(DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG(dl, dr, al, ar)));
+        Item item(DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG(dl, dr, al, ar) ,TCOND::TestCondition(), TCOND::TestCondition()));
         item.SetJudgeCondCodec(codecCond);
         item.SetJudgeCondAdpow(adpowCond);
 
         if (model->AddItem(item))
         {
             FLST::FileNode<DCWZ::ARG_RTC_GENERATE> NodeAdd(
-                DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG<unsigned char>(dl, dr, al, ar)),
+                DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG<unsigned char>(dl, dr, al, ar), TCOND::TestCondition(), TCOND::TestCondition()),
                 FLST::FileOPT::ADD_FILE);
             if (!ArgRecord.AddNode(NodeAdd))
             {
                 FLST::FileNode<DCWZ::ARG_RTC_GENERATE> NodeTB(
-                    DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG<unsigned char>(dl, dr, al, ar)),
+                    DCWZ::ARG_RTC_GENERATE(SDG::ARG(db, freq, dur), DCWZ::ArgRegCFG<unsigned char>(dl, dr, al, ar), TCOND::TestCondition(), TCOND::TestCondition()),
                     FLST::FileOPT::TO_BOTTOM);
                 ArgRecord.AddNode(NodeTB);
             }
@@ -1369,29 +1369,7 @@ namespace DlgMenuARG{
             model->Items[row - 1].SetJudgeCondAdpow(newAdpowCond);
         }
     }
-       /* double dl = SArgDL->value();
-        double dr = SArgDR->value();
-        double al = SArgAL->value();
-        double ar = SArgAR->value();
-
-        DCWZ::ARG_RTC_GENERATE OldARG = model->Items[row - 1].GetArg();
-        DCWZ::ARG_RTC_GENERATE NewARG(model->Items[row - 1].GetArg().GetAudioARG(), DCWZ::ArgRegCFG<unsigned char>(-(dl - 30) / 1.5, dr + 18, (al + 126) / 1.5, ar + 40));
-        if(OldARG == NewARG)
-        {
-            return;
-        }
-        model->UpdateItem(row, Item(NewARG));
-        FLST::FileNode<DCWZ::ARG_RTC_GENERATE> NodeDel(OldARG, FLST::FileOPT::DEL_FIEL);
-        ArgRecord.AddNode(NodeDel);
-        FLST::FileNode<DCWZ::ARG_RTC_GENERATE> NodeAdd(NewARG, FLST::FileOPT::ADD_FILE);
-        ArgRecord.AddNode(NodeAdd);
-        for(int i = model->rowCount() - 2; i > 0 && model->Items[i - 1] != model->Items[row - 2]; i--)
-        {
-            FLST::FileNodeEXCH<DCWZ::ARG_RTC_GENERATE> NodeExch(NewARG, model->Items[i - 1].GetArg());
-            ArgRecord.AddNode(NodeExch);
-        }*/
-    
-
+      
     void DlgARG::DelArg(Item im)
     {
         if(model->DelItem(im))

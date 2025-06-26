@@ -1404,6 +1404,38 @@ namespace MenuSINADCFG{
         Cond.get()[1].SetRangeVppRMS(TCOND::Range(SpinVppRMSADPOWLeft->value(), SpinVppRMSADPOWRight->value()));
     }
 
+    /***********新增：读取条件的实现****************/
+ // DlgMenuCFG.cpp
+    TCOND::TestCondition MenuSINADCFG::DialogSinadCFG::GetCodecTestCondition() const
+    {
+        return Cond ? Cond[0] : TCOND::TestCondition();
+    }
+    TCOND::TestCondition MenuSINADCFG::DialogSinadCFG::GetAdpowTestCondition() const
+    {
+        return Cond ? Cond[1] : TCOND::TestCondition();
+    }
+
+    void MenuSINADCFG::DialogSinadCFG::SetTestCondition(
+        const TCOND::TestCondition& codecCond,
+        const TCOND::TestCondition& adpowCond)
+    {
+        // Codec 区域
+        SpinSinadCodecLeft->setValue(codecCond.GetRangeSINAD().GetLeft());
+        SpinSinadCodecRight->setValue(codecCond.GetRangeSINAD().GetRight());
+        SpinVppPTPCodecLeft->setValue(codecCond.GetRangeVppPTP().GetLeft());
+        SpinVppPTPCodecRight->setValue(codecCond.GetRangeVppPTP().GetRight());
+        SpinVppRMSCodecLeft->setValue(codecCond.GetRangeVppRMS().GetLeft());
+        SpinVppRMSCodecRight->setValue(codecCond.GetRangeVppRMS().GetRight());
+
+        // ADPOW 区域
+        SpinSinadADPOWLeft->setValue(adpowCond.GetRangeSINAD().GetLeft());
+        SpinSinadADPOWRight->setValue(adpowCond.GetRangeSINAD().GetRight());
+        SpinVppPTPADPOWLeft->setValue(adpowCond.GetRangeVppPTP().GetLeft());
+        SpinVppPTPADPOWRight->setValue(adpowCond.GetRangeVppPTP().GetRight());
+        SpinVppRMSADPOWLeft->setValue(adpowCond.GetRangeVppRMS().GetLeft());
+        SpinVppRMSADPOWRight->setValue(adpowCond.GetRangeVppRMS().GetRight());
+    }
+
     void DialogSinadCFG::OKSlot()
     {
         CFGSinadCodecSlot();
@@ -1444,35 +1476,5 @@ namespace MenuSINADCFG{
         SpinVppRMSADPOWRight    ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppRMS().GetRight());
     }
 
-    /***********新增：读取条件的实现****************/
-   // DlgMenuCFG.cpp
-    TCOND::TestCondition MenuSINADCFG::DialogSinadCFG::GetCodecTestCondition() const
-    {
-        return Cond ? Cond[0] : TCOND::TestCondition();
-    }
-    TCOND::TestCondition MenuSINADCFG::DialogSinadCFG::GetAdpowTestCondition() const
-    {
-        return Cond ? Cond[1] : TCOND::TestCondition();
-    }
-
-    void MenuSINADCFG::DialogSinadCFG::SetTestCondition(
-        const TCOND::TestCondition& codecCond,
-        const TCOND::TestCondition& adpowCond)
-    {
-        // Codec 区域
-        SpinSinadCodecLeft->setValue(codecCond.GetRangeSINAD().GetLeft());
-        SpinSinadCodecRight->setValue(codecCond.GetRangeSINAD().GetRight());
-        SpinVppPTPCodecLeft->setValue(codecCond.GetRangeVppPTP().GetLeft());
-        SpinVppPTPCodecRight->setValue(codecCond.GetRangeVppPTP().GetRight());
-        SpinVppRMSCodecLeft->setValue(codecCond.GetRangeVppRMS().GetLeft());
-        SpinVppRMSCodecRight->setValue(codecCond.GetRangeVppRMS().GetRight());
-
-        // ADPOW 区域
-        SpinSinadADPOWLeft->setValue(adpowCond.GetRangeSINAD().GetLeft());
-        SpinSinadADPOWRight->setValue(adpowCond.GetRangeSINAD().GetRight());
-        SpinVppPTPADPOWLeft->setValue(adpowCond.GetRangeVppPTP().GetLeft());
-        SpinVppPTPADPOWRight->setValue(adpowCond.GetRangeVppPTP().GetRight());
-        SpinVppRMSADPOWLeft->setValue(adpowCond.GetRangeVppRMS().GetLeft());
-        SpinVppRMSADPOWRight->setValue(adpowCond.GetRangeVppRMS().GetRight());
-    }
+  
 }; // namespace MenuSINADCFG

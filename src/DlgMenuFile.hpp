@@ -145,8 +145,7 @@ namespace DlgMenuARG{
         bool operator==(const Item& cmp) const;
         bool operator!=(const Item& cmp) const;
         /***********新增：分别存储两组条件**************/
-        void SetJudgeCondCodec(const TCOND::TestCondition& cond) { 
-            JudgeCondCodec = cond; }
+        void SetJudgeCondCodec(const TCOND::TestCondition& cond) { JudgeCondCodec = cond; }
         void SetJudgeCondAdpow(const TCOND::TestCondition& cond) { JudgeCondAdpow = cond; }
         TCOND::TestCondition GetJudgeCondCodec() const { return JudgeCondCodec; }
         TCOND::TestCondition GetJudgeCondAdpow() const { return JudgeCondAdpow; }

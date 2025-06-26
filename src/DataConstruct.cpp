@@ -675,6 +675,24 @@ namespace DCWZ{
         }
     }
 
+    void DCWZ::DataList::AddNode(std::unique_ptr<DataConstruct>& DC,
+        const TCOND::TestCondition& codecCond,
+        const TCOND::TestCondition& adpowCond)
+    {
+        std::shared_ptr<DataNode> Node = std::make_shared<DataNode>();
+        Node->SetData(DC);
+        Node->SetCondCodec(codecCond);
+        Node->SetCondAdpow(adpowCond);
+        if (Head == nullptr) {
+            Head = Node;
+            Tail = Node;
+        }
+        else {
+            Tail->SetNext(Node);
+            Tail = Node;
+        }
+    }
+
     void DataList::AddNode(FPWZ::ArgDM a)
     {
         std::unique_ptr<DataConstruct> DC = std::make_unique<DC_DN_MNIC_64K>(a);
@@ -720,9 +738,31 @@ namespace DCWZ{
 
     void DataList::AddNode(ARG_RTC_GENERATE a)
     {
+        /*std::unique_ptr<DataConstruct> DC = std::make_unique<DC_DN_MNIC_64K_RCT_GENERATE>(a);
+        DC->Construct();
+        AddNode(DC);*/
+        AddNode(a, a.GetJudgeCondCodec(), a.GetJudgeCondAdpow());//新增：
+    }
+
+    /********************新增：重载添加参数*****************************************/
+    void DataList::AddNode(const ARG_RTC_GENERATE& a,
+        const TCOND::TestCondition& codecCond,
+        const TCOND::TestCondition& adpowCond)
+    {
         std::unique_ptr<DataConstruct> DC = std::make_unique<DC_DN_MNIC_64K_RCT_GENERATE>(a);
         DC->Construct();
-        AddNode(DC);
+        std::shared_ptr<DataNode> Node = std::make_shared<DataNode>();
+        Node->SetData(DC);
+        Node->SetCondCodec(codecCond);
+        Node->SetCondAdpow(adpowCond);
+        if (Head == nullptr) {
+            Head = Node;
+            Tail = Node;
+        }
+        else {
+            Tail->SetNext(Node);
+            Tail = Node;
+        }
     }
 
     void DataList::DelNode(ARG_RTC_GENERATE a)

@@ -954,6 +954,7 @@ void TaskDataSend::run()
 			//DCR::DeviceCheckResultGlobal->SetCondition(conds);                           //新增：设置设备检查条件
 
 			SOCKWZ::SockGlob::Send((char*)DCWZ::DataConstruct::GetRegCfgCMD(), 0x51 * 4 + 1);                   // 17. 发送配置命令
+			/*****************新增：打印条件********************/
 			codecCond.Print("codecCond");
 			adpowCond.Print("adpowCond");
 

@@ -281,8 +281,8 @@ namespace DCWZ{
         const std::unique_ptr<DataConstruct>& GetData() const;
         const std::shared_ptr<DataNode>& GetNext() const;
         /*****************新增**********************/
-        void SetCondCodec(const TCOND::TestCondition& c) { CondCodec = c; }
-        void SetCondAdpow(const TCOND::TestCondition& c) { CondAdpow = c; }
+        void SetCondCodec(const TCOND::TestCondition& cond) { CondCodec = cond; }
+        void SetCondAdpow(const TCOND::TestCondition& cond) { CondAdpow = cond; }
         const TCOND::TestCondition& GetCondCodec() const { return CondCodec; }
         const TCOND::TestCondition& GetCondAdpow() const { return CondAdpow; }
     };
@@ -296,9 +296,17 @@ namespace DCWZ{
         ~DataList();
 
         void AddNode(std::unique_ptr<DataConstruct>& DC);
+        /********************新增：设置重载***************************/
+        void AddNode(std::unique_ptr<DataConstruct>& DC,
+            const TCOND::TestCondition& codecCond,
+            const TCOND::TestCondition& adpowCond);
         void AddNode(FPWZ::ArgDM a);
         void DelNode(FPWZ::ArgDM a);
         void AddNode(ARG_RTC_GENERATE a);
+        //新增：重载添加参数
+        void AddNode(const ARG_RTC_GENERATE& a,
+            const TCOND::TestCondition& codecCond,
+            const TCOND::TestCondition& adpowCond);
         void DelNode(ARG_RTC_GENERATE a);
         void Exchange(ARG_RTC_GENERATE a, ARG_RTC_GENERATE exchg);
         void ToBottom(ARG_RTC_GENERATE a);

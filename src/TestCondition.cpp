@@ -1,4 +1,4 @@
-#include "TestCondition.hpp"
+ï»¿#include "TestCondition.hpp"
 #include <QDebug> 
 
 namespace TCOND{
@@ -17,26 +17,16 @@ namespace TCOND{
     Range::~Range()
     {}
 
-   /* void Range::operator=(const Range& range)
+    void Range::operator=(const Range& range)
     {
         Left = range.Left;
         Right = range.Right;
-    }*/
-
-    Range& Range::operator=(const Range& range)
-    {
-        if (this != &range) {
-            Left = range.Left;
-            Right = range.Right;
-        }
-        return *this;
     }
 
     void Range::SetRange(int left, int right)
     {
         Left = left;
         Right = right;
-        qDebug() << "[Range::SetRange] ÉèÖÃÎª:" << Left << Right;
     }
 
     int Range::GetLeft() const
@@ -60,32 +50,26 @@ namespace TCOND{
     TestCondition::~TestCondition()
     {}
 
-    TestCondition& TestCondition::operator=(const TestCondition& as) {
-        if (this != &as) {
-            RangeSINAD = as.RangeSINAD;
-            RangeVppPTP = as.RangeVppPTP;
-            RangeVppRMS = as.RangeVppRMS;
-        }
-        return *this;
+    void TestCondition::operator=(const TestCondition& as)
+    {
+        RangeSINAD = as.RangeSINAD;
+        RangeVppPTP = as.RangeVppPTP;
+        RangeVppRMS = as.RangeVppRMS;
     }
 
-    
     void TestCondition::SetRangeSINAD(Range range)
     {
         RangeSINAD = range;
-        qDebug() << "[SetRangeSINAD] ÉèÖÃÎª:" << range.GetLeft() << range.GetRight();
     }
 
     void TestCondition::SetRangeVppPTP(Range range)
     {
         RangeVppPTP = range;
-        qDebug() << "[SetRangeVppPTP] ÉèÖÃÎª:" << range.GetLeft() << range.GetRight();
     }
 
     void TestCondition::SetRangeVppRMS(Range range)
     {
         RangeVppRMS = range;
-        qDebug() << "[SetRangeVppRMS] ÉèÖÃÎª:" << range.GetLeft() << range.GetRight();
     }
 
     Range& TestCondition::GetRangeSINAD() {
@@ -122,33 +106,27 @@ namespace TCOND{
     bool TestCondition::CheckSINAD(unsigned short sinad) const
     {
         short res = SinadTransfer(sinad);
+        //qDebug() << "[CheckSINAD] è¾“å…¥sinad:" << sinad << "è½¬æ¢åŽ:" << res << "åŒºé—´:[" << RangeSINAD.GetLeft() << "," << RangeSINAD.GetRight() << "]";
         return res >= RangeSINAD.GetLeft() && res <= RangeSINAD.GetRight();
     }
 
     bool TestCondition::CheckVppPTP(unsigned short vpp) const
     {
+        /*qDebug() << "[CheckVppPTP] è¾“å…¥vpp:" << vpp
+            << "åŒºé—´:[" << RangeVppPTP.GetLeft() << "," << RangeVppPTP.GetRight() << "]";*/
         return vpp >= RangeVppPTP.GetLeft() && vpp <= RangeVppPTP.GetRight();
     }
 
     bool TestCondition::CheckVppRMS(unsigned short rms) const
     {
+       /* qDebug() << "[CheckVppRMS] è¾“å…¥rms:" << rms
+            << "åŒºé—´:[" << RangeVppRMS.GetLeft() << "," << RangeVppRMS.GetRight() << "]";*/
         return rms >= RangeVppRMS.GetLeft() && rms <= RangeVppRMS.GetRight();
     }
 
     bool TestCondition::CheckAll(unsigned short sinad, unsigned short vpp, unsigned short rms) const
     {
-        //return CheckSINAD(sinad) && CheckVppPTP(vpp) && CheckVppRMS(rms);
-        bool sinadOk = CheckSINAD(sinad);
-        bool vppOk = CheckVppPTP(vpp);
-        bool rmsOk = CheckVppRMS(rms);
-
-        /**********************************ÐÂÔö£º¼ì²éÖµÊÇ·ñ±»ÕýÈ·´«Èë*************************************************/
-       /* qDebug() << "[CheckAll]"
-            << "SINAD:" << sinad << "in [" << RangeSINAD.GetLeft() << "," << RangeSINAD.GetRight() << "]" << (sinadOk ? "OK" : "NG")
-            << "VppPTP:" << vpp << "in [" << RangeVppPTP.GetLeft() << "," << RangeVppPTP.GetRight() << "]" << (vppOk ? "OK" : "NG")
-            << "VppRMS:" << rms << "in [" << RangeVppRMS.GetLeft() << "," << RangeVppRMS.GetRight() << "]" << (rmsOk ? "OK" : "NG");*/
-
-        return sinadOk && vppOk && rmsOk;
+        return CheckSINAD(sinad) && CheckVppPTP(vpp) && CheckVppRMS(rms);
     }
 
     short TestCondition::SinadTransfer(unsigned short sinad)
@@ -162,12 +140,5 @@ namespace TCOND{
             return (sinad - 4096) / 16;
         }
     }
-/*******************************ÐÂÔö£º´òÓ¡º¯ÊýÊµÏÖ*******************************************/
-    void TestCondition::Print(const QString& name) const 
-    {
-        qDebug() << (name.isEmpty() ? "[TestCondition]" : name)
-            << "RangeSINAD:[" << RangeSINAD.GetLeft() << "," << RangeSINAD.GetRight() << "]"
-            << "RangeVppPTP:[" << RangeVppPTP.GetLeft() << "," << RangeVppPTP.GetRight() << "]"
-            << "RangeVppRMS:[" << RangeVppRMS.GetLeft() << "," << RangeVppRMS.GetRight() << "]";
-    }
+
 }; // namespace TCOND

@@ -1,4 +1,4 @@
-#ifndef _DLGMENUFILE_HPP_
+﻿#ifndef _DLGMENUFILE_HPP_
 #define _DLGMENUFILE_HPP_
 
 #include <QDialog>
@@ -133,7 +133,6 @@ namespace DlgMenuARG{
         DCWZ::ARG_RTC_GENERATE Arg;
         TCOND::TestCondition JudgeCondCodec;
         TCOND::TestCondition JudgeCondAdpow; // 新增：每条Item独立的判定条件
-
     public:
         Item();
         Item(DCWZ::ARG_RTC_GENERATE);
@@ -145,7 +144,11 @@ namespace DlgMenuARG{
         bool operator==(const Item& cmp) const;
         bool operator!=(const Item& cmp) const;
         /***********新增：分别存储两组条件**************/
-        void SetJudgeCondCodec(const TCOND::TestCondition& cond) { JudgeCondCodec = cond; }
+        void SetJudgeCondCodec(const TCOND::TestCondition& cond) 
+        { 
+            //qDebug() << "SetJudgeCondCodec: SINAD_L=" << cond.GetRangeSINAD().GetLeft();
+            JudgeCondCodec = cond; 
+        }
         void SetJudgeCondAdpow(const TCOND::TestCondition& cond) { JudgeCondAdpow = cond; }
         TCOND::TestCondition GetJudgeCondCodec() const { return JudgeCondCodec; }
         TCOND::TestCondition GetJudgeCondAdpow() const { return JudgeCondAdpow; }

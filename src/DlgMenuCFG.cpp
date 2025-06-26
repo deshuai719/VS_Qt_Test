@@ -1404,8 +1404,56 @@ namespace MenuSINADCFG{
         Cond.get()[1].SetRangeVppRMS(TCOND::Range(SpinVppRMSADPOWLeft->value(), SpinVppRMSADPOWRight->value()));
     }
 
+    void DialogSinadCFG::OKSlot()
+    {
+        // 1. 读取界面上各个SpinBox的值，设置到Cond[0]（Codec）和Cond[1]（ADPOW）对应的TestCondition对象中
+        CFGSinadCodecSlot();      // 设置Codec的SINAD阈值范围
+        CFGVppPTPCodecSlot();     // 设置Codec的Vpp峰峰值阈值范围
+        CFGVppRMSCodecSlot();     // 设置Codec的RMS阈值范围
+        CFGSinadADPOWSlot();      // 设置ADPOW的SINAD阈值范围
+        CFGVppPTPADPOWSlot();     // 设置ADPOW的Vpp峰峰值阈值范围
+        CFGVppRMSADPOWSlot();     // 设置ADPOW的RMS阈值范围
+
+        // 2. 打印当前Cond数组中各项阈值的左右区间到调试日志
+        WRITE_DLG_SINADCFG_MENU_DBG(
+            "Cond Codec Sinad Left = %u, Right = %u\n\
+        Cond Codec Vpp Left = %u, Right = %u\n\
+        Cond Codec Rms Left = %u, Right = %u\n\
+        Cond Adpow Sinad Left = %u, Right = %u\n\
+        Cond AdPow Vpp Left = %u, Right = %u\n\
+        Cond AdPow Rms Left = %u, Right = %u\n",
+            Cond[0].GetRangeSINAD().GetLeft(), Cond[0].GetRangeSINAD().GetRight(),
+            Cond[0].GetRangeVppPTP().GetLeft(), Cond[0].GetRangeVppPTP().GetRight(),
+            Cond[0].GetRangeVppRMS().GetLeft(), Cond[0].GetRangeVppRMS().GetRight(),
+            Cond[1].GetRangeSINAD().GetLeft(), Cond[1].GetRangeSINAD().GetRight(),
+            Cond[1].GetRangeVppPTP().GetLeft(), Cond[1].GetRangeVppPTP().GetRight(),
+            Cond[1].GetRangeVppRMS().GetLeft(), Cond[1].GetRangeVppRMS().GetRight()
+        );
+
+        // 3. 将Cond数组中的TestCondition对象写入全局的DeviceCheckResultGlobal配置中
+       /* DCR::DeviceCheckResultGlobal->GetCondition()[0] = Cond[0];
+        DCR::DeviceCheckResultGlobal->GetCondition()[1] = Cond[1];*/
+    }
+
+    //当用户点击“取消”时，把所有SpinBox控件的值恢复为全局配置（DeviceCheckResultGlobal）中保存的原始值
+    void DialogSinadCFG::CancelSlot()
+    {
+        SpinSinadCodecLeft      ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeSINAD().GetLeft());
+        SpinSinadCodecRight     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeSINAD().GetRight());
+        SpinVppPTPCodecLeft     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeVppPTP().GetLeft());
+        SpinVppPTPCodecRight    ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeVppPTP().GetRight());
+        SpinVppRMSCodecLeft     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeVppRMS().GetLeft());
+        SpinVppRMSCodecRight    ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeVppRMS().GetRight());
+        SpinSinadADPOWLeft      ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeSINAD().GetLeft());
+        SpinSinadADPOWRight     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeSINAD().GetRight());
+        SpinVppPTPADPOWLeft     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppPTP().GetLeft());
+        SpinVppPTPADPOWRight    ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppPTP().GetRight());
+        SpinVppRMSADPOWLeft     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppRMS().GetLeft());
+        SpinVppRMSADPOWRight    ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppRMS().GetRight());
+    }
+
     /***********新增：读取条件的实现****************/
- // DlgMenuCFG.cpp
+   // DlgMenuCFG.cpp
     TCOND::TestCondition MenuSINADCFG::DialogSinadCFG::GetCodecTestCondition() const
     {
         return Cond ? Cond[0] : TCOND::TestCondition();
@@ -1435,46 +1483,4 @@ namespace MenuSINADCFG{
         SpinVppRMSADPOWLeft->setValue(adpowCond.GetRangeVppRMS().GetLeft());
         SpinVppRMSADPOWRight->setValue(adpowCond.GetRangeVppRMS().GetRight());
     }
-
-    void DialogSinadCFG::OKSlot()
-    {
-        CFGSinadCodecSlot();
-        CFGVppPTPCodecSlot();
-        CFGVppRMSCodecSlot();
-        CFGSinadADPOWSlot();
-        CFGVppPTPADPOWSlot();
-        CFGVppRMSADPOWSlot();        
-        WRITE_DLG_SINADCFG_MENU_DBG("Cond Codec Sinad Left = %u, Right = %u\n\\
-            Cond Codec Vpp Left = %u, Right = %u\n\\
-            Cond Codec Rms Left = %u, Right = %u\n\\
-            Cond Adpow Sinad Left = %u, Right = %u\n\\
-            Cond AdPow Vpp Left = %u, Right = %u\n\\
-            Cond AdPow Rms Left = %u, Right = %u\n", 
-            Cond[0].GetRangeSINAD().GetLeft(),  Cond[0].GetRangeSINAD().GetRight(),
-            Cond[0].GetRangeVppPTP().GetLeft(), Cond[0].GetRangeVppPTP().GetRight(),
-            Cond[0].GetRangeVppRMS().GetLeft(), Cond[0].GetRangeVppRMS().GetRight(),
-            Cond[1].GetRangeSINAD().GetLeft(),  Cond[1].GetRangeSINAD().GetRight(),
-            Cond[1].GetRangeVppPTP().GetLeft(), Cond[1].GetRangeVppPTP().GetRight(),
-            Cond[1].GetRangeVppRMS().GetLeft(), Cond[1].GetRangeVppRMS().GetRight());
-        DCR::DeviceCheckResultGlobal->GetCondition()[0] = Cond[0];
-        DCR::DeviceCheckResultGlobal->GetCondition()[1] = Cond[1];
-    }
-
-    void DialogSinadCFG::CancelSlot()
-    {
-        SpinSinadCodecLeft      ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeSINAD().GetLeft());
-        SpinSinadCodecRight     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeSINAD().GetRight());
-        SpinVppPTPCodecLeft     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeVppPTP().GetLeft());
-        SpinVppPTPCodecRight    ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeVppPTP().GetRight());
-        SpinVppRMSCodecLeft     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeVppRMS().GetLeft());
-        SpinVppRMSCodecRight    ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeVppRMS().GetRight());
-        SpinSinadADPOWLeft      ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeSINAD().GetLeft());
-        SpinSinadADPOWRight     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeSINAD().GetRight());
-        SpinVppPTPADPOWLeft     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppPTP().GetLeft());
-        SpinVppPTPADPOWRight    ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppPTP().GetRight());
-        SpinVppRMSADPOWLeft     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppRMS().GetLeft());
-        SpinVppRMSADPOWRight    ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppRMS().GetRight());
-    }
-
-  
 }; // namespace MenuSINADCFG

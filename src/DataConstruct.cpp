@@ -155,8 +155,27 @@ namespace DCWZ{
         CmdRegCFG[0x47] &= AR;
 		CmdRegCFG[0x48] &= AR;
 
+        //// 输出调试信息
+        //qDebug() << "[UpdateCfgCMD] DL =" << static_cast<int>(DL)
+        //    << "DR =" << static_cast<int>(DR)
+        //    << "AL =" << static_cast<int>(AL)
+        //    << "AR =" << static_cast<int>(AR);
+
+        //// 16进制输出
+        //qDebug() << "[UpdateCfgCMD] CmdRegCFG[0x41]=" << QString("0x%1").arg(CmdRegCFG[0x41], 8, 16, QChar('0'))
+        //    << "CmdRegCFG[0x42]=" << QString("0x%1").arg(CmdRegCFG[0x42], 8, 16, QChar('0'))
+        //    << "CmdRegCFG[0x43]=" << QString("0x%1").arg(CmdRegCFG[0x43], 8, 16, QChar('0'))
+        //    << "CmdRegCFG[0x44]=" << QString("0x%1").arg(CmdRegCFG[0x44], 8, 16, QChar('0'))
+        //    << "CmdRegCFG[0x45]=" << QString("0x%1").arg(CmdRegCFG[0x45], 8, 16, QChar('0'))
+        //    << "CmdRegCFG[0x46]=" << QString("0x%1").arg(CmdRegCFG[0x46], 8, 16, QChar('0'))
+        //    << "CmdRegCFG[0x47]=" << QString("0x%1").arg(CmdRegCFG[0x47], 8, 16, QChar('0'))
+        //    << "CmdRegCFG[0x48]=" << QString("0x%1").arg(CmdRegCFG[0x48], 8, 16, QChar('0'));
+
 		unsigned int chksum_head_all = TOOLWZ::AccVerify((char*)(CmdRegCFG + 1), 320);
         CmdRegCFG[0x51] = chksum_head_all;
+
+
+
     }
 
     const char const* DataConstruct::GetRegCfgCMD()
@@ -410,22 +429,9 @@ namespace DCWZ{
     }
 
     //参数数据构造类
-    DCWZ::ARG_RTC_GENERATE::ARG_RTC_GENERATE()
-        : ArgAudio(), RegCFG(), JudgeCondCodec(), JudgeCondAdpow() {
-    }
 
-    DCWZ::ARG_RTC_GENERATE::ARG_RTC_GENERATE(SDG::ARG a, ArgRegCFG<unsigned char> regCfg,
-        const TCOND::TestCondition& codecCond,
-        const TCOND::TestCondition& adpowCond)
-        : ArgAudio(a), RegCFG(regCfg), JudgeCondCodec(codecCond), JudgeCondAdpow(adpowCond) {
-    }
-
-    DCWZ::ARG_RTC_GENERATE::ARG_RTC_GENERATE(const ARG_RTC_GENERATE& cp)
-        : ArgAudio(cp.ArgAudio), RegCFG(cp.RegCFG),
-        JudgeCondCodec(cp.JudgeCondCodec), JudgeCondAdpow(cp.JudgeCondAdpow) {
-    }
-    /*ARG_RTC_GENERATE::ARG_RTC_GENERATE()
-        : ArgAudio(), RegCFG(), JudgeCondCodec(), JudgeCondAdpow()
+    ARG_RTC_GENERATE::ARG_RTC_GENERATE()
+        : ArgAudio(), RegCFG()
     {}
 
     ARG_RTC_GENERATE::ARG_RTC_GENERATE(SDG::ARG a, ArgRegCFG<unsigned char> regCfg)
@@ -434,24 +440,20 @@ namespace DCWZ{
 
     ARG_RTC_GENERATE::ARG_RTC_GENERATE(const ARG_RTC_GENERATE& cp)
         : ArgAudio(cp.GetAudioARG()), RegCFG(cp.GetRegCfgARG())
-    {}*/
+    {}
 
     ARG_RTC_GENERATE::~ARG_RTC_GENERATE()
     {}
 
-    void DCWZ::ARG_RTC_GENERATE::operator=(const ARG_RTC_GENERATE& as) 
+    void ARG_RTC_GENERATE::operator=(const ARG_RTC_GENERATE& as)
     {
-        ArgAudio = as.ArgAudio;
-        RegCFG = as.RegCFG;
-        JudgeCondCodec = as.JudgeCondCodec;
-        JudgeCondAdpow = as.JudgeCondAdpow;
-    }
-   /* void ARG_RTC_GENERATE::operator=(const ARG_RTC_GENERATE& as)
-    {
-    
+        // WRITE_DLG_MENU_AUDIO_ARG_DBG("DCWZ::ARG_RTC_GENERATE::operator=(), AudioArg: dB = %f, Freq = %lld\n",
+        //     ArgAudio.GetDB(), ArgAudio.GetFreq());
+        // WRITE_DLG_MENU_AUDIO_ARG_DBG("DCWZ::ARG_RTC_GENERATE::operator=(), as.audioArg: dB = %f, Freq = %lld\n",
+        //     as.GetAudioARG().GetDB(), as.GetAudioARG().GetFreq());
         ArgAudio = as.GetAudioARG();
         RegCFG = as.GetRegCfgARG();
-    }*/
+    }
 
     bool ARG_RTC_GENERATE::operator==(const ARG_RTC_GENERATE& as) const
     {
@@ -675,24 +677,6 @@ namespace DCWZ{
         }
     }
 
-    void DCWZ::DataList::AddNode(std::unique_ptr<DataConstruct>& DC,
-        const TCOND::TestCondition& codecCond,
-        const TCOND::TestCondition& adpowCond)
-    {
-        std::shared_ptr<DataNode> Node = std::make_shared<DataNode>();
-        Node->SetData(DC);
-        Node->SetCondCodec(codecCond);
-        Node->SetCondAdpow(adpowCond);
-        if (Head == nullptr) {
-            Head = Node;
-            Tail = Node;
-        }
-        else {
-            Tail->SetNext(Node);
-            Tail = Node;
-        }
-    }
-
     void DataList::AddNode(FPWZ::ArgDM a)
     {
         std::unique_ptr<DataConstruct> DC = std::make_unique<DC_DN_MNIC_64K>(a);
@@ -738,31 +722,9 @@ namespace DCWZ{
 
     void DataList::AddNode(ARG_RTC_GENERATE a)
     {
-        /*std::unique_ptr<DataConstruct> DC = std::make_unique<DC_DN_MNIC_64K_RCT_GENERATE>(a);
-        DC->Construct();
-        AddNode(DC);*/
-        AddNode(a, a.GetJudgeCondCodec(), a.GetJudgeCondAdpow());//新增：
-    }
-
-    /********************新增：重载添加参数*****************************************/
-    void DataList::AddNode(const ARG_RTC_GENERATE& a,
-        const TCOND::TestCondition& codecCond,
-        const TCOND::TestCondition& adpowCond)
-    {
         std::unique_ptr<DataConstruct> DC = std::make_unique<DC_DN_MNIC_64K_RCT_GENERATE>(a);
         DC->Construct();
-        std::shared_ptr<DataNode> Node = std::make_shared<DataNode>();
-        Node->SetData(DC);
-        Node->SetCondCodec(codecCond);
-        Node->SetCondAdpow(adpowCond);
-        if (Head == nullptr) {
-            Head = Node;
-            Tail = Node;
-        }
-        else {
-            Tail->SetNext(Node);
-            Tail = Node;
-        }
+        AddNode(DC);
     }
 
     void DataList::DelNode(ARG_RTC_GENERATE a)

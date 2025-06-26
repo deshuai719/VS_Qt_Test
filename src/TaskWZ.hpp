@@ -1,4 +1,4 @@
-#ifndef _TASKWZ_HPP_
+﻿#ifndef _TASKWZ_HPP_
 #define _TASKWZ_HPP_
 
 #include <set>

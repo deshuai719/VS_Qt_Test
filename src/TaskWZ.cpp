@@ -1,5 +1,5 @@
-#include "TaskWZ.hpp"
-#include "DlgMenuFile.hpp"
+﻿#include "TaskWZ.hpp"
+#include "GlobalConditionList.hpp"
 #include <QDebug>
 #include <atomic>
 
@@ -651,7 +651,6 @@ void TaskChipStatParsing::run()
 							Sinad[2] = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->MNICx4_ADC_INFO_ARR[i].Info[8 + j].sinad;
 							Vpp[2] = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->MNICx4_ADC_INFO_ARR[i].Info[8 + j].vpp;
 							Rms[2] = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->MNICx4_ADC_INFO_ARR[i].Info[8 + j].rms;
-							DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).UpdateRangeSINAD(Sinad[2]);
 							Res[2] &= DCR::DeviceCheckResultGlobal->GetCondition()[1].CheckAll(Sinad[2], Vpp[2], Rms[2]);
 							DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).CheckPacksOfMifInc(Res[0] & Res[1] & Res[2]);
 
@@ -939,24 +938,23 @@ void TaskDataSend::run()
 		std::shared_ptr<DCWZ::DataNode> Node = DCWZ::DataMana::DataListGlobal.GetHead();                        // 13. 获取数据链表头节点
 		for (int i = 0; Node != nullptr && Loop; Node = Node->GetNext(), i++)                                   // 14. 遍历所有数据节点
 		{
-			WRITE_TASK_DATA_SEND_DBG("Send Node\n");                                                            // 15. 记录发送节点日志
-			Node->GetData()->UpdateCfgCMD();                                                                     // 16. 更新节点的配置命令
+			WRITE_TASK_DATA_SEND_DBG("Send Node\n");  
+			if (i < g_ConditionList.size()) {
+				DCR::DeviceCheckResultGlobal->GetCondition()[0] = g_ConditionList[i].first;
+				DCR::DeviceCheckResultGlobal->GetCondition()[1] = g_ConditionList[i].second;
 
-			TCOND::TestCondition codecCond = Node->GetCondCodec();
-			TCOND::TestCondition adpowCond = Node->GetCondAdpow();
-			std::array<TCOND::TestCondition, 2> conds = { codecCond, adpowCond };
-			DCR::DeviceCheckResultGlobal->SetCondition(conds);
+				// 输出本次下发到全局的条件
+				qDebug() << "第" << i + 1 << "组条件：";
+				qDebug() << "  CodecCond SINAD:" << g_ConditionList[i].first.GetRangeSINAD().GetLeft() << g_ConditionList[i].first.GetRangeSINAD().GetRight()
+					<< "VppPTP:" << g_ConditionList[i].first.GetRangeVppPTP().GetLeft() << g_ConditionList[i].first.GetRangeVppPTP().GetRight()
+					<< "VppRMS:" << g_ConditionList[i].first.GetRangeVppRMS().GetLeft() << g_ConditionList[i].first.GetRangeVppRMS().GetRight();
+				qDebug() << "  AdpowCond SINAD:" << g_ConditionList[i].second.GetRangeSINAD().GetLeft() << g_ConditionList[i].second.GetRangeSINAD().GetRight()
+					<< "VppPTP:" << g_ConditionList[i].second.GetRangeVppPTP().GetLeft() << g_ConditionList[i].second.GetRangeVppPTP().GetRight()
+					<< "VppRMS:" << g_ConditionList[i].second.GetRangeVppRMS().GetLeft() << g_ConditionList[i].second.GetRangeVppRMS().GetRight();
 
-			//TCOND::TestCondition codecCond;   // 定义并初始化
-			//TCOND::TestCondition adpowCond;   // 定义并初始化
-
-			//std::array<TCOND::TestCondition, 2> conds = { codecCond, adpowCond };
-			//DCR::DeviceCheckResultGlobal->SetCondition(conds);                           //新增：设置设备检查条件
-
+			}// 15. 记录发送节点日志
+			Node->GetData()->UpdateCfgCMD();                                                                    // 16. 更新节点的配置命令
 			SOCKWZ::SockGlob::Send((char*)DCWZ::DataConstruct::GetRegCfgCMD(), 0x51 * 4 + 1);                   // 17. 发送配置命令
-			/*****************新增：打印条件********************/
-			codecCond.Print("codecCond");
-			adpowCond.Print("adpowCond");
 
 
 			/**********************新增：在发送0x38数据包前执行检测收0xAO回包代码************************/

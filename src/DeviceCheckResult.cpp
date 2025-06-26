@@ -1,5 +1,4 @@
 #include "DeviceCheckResult.hpp"
-#include <array>
 
 namespace DCR{
 
@@ -335,13 +334,6 @@ namespace DCR{
     {
         if(ChipUnSatisfiedNum > 0)
             ChipUnSatisfiedNum--;
-    }
-
-	//新增： 设置两组条件（Codec和ADPOW）
-    void DeviceCheckResult::SetCondition(const std::array<TCOND::TestCondition, 2>& conds) {
-        if (!Condition) Condition.reset(new TCOND::TestCondition[2]);
-        Condition[0] = conds[0];
-        Condition[1] = conds[1];
     }
 
     double DeviceCheckResult::TemperatureTransferInner(unsigned short data)

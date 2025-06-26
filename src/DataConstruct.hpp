@@ -4,7 +4,6 @@
 #include "DataFrameWz.hpp"
 #include "FileParsing.hpp"
 #include "SamplingDataGenerate.hpp"
-#include "TestCondition.hpp"
 
 /*
     下发数据构造
@@ -211,13 +210,8 @@ namespace DCWZ{
     private:
         SDG::ARG ArgAudio;//音频参数
         ArgRegCFG<unsigned char> RegCFG;//寄存器配置参数
-        TCOND::TestCondition JudgeCondCodec;  // 新增：Codec判定条件
-        TCOND::TestCondition JudgeCondAdpow;
     public:
         ARG_RTC_GENERATE();
-        ARG_RTC_GENERATE(SDG::ARG a, ArgRegCFG<unsigned char> regCfg,
-            const TCOND::TestCondition& codecCond = TCOND::TestCondition(),
-            const TCOND::TestCondition& adpowCond = TCOND::TestCondition());
         ARG_RTC_GENERATE(SDG::ARG a, ArgRegCFG<unsigned char> regCfg);
         ARG_RTC_GENERATE(const ARG_RTC_GENERATE& cp);
         ~ARG_RTC_GENERATE();
@@ -228,12 +222,6 @@ namespace DCWZ{
         SDG::ARG GetAudioARG() const;
         void SetRegcfgARG(ArgRegCFG<unsigned char> regCfg);
         ArgRegCFG<unsigned char> GetRegCfgARG() const;
-
-        // 新增：判定条件的getter/setter
-        void SetJudgeCondCodec(const TCOND::TestCondition& cond) { JudgeCondCodec = cond; }
-        void SetJudgeCondAdpow(const TCOND::TestCondition& cond) { JudgeCondAdpow = cond; }
-        const TCOND::TestCondition& GetJudgeCondCodec() const { return JudgeCondCodec; }
-        const TCOND::TestCondition& GetJudgeCondAdpow() const { return JudgeCondAdpow; }
     };
 
     class DC_DN_MNIC_64K_RCT_GENERATE: public DataConstruct{
@@ -266,9 +254,6 @@ namespace DCWZ{
     private:
         std::unique_ptr<DataConstruct> DC;
         std::shared_ptr<DataNode> Next;
-        // 新增：每个节点两组条件
-        TCOND::TestCondition CondCodec;
-        TCOND::TestCondition CondAdpow; 
     public:
         DataNode();
         ~DataNode();
@@ -280,11 +265,6 @@ namespace DCWZ{
         void SetNext(const std::shared_ptr<DataNode>& Node);
         const std::unique_ptr<DataConstruct>& GetData() const;
         const std::shared_ptr<DataNode>& GetNext() const;
-        /*****************新增**********************/
-        void SetCondCodec(const TCOND::TestCondition& cond) { CondCodec = cond; }
-        void SetCondAdpow(const TCOND::TestCondition& cond) { CondAdpow = cond; }
-        const TCOND::TestCondition& GetCondCodec() const { return CondCodec; }
-        const TCOND::TestCondition& GetCondAdpow() const { return CondAdpow; }
     };
 
     class DataList{
@@ -296,17 +276,9 @@ namespace DCWZ{
         ~DataList();
 
         void AddNode(std::unique_ptr<DataConstruct>& DC);
-        /********************新增：设置重载***************************/
-        void AddNode(std::unique_ptr<DataConstruct>& DC,
-            const TCOND::TestCondition& codecCond,
-            const TCOND::TestCondition& adpowCond);
         void AddNode(FPWZ::ArgDM a);
         void DelNode(FPWZ::ArgDM a);
         void AddNode(ARG_RTC_GENERATE a);
-        //新增：重载添加参数
-        void AddNode(const ARG_RTC_GENERATE& a,
-            const TCOND::TestCondition& codecCond,
-            const TCOND::TestCondition& adpowCond);
         void DelNode(ARG_RTC_GENERATE a);
         void Exchange(ARG_RTC_GENERATE a, ARG_RTC_GENERATE exchg);
         void ToBottom(ARG_RTC_GENERATE a);

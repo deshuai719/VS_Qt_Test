@@ -1,4 +1,4 @@
-#include "CentralWindow.hpp"
+﻿#include "CentralWindow.hpp"
 
 
 namespace CWD{
@@ -488,6 +488,27 @@ namespace CWD{
         CLOSE_CENTRAL_WIDGET_DBG();
     }
 
+    /**********************新增：刷新芯片在线状态**************************************/
+    void CentralWidget::UpdateChipOnlineStatus()
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                Models[i].UpdateItem(j + 1, CWD::Item(
+                    DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline(),
+                    Range(
+                        DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckSatisfiedCount(),
+                        DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()
+                    ),
+                    Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetRangeSINAD())
+                ));
+            }
+        }
+        POnlineChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipOnLineNum()));
+    }
+
+
     void CentralWidget::InitUI()
     {
         LocalIP             .setText("本机IPPORT:00.00.00.00:0000");
@@ -823,17 +844,22 @@ namespace CWD{
     {
         TimingDetection->start(1000);
         IfNoticeMNICWhenDisconnect = true;
+        UpdateChipOnlineStatus();// 新增：网口连接时刷新芯片在线状态
+   
+
     }
 
     void CentralWidget::NetDisconnected()
     {
         TimingDetection->stop();
+        UpdateChipOnlineStatus(); // 新增：定时刷新芯片在线状态
         ResetModelItemStat();
     }
 
     void CentralWidget::TimingDetectionEvent()
     {
         WRITE_CENTRAL_WIDGET_DBG("CentralWidget::TimingDetectionEvent(), Enter\n");
+        UpdateChipOnlineStatus(); // 每秒刷新一次在线状态和颜色
         TemperatureInner.setText(QString("FPGA温度:%1℃").arg(DCR::DeviceCheckResultGlobal->GetTemperatureInner(), 4, 'f', 1, '0'));
         TemperatureEnv.setText(QString("环境温度:%1℃").arg(DCR::DeviceCheckResultGlobal->GetTempeartureEnv(), 4, 'f', 1, '0'));
         if(DCR::DeviceCheckResultGlobal->GetUpPackCount() == UpPackCount)

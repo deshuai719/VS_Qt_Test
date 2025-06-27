@@ -659,14 +659,14 @@ namespace DlgMenuARG{
     bool Model::AddItem(Item item)
     {
    /*     qDebug() << "Model::AddItem: codecCond.SINAD_L=" << item.GetJudgeCondCodec().GetRangeSINAD().GetLeft();*/
-        for(auto mem : Items)
+       /* for(auto mem : Items)
         {
             if(mem == item)
             {
                 qDebug() << "AddItem: 重复，未添加";
                 return false;
             }
-        }
+        }*/
 
         beginInsertRows(QModelIndex(), rowCount(), rowCount());
         Items.push_back(item);
@@ -1188,10 +1188,10 @@ namespace DlgMenuARG{
             DCWZ::ARG_RTC_GENERATE param(
                 SDG::ARG(dB, Freq, Dur),
                 DCWZ::ArgRegCFG<unsigned char>(
-                    static_cast<unsigned char>(-(dl - 30) / 1.5),
-                    static_cast<unsigned char>(dr + 18),
-                    static_cast<unsigned char>((al + 126) / 1.5),
-                    static_cast<unsigned char>(ar + 40)
+                    static_cast<unsigned char>(dl),
+                    static_cast<unsigned char>(dr),
+                    static_cast<unsigned char>(al),
+                    static_cast<unsigned char>(ar)
                 )
             );
             g_ParamList.append(param); // 新增：存储参数

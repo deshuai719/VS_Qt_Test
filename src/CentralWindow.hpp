@@ -1,4 +1,4 @@
-#ifndef _CENTRALWINDOW_HPP_
+﻿#ifndef _CENTRALWINDOW_HPP_
 #define _CENTRALWINDOW_HPP_
 
 #include <QAbstractListModel>
@@ -119,7 +119,9 @@ namespace CWD{
 
     //CentralWidget
 
-    class CentralWidget: public QWidget{
+    class CentralWidget: 
+        public QWidget
+    {
         Q_OBJECT
 
         QLabel LocalIP;
@@ -203,6 +205,7 @@ namespace CWD{
         void NetConnected();//msg from MNIC
         void NetDisconnected();//msg from MNIC
         void TimingDetectionEvent();
+        void UpdateChipOnlineStatus();//新增：在线状态刷新
     signals:
         void NetRecovery();//msg to MNIC
         void NetLoss();//msg to MNIC

@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -13,7 +13,7 @@ class LogProcessor {
     struct ChipRes {
         std::string Res;
         std::vector<std::string> chipData;
-        int validCount = 0; // 有效包数
+        int validCount = 0; // 新增：有效包数
     } ;
 public:
     // 处理日志文件
@@ -26,83 +26,155 @@ public:
             return;
         }
 
-        std::string line;
-        bool inParameterBlock = false;
-        // std::map<std::string, std::vector<std::string>> chipData; // 按芯片编号存储数据
-        std::map<std::string, ChipRes> chipData; // 按芯片编号存储数据
-        std::string currentTimestamp;
+        //增加参数与条件缓存
+        std::vector<std::string> paramBlockLines;
+        bool readingParamBlock = false;
+        int paramBlockLineCount = 0;
 
-        while (std::getline(inFile, line)) {
-            if (line.find("[本组参数下发开始:") != std::string::npos) {
-                inParameterBlock = true;
-                outFile << line << "\n\n";
-                continue;
+        std::string line;                                                                          // 用于存储每次读取的日志行
+        bool inParameterBlock = false;                                                             // 标记当前是否在“参数下发”块内
+        // std::map<std::string, std::vector<std::string>> chipData;                               // 按芯片编号存储数据
+        std::map<std::string, ChipRes> chipData;                                                   // 按芯片编号存储每个芯片的结果和数据
+        std::string currentTimestamp;                                                              // 当前参数块的时标
+
+        while (std::getline(inFile, line)) {                                                       // 逐行读取输入文件
+            if (line.find("[本组参数下发开始:") != std::string::npos)                                      // 检查是否为参数块的开始
+            {
+                inParameterBlock = true;                                                           // 进入参数块
+                outFile << line << "\n\n";                                                         // 原样输出该行并空一行
+                //增加参数与条件缓存
+                paramBlockLines.clear();
+                readingParamBlock = false;
+                paramBlockLineCount = 0;
+
+                continue;                                                                          // 进入下一行处理
+
+            }
+
+            if (inParameterBlock) {
+                // 2. 识别并缓存参数与条件内容
+                if (!readingParamBlock && line.find("组参数与条件：") != std::string::npos) {
+                    readingParamBlock = true;
+                    paramBlockLineCount = 0;
+                }
+                if (readingParamBlock && paramBlockLineCount < 4) 
+                {
+                    paramBlockLines.push_back(line);
+                    paramBlockLineCount++;
+                    if (paramBlockLineCount == 4) {
+                        readingParamBlock = false;
+                    }
+                   
+                    
+                    continue;
+                }
             }
 
             if (line.find("[本组参数下发结束:") != std::string::npos) {
                 inParameterBlock = false;
-                
-                // 输出排序后的芯片数据
-                for (const auto& pair : chipData) 
-                {
-                    outFile << pair.first << ", "; // 芯片编号
-                    outFile << "Res:" << pair.second.Res << "，"; // 芯片结果
-                    outFile << " 有效包数：" << pair.second.validCount << "\n";//新增，有效包数结果
-                    for (const auto& data : pair.second.chipData) 
-                    {
+                // 新增：统计每个芯片编号的有效包数
+                int currentDur = 1; // 默认值
+                for (const auto& paramLine : paramBlockLines) {
+                    size_t pos = paramLine.find("Dur=");
+                    if (pos != std::string::npos) {
+                        std::istringstream iss(paramLine.substr(pos + 4));
+                        iss >> currentDur;
+                        break;
+                    }
+                }
+                for (auto& pair : chipData) {
+                    int validCount = 0;
+                    bool startCounting = false;
+                    const auto& dataVec = pair.second.chipData;
+                    for (size_t i = 0; i + 2 < dataVec.size(); i += 3) {
+                        bool allTrue = true;
+                        for (int j = 0; j < 3; ++j) {
+                            if (dataVec[i + j].find("Res: TRUE") == std::string::npos) {
+                                allTrue = false;
+                                break;
+                            }
+                        }
+                        if (allTrue) {
+                            if (!startCounting) {
+                                startCounting = true; // 第一次遇到全TRUE的组，开始计数
+                            }
+                            if (startCounting) {
+                                ++validCount;
+                            }
+                        }
+                        else {
+                            if (startCounting) {
+                                break; // 已经开始计数，遇到非全TRUE组，停止
+                            }
+                            // 没开始计数，继续找下一个三行组
+                        }
+                    }
+                    pair.second.validCount = validCount;
+                    pair.second.Res = (validCount >= currentDur * 125 - 1) ? "成功" : "失败";
+                }
+                // 3. 输出每个芯片编号前先输出参数与条件
+                for (const auto& pair : chipData) {
+                    for (const auto& paramLine : paramBlockLines) {
+                        outFile << paramLine << "\n";
+                    }
+                    outFile << pair.first << ", ";
+                    outFile << "Res:" << pair.second.Res << "，";
+                    outFile << " 有效包数：" << pair.second.validCount << "\n";
+                    for (const auto& data : pair.second.chipData) {
                         outFile << data << "\n";
                     }
                 }
-                
                 outFile << "\n" << line << "\n";
                 chipData.clear();
+                paramBlockLines.clear(); // 4. 清空
                 continue;
             }
 
-            if (inParameterBlock) {
-                if (line.find("测试次数：") != std::string::npos) {
-                    // 提取时间戳
-                    size_t pos = line.find("时标:");
-                    if (pos != std::string::npos) {
-                        currentTimestamp = line.substr(pos + 7);
+            if (inParameterBlock)                                                                  // 如果当前在参数块内
+            {
+                if (line.find("测试次数：") != std::string::npos)                                       // 查找“测试次数：”关键字
+                {
+                                                                                                   // 提取时间戳
+                    size_t pos = line.find("时标:");                                                 // 查找“时标:”关键字
+                    if (pos != std::string::npos)
+                    {
+                        currentTimestamp = line.substr(pos + 7);                                   // 提取时标后的内容作为当前时间戳
                     }
-                    continue;
+                    continue;                                                                      // 处理下一行
                 }
 
-                if (line.find("芯片编号：") != std::string::npos) {
-                    // 提取芯片编号作为key
-                    std::string chipId = line.substr(line.find("芯片编号："));
-                    
-                    // 读取接下来的三行数据并添加时间戳
-                    // std::vector<std::string> chipLines;
-                    ChipRes chipRes;
-                    bool isRes = true;
-                    for (int i = 0; i < 3; i++) {
-                        if (std::getline(inFile, line)) {
-                            // 添加时间戳
-                            size_t bracketPos = line.find('[');
-                            if (bracketPos != std::string::npos) {
-                                line.insert(bracketPos + 1, "Timstamp:" + currentTimestamp + ", ");
+                if (line.find("芯片编号：") != std::string::npos)                                       // 查找“芯片编号：”关键字
+                {
+                                                                                                   // 提取芯片编号作为key
+                    std::string chipId = line.substr(line.find("芯片编号："));                          // 以“芯片编号：”及其后内容作为芯片编号
+
+
+                                                                                                   // 读取接下来的三行数据并添加时间戳
+                    ChipRes chipRes;                                                               // 新建一个芯片结果结构体
+                    bool isRes = true;                                                             // 标记该芯片整体结果，初始为true
+                    for (int i = 0; i < 3; i++)                                                    // 读取三行数据
+                    {
+                        if (std::getline(inFile, line))                                            // 读取一行
+                        {
+                                                                                                   // 添加时间戳
+                            size_t bracketPos = line.find('[');                                    // 查找第一个'['
+                            if (bracketPos != std::string::npos)
+                            {
+                                line.insert(bracketPos + 1, "Timstamp:" + currentTimestamp + ", ");// 在'['后插入时间戳
                             }
-                            size_t resultPos = line.find("FALSE");
-                            if (resultPos != std::string::npos) {
+                            size_t resultPos = line.find("FALSE");                                 // 查找"FALSE"
+                            if (resultPos != std::string::npos)                                    // 只要有一行出现"FALSE"，整体结果为失败
+                            {
                                 isRes = false;
                             }
-                            // chipLines.push_back(line);
-                            chipRes.chipData.push_back(line);
+                            chipRes.chipData.push_back(line);                                      // 保存该行到chipData
 
-                            //新增：添加判断Res：true数量的自增量
-                            if (line.find("Res: TRUE") != std::string::npos)
-                            {
-                                chipRes.validCount++;
-                            }
               
                         }
                     }
                     
-                    // 保存到map中
-                    // chipData[chipId].insert(chipData[chipId].end(), chipLines.begin(), chipLines.end());
-                    chipData[chipId].Res = (isRes ? "成功" : "失败");
+                
+                  
                     chipData[chipId].chipData.insert(chipData[chipId].chipData.end(), chipRes.chipData.begin(), chipRes.chipData.end());
                 }
             } else {

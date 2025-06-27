@@ -1,4 +1,4 @@
-#ifndef _LOGWZ_HPP_
+﻿#ifndef _LOGWZ_HPP_
 #define _LOGWZ_HPP_
 
 #include <cstdio>
@@ -48,8 +48,9 @@ namespace LWZ{
 #define WRITE_LOG(Index, Format, ...)   LWZ::Log::LogInstance->Write(Index, Format, __VA_ARGS__)
 #define CLOSE_LOG(Index)   LWZ::Log::LogInstance->Close(Index)
 
-// #define DBG_LOG
-#undef DBG_LOG
+//调试日志开关
+ #define DBG_LOG
+//#undef DBG_LOG
 
 #if defined DBG_LOG
 
@@ -330,10 +331,11 @@ namespace LWZ{
 
 #define OPEN_LOG_UP_RECORD(path)   LWZ::Log::LogInstance->Init(LOG_UP_RECORD_INDEX, QString(PRE_FILE_DBG + #path).toStdString().c_str())
 #define WRITE_LOG_UP_RECORD(fmt, ...)   LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, fmt, __VA_ARGS__)
-#define WRITE_LOG_UP_PARAM_RECORD(...) LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  下发参数: dB=%.1f, Freq=%llu, Dur=%u, DL=%d, DR=%d, AL=%d, AR=%d\n", __VA_ARGS__)//新增：日志写参数
-#define WRITE_LOG_UP_COND_RECORD(...)  LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  测试条件: Codec SINAD[%.1f,%.1f], VppPTP[%.1f,%.1f], VppRMS[%.1f,%.1f]\n", __VA_ARGS__)//新增：日志写判定条件
+#define WRITE_LOG_UP_PARAM_RECORD(...) LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  参数: dB=%.2f, Freq=%llu, Dur=%u, Digital=%d, PGA=%d, Playback=%d, Headset=%d\n", __VA_ARGS__)//新增：日志写参数
+#define WRITE_LOG_UP_CODEC_COND_RECORD(...)  LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  Codec SINAD[%.d,%.d], VppPTP[%.d,%.d], VppRMS[%.d,%.d]\n", __VA_ARGS__)//新增：日志写判定条件
+#define WRITE_LOG_UP_ADPOW_COND_RECORD(...)  LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  Adpow SINAD[%.d,%.d], VppPTP[%.d,%.d], VppRMS[%.d,%.d]\n", __VA_ARGS__)//新增：日志写判定条件
 #define WRITE_LOG_UP_PACK_RECORD(...)   LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "\n测试次数：%4d, 时标:%5d\n", __VA_ARGS__)
-#define WRITE_LOG_UP_CHIP_RECORD(...)   LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  芯片编号：J[%d]S[%d]\n    Codec Left [Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s],\n    Codec Right[Siand:%4d, Vpp:%5d, Rms:%5d, Res:%s],\n    AdPow      [Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s]\n", __VA_ARGS__)
+#define WRITE_LOG_UP_CHIP_RECORD(...)   LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  芯片编号：J[%d]S[%d]\n    Codec Left [Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s],\n    Codec Right[Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s],\n    AdPow      [Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s]\n", __VA_ARGS__)
 #define CLOSE_LOG_UP_RECORD()   LWZ::Log::LogInstance->Close(LOG_UP_RECORD_INDEX)
 
 #else

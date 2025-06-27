@@ -1172,17 +1172,11 @@ namespace DlgMenuARG{
         int rowCount = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, "NUMBER/rowCount").toInt();
         qDebug() << "rowCount=" << rowCount;
         g_ConditionList.clear();
+        g_ParamList.clear();
         for(int i = 0; i < rowCount; i++)
         {
 
             //qDebug() << "正在读取第" << i << "条";
-            // double dB = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_ARG_RECORD, KEYITEM(i, DB)).toDouble();
-            // unsigned long long Freq = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_ARG_RECORD, KEYITEM(i, Freq)).toULongLong();
-            // unsigned int Dur = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_ARG_RECORD, KEYITEM(i, Dur)).toUInt();
-            // unsigned char dl = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_ARG_RECORD, KEYITEM(i, DL)).toUInt();
-            // unsigned char dr = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_ARG_RECORD, KEYITEM(i, DR)).toUInt();
-            // unsigned char al = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_ARG_RECORD, KEYITEM(i, AL)).toUInt();
-            // unsigned char ar = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_ARG_RECORD, KEYITEM(i, AR)).toUInt();
             double dB = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, DB)).toDouble();
             unsigned long long Freq = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Freq)).toULongLong();
             unsigned int Dur = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Dur)).toUInt();
@@ -1190,6 +1184,17 @@ namespace DlgMenuARG{
             double dr = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, DR)).toDouble();
             double al = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, AL)).toDouble();
             double ar = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, AR)).toDouble();
+
+            DCWZ::ARG_RTC_GENERATE param(
+                SDG::ARG(dB, Freq, Dur),
+                DCWZ::ArgRegCFG<unsigned char>(
+                    static_cast<unsigned char>(-(dl - 30) / 1.5),
+                    static_cast<unsigned char>(dr + 18),
+                    static_cast<unsigned char>((al + 126) / 1.5),
+                    static_cast<unsigned char>(ar + 40)
+                )
+            );
+            g_ParamList.append(param); // 新增：存储参数
             //qDebug() << "dB=" << dB << "Freq=" << Freq << "Dur=" << Dur << "dl=" << (int)dl << "dr=" << (int)dr << "al=" << (int)al << "ar=" << (int)ar;
             // 新增：读取判定条件
             TCOND::TestCondition codecCond, adpowCond;

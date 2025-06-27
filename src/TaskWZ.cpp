@@ -751,7 +751,7 @@ void TaskTestStatistics::run()
 				for(int j = 0; j < 4; j++)
 				{
 					//打印统计的连续有效包数
-					qDebug() << "Board" << i << "Chip" << j << "连续有效包数:"<< DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMif()<< "要求:" << ContinousValidNum;
+					//qDebug() << "Board" << i << "Chip" << j << "连续有效包数:"<< DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMif()<< "要求:" << ContinousValidNum;
 					if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMif() < ContinousValidNum)// 判断该芯片的连续有效包数是否小于要求
 					{
 						WRITE_TASK_STATISTICS_DBG("Check Result A Mif: False\n");
@@ -919,7 +919,7 @@ void TaskDataSend::init()
 
 void TaskDataSend::run()
 {
-	OPEN_TASK_DATA_SEND_DBG(LogTaskDataSend.txt);                                                               // 1. 打开数据发送任务的调试日志文件
+	OPEN_TASK_DATA_SEND_DBG(LogTaskDataSend.log);                                                               // 1. 打开数据发送任务的调试日志文件
 	OPEN_TASK_DATA_SEND_INFO_VERIFY(LogTaskDataSendInfoVerify.txt);                                             // 2. 打开数据发送信息校验日志
 	OPEN_LOG_UP_RECORD(LogUpRecord.log);                                                                        // 3. 打开上报记录日志
 	emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_START, StatisticMode::STATISTICS_A_MIF));                  // 4. 发送测试开始信号
@@ -939,22 +939,70 @@ void TaskDataSend::run()
 		for (int i = 0; Node != nullptr && Loop; Node = Node->GetNext(), i++)                                   // 14. 遍历所有数据节点
 		{
 			WRITE_TASK_DATA_SEND_DBG("Send Node\n");  
-			if (i < g_ConditionList.size()) {
-				DCR::DeviceCheckResultGlobal->GetCondition()[0] = g_ConditionList[i].first;
-				DCR::DeviceCheckResultGlobal->GetCondition()[1] = g_ConditionList[i].second;
-
-				// 输出本次下发到全局的条件
-				qDebug() << "第" << i + 1 << "组条件：";
-				qDebug() << "  CodecCond SINAD:" << g_ConditionList[i].first.GetRangeSINAD().GetLeft() << g_ConditionList[i].first.GetRangeSINAD().GetRight()
-					<< "VppPTP:" << g_ConditionList[i].first.GetRangeVppPTP().GetLeft() << g_ConditionList[i].first.GetRangeVppPTP().GetRight()
-					<< "VppRMS:" << g_ConditionList[i].first.GetRangeVppRMS().GetLeft() << g_ConditionList[i].first.GetRangeVppRMS().GetRight();
-				qDebug() << "  AdpowCond SINAD:" << g_ConditionList[i].second.GetRangeSINAD().GetLeft() << g_ConditionList[i].second.GetRangeSINAD().GetRight()
-					<< "VppPTP:" << g_ConditionList[i].second.GetRangeVppPTP().GetLeft() << g_ConditionList[i].second.GetRangeVppPTP().GetRight()
-					<< "VppRMS:" << g_ConditionList[i].second.GetRangeVppRMS().GetLeft() << g_ConditionList[i].second.GetRangeVppRMS().GetRight();
-
-			}// 15. 记录发送节点日志
+			if (i < g_ConditionList.size()) //从文件中读取对应序号的条件设置为全局条件
+			{
+		
 			Node->GetData()->UpdateCfgCMD();                                                                    // 16. 更新节点的配置命令
 			SOCKWZ::SockGlob::Send((char*)DCWZ::DataConstruct::GetRegCfgCMD(), 0x51 * 4 + 1);                   // 17. 发送配置命令
+
+			DCR::DeviceCheckResultGlobal->GetCondition()[0] = g_ConditionList[i].first;
+			DCR::DeviceCheckResultGlobal->GetCondition()[1] = g_ConditionList[i].second;
+
+
+			WRITE_LOG_UP_RECORD("\n[本组参数下发开始:%04d]\n", i + 1);                                              //  记录本组参数下发开始
+
+		
+			WRITE_LOG_UP_RECORD("\n第%d组参数与条件：\n", i + 1);                                                      //记录本组下发第几组条件和具体条件内容
+			if (i < g_ParamList.size()) {
+				const auto& param = g_ParamList[i];
+				WRITE_LOG_UP_PARAM_RECORD(                                                                  //记录本组下发参数的内容
+					param.GetAudioARG().GetDB(),
+					param.GetAudioARG().GetFreq(),
+					param.GetAudioARG().GetDur(),
+					param.GetRegCfgARG().GetDL(),
+					param.GetRegCfgARG().GetDR(),
+					param.GetRegCfgARG().GetAL(),
+					param.GetRegCfgARG().GetAR()
+				);
+			WRITE_LOG_UP_CODEC_COND_RECORD(
+				g_ConditionList[i].first.GetRangeSINAD().GetLeft(), g_ConditionList[i].first.GetRangeSINAD().GetRight(),
+				g_ConditionList[i].first.GetRangeVppPTP().GetLeft(), g_ConditionList[i].first.GetRangeVppPTP().GetRight(),
+				g_ConditionList[i].first.GetRangeVppRMS().GetLeft(), g_ConditionList[i].first.GetRangeVppRMS().GetRight()
+			);
+			WRITE_LOG_UP_ADPOW_COND_RECORD(
+				g_ConditionList[i].second.GetRangeSINAD().GetLeft(), g_ConditionList[i].second.GetRangeSINAD().GetRight(),
+				g_ConditionList[i].second.GetRangeVppPTP().GetLeft(), g_ConditionList[i].second.GetRangeVppPTP().GetRight(),
+				g_ConditionList[i].second.GetRangeVppRMS().GetLeft(), g_ConditionList[i].second.GetRangeVppRMS().GetRight()); // 记录条件范围
+			//qDebug() << typeid(g_ConditionList[i].first.GetRangeSINAD().GetLeft()).name();//确认GetLeft中数据的类型，此处为int
+			// 输出本次下发到全局的条件
+			/*qDebug() << "第" << i + 1 << "组条件：";
+			qDebug() << "  CodecCond SINAD:" << g_ConditionList[i].first.GetRangeSINAD().GetLeft() << g_ConditionList[i].first.GetRangeSINAD().GetRight()
+				<< "VppPTP:" << g_ConditionList[i].first.GetRangeVppPTP().GetLeft() << g_ConditionList[i].first.GetRangeVppPTP().GetRight()
+				<< "VppRMS:" << g_ConditionList[i].first.GetRangeVppRMS().GetLeft() << g_ConditionList[i].first.GetRangeVppRMS().GetRight();
+			qDebug() << "  AdpowCond SINAD:" << g_ConditionList[i].second.GetRangeSINAD().GetLeft() << g_ConditionList[i].second.GetRangeSINAD().GetRight()
+				<< "VppPTP:" << g_ConditionList[i].second.GetRangeVppPTP().GetLeft() << g_ConditionList[i].second.GetRangeVppPTP().GetRight()
+				<< "VppRMS:" << g_ConditionList[i].second.GetRangeVppRMS().GetLeft() << g_ConditionList[i].second.GetRangeVppRMS().GetRight();*/
+
+			}// 15. 记录发送节点日志
+			
+			}
+		
+			//// cfgCmd: 指向GetRegCfgCMD()返回的字节流
+			//const uint8_t* cfgCmd = reinterpret_cast<const uint8_t*>(DCWZ::DataConstruct::GetRegCfgCMD());
+			//// 1. 取出8个unsigned int
+			//unsigned int vals[8];
+			//for (int i = 0; i < 8; ++i) 
+			//{
+			//	// 注意字节序，假设小端
+			//	vals[i] = *(const unsigned int*)(cfgCmd + (0x41 + i) * 4);
+			//}
+			//// 2. 取出推DL、DR、AL、AR
+			//unsigned int DL = vals[0] & 0xFF; // 低8位
+			//unsigned int DR = vals[2] & 0xFF;
+			//unsigned int AL = vals[4] & 0xFF;
+			//unsigned int AR = vals[6] & 0xFF;
+
+			//qDebug() << "配置参数Digital:" << 30-DL*1.5 << "PGA:" << DR*1.0-18 << "Playback:" << AL*1.5-126 << "Headset:" << AR*1.0-40 ;
 
 
 			/**********************新增：在发送0x38数据包前执行检测收0xAO回包代码************************/
@@ -997,8 +1045,12 @@ void TaskDataSend::run()
 			}
 
 
-			WRITE_LOG_UP_RECORD("\n[本组参数下发开始:%04d]\n", i + 1);                                          // 18. 记录本组参数下发开始
+			
+
 			TaskChipStatParsing::bPackLogRecord = true;                                                         // 19. 启用芯片包日志记录
+
+
+
 
 			for (int i = 0; i < Node->GetData()->GetSendNum(); )                                                // 20. 发送每个数据包
 			{
@@ -1045,7 +1097,7 @@ void TaskDataSend::run()
 			TaskChipStatParsing::bPackLogRecord = false;                                                        // 28. 关闭芯片包日志记录
 			WRITE_TASK_DATA_SEND_DBG("Fluid Buffer Empty\n");
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));                                         // 29. 等待10ms
-			TaskTestStatistics::ContinousValidNum = Node->GetData()->GetDuration() * 125 - 1;                   // 30. 设置连续有效包数
+			TaskTestStatistics::ContinousValidNum = Node->GetData()->GetDuration() * 125 - 1;                   // 30. 设置连续有效包数目标
 			StatisticMode Mode = TASKWZ::StatisticMode::STATISTICS_A_MIF;                                       // 31. 设置统计模式
 			TaskTestStatistics::QueueStatistcsMODE.front(Mode);                                                 // 32. 推送统计模式到队列
 			WRITE_TASK_DATA_SEND_DBG("Semaphore Release Statistics a mif\n");
@@ -1152,7 +1204,18 @@ void TaskVersionParsing::run()
 					&& PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->chk_fail == 0
 					&& PTR_ARG_UP_A0(DataUp.GetData().get() + HEAD_DATA_LEN)->cmd_ack == 1)
 				{
-					WRITE_TASK_VERSION_GET_DBG("Data[0] = 0x%02x ... Data[7] = 0x%02x\n", ...);                                            // 15. 打印数据内容
+					WRITE_TASK_VERSION_GET_DBG
+					(
+						"Data[0] = 0x%02x ... Data[7] = 0x%02x\n",
+						((uint8_t*)DataUp.GetData().get())[0],
+						((uint8_t*)DataUp.GetData().get())[1],
+						((uint8_t*)DataUp.GetData().get())[2],
+						((uint8_t*)DataUp.GetData().get())[3],
+						((uint8_t*)DataUp.GetData().get())[4],
+						((uint8_t*)DataUp.GetData().get())[5],
+						((uint8_t*)DataUp.GetData().get())[6],
+						((uint8_t*)DataUp.GetData().get())[7]
+					);                                           // 15. 打印数据内容
 					Version.SEC = PTR_VERSION_UP(DataUp.GetData().get() + 12)->SEC;                                                        // 16. 解析并保存版本号各字段
 					Version.MIN = PTR_VERSION_UP(DataUp.GetData().get() + 12)->MIN;
 					Version.HOUR = PTR_VERSION_UP(DataUp.GetData().get() + 12)->HOUR;

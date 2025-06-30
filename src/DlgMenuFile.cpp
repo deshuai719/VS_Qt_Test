@@ -630,7 +630,7 @@ namespace DlgMenuARG{
         painter->fillRect(Rc[11], Brush[1]);
 
         painter->drawText(Rc[0],    QString("%1").arg(row));
-        painter->drawText(Rc[1],    Qt::AlignCenter, "更新");
+        painter->drawText(Rc[1],    Qt::AlignCenter, "判断条件");
         painter->drawText(Rc[2],    Qt::AlignCenter, "上移");
         painter->drawText(Rc[3],    Qt::AlignCenter, "下移");
         painter->drawText(Rc[4],    Qt::AlignCenter, QString("%1").arg(Arg.GetAudioARG().GetDB(), 1, 'f', 1, '0'));
@@ -1199,30 +1199,30 @@ namespace DlgMenuARG{
             // 新增：读取判定条件
             TCOND::TestCondition codecCond, adpowCond;
             // 新增：codec
-            double codecSinadL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_SINAD_L)).toDouble();
-            double codecSinadR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_SINAD_R)).toDouble();
+            int codecSinadL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_SINAD_L)).toInt();
+            int codecSinadR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_SINAD_R)).toInt();
      /*       qDebug() << "Codec_SINAD_L:" << codecSinadL;*/
             codecCond.GetRangeSINAD().SetRange(codecSinadL, codecSinadR);
 
-            double codecVppPTPL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_VppPTP_L)).toDouble();
-            double codecVppPTPR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_VppPTP_R)).toDouble();
+            int codecVppPTPL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_VppPTP_L)).toInt();
+            int codecVppPTPR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_VppPTP_R)).toInt();
             codecCond.GetRangeVppPTP().SetRange(codecVppPTPL, codecVppPTPR);
 
-            double codecVppRMSL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_VppRMS_L)).toDouble();
-            double codecVppRMSR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_VppRMS_R)).toDouble();
+            int codecVppRMSL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_VppRMS_L)).toInt();
+            int codecVppRMSR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Codec_VppRMS_R)).toInt();
             codecCond.GetRangeVppRMS().SetRange(codecVppRMSL, codecVppRMSR);
 
             // 新增： adpow
-            double adpowSinadL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_SINAD_L)).toDouble();
-            double adpowSinadR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_SINAD_R)).toDouble();
+            int adpowSinadL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_SINAD_L)).toInt();
+            int adpowSinadR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_SINAD_R)).toInt();
             adpowCond.GetRangeSINAD().SetRange(adpowSinadL, adpowSinadR);
 
-            double adpowVppPTPL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_VppPTP_L)).toDouble();
-            double adpowVppPTPR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_VppPTP_R)).toDouble();
+            int adpowVppPTPL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_VppPTP_L)).toInt();
+            int adpowVppPTPR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_VppPTP_R)).toInt();
             adpowCond.GetRangeVppPTP().SetRange(adpowVppPTPL, adpowVppPTPR);
 
-            double adpowVppRMSL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_VppRMS_L)).toDouble();
-            double adpowVppRMSR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_VppRMS_R)).toDouble();
+            int adpowVppRMSL = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_VppRMS_L)).toInt();
+            int adpowVppRMSR = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Adpow_VppRMS_R)).toInt();
             adpowCond.GetRangeVppRMS().SetRange(adpowVppRMSL, adpowVppRMSR);
 
             //qDebug() << "InitARG i=" << i << "Codec_SINAD_L=" << codecSinadL << "Codec_SINAD_R=" << codecSinadR;

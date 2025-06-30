@@ -959,10 +959,10 @@ void TaskDataSend::run()
 					param.GetAudioARG().GetDB(),
 					param.GetAudioARG().GetFreq(),
 					param.GetAudioARG().GetDur(),
-					param.GetRegCfgARG().GetDL(),
-					param.GetRegCfgARG().GetDR(),
-					param.GetRegCfgARG().GetAL(),
-					param.GetRegCfgARG().GetAR()
+					static_cast<signed char>(param.GetRegCfgARG().GetDL()),
+					static_cast<signed char>(param.GetRegCfgARG().GetDR()),
+					static_cast<signed char>(param.GetRegCfgARG().GetAL()),
+					static_cast<signed char>(param.GetRegCfgARG().GetAR())
 				);
 			WRITE_LOG_UP_CODEC_COND_RECORD(
 				g_ConditionList[i].first.GetRangeSINAD().GetLeft(), g_ConditionList[i].first.GetRangeSINAD().GetRight(),
@@ -973,15 +973,15 @@ void TaskDataSend::run()
 				g_ConditionList[i].second.GetRangeSINAD().GetLeft(), g_ConditionList[i].second.GetRangeSINAD().GetRight(),
 				g_ConditionList[i].second.GetRangeVppPTP().GetLeft(), g_ConditionList[i].second.GetRangeVppPTP().GetRight(),
 				g_ConditionList[i].second.GetRangeVppRMS().GetLeft(), g_ConditionList[i].second.GetRangeVppRMS().GetRight()); // 记录条件范围
-			//qDebug() << typeid(g_ConditionList[i].first.GetRangeSINAD().GetLeft()).name();//确认GetLeft中数据的类型，此处为int
+			qDebug() << typeid(g_ConditionList[i].first.GetRangeSINAD().GetLeft()).name();//确认GetLeft中数据的类型，此处为int
 			// 输出本次下发到全局的条件
-			/*qDebug() << "第" << i + 1 << "组条件：";
+			qDebug() << "第" << i + 1 << "组条件：";
 			qDebug() << "  CodecCond SINAD:" << g_ConditionList[i].first.GetRangeSINAD().GetLeft() << g_ConditionList[i].first.GetRangeSINAD().GetRight()
 				<< "VppPTP:" << g_ConditionList[i].first.GetRangeVppPTP().GetLeft() << g_ConditionList[i].first.GetRangeVppPTP().GetRight()
 				<< "VppRMS:" << g_ConditionList[i].first.GetRangeVppRMS().GetLeft() << g_ConditionList[i].first.GetRangeVppRMS().GetRight();
 			qDebug() << "  AdpowCond SINAD:" << g_ConditionList[i].second.GetRangeSINAD().GetLeft() << g_ConditionList[i].second.GetRangeSINAD().GetRight()
 				<< "VppPTP:" << g_ConditionList[i].second.GetRangeVppPTP().GetLeft() << g_ConditionList[i].second.GetRangeVppPTP().GetRight()
-				<< "VppRMS:" << g_ConditionList[i].second.GetRangeVppRMS().GetLeft() << g_ConditionList[i].second.GetRangeVppRMS().GetRight();*/
+				<< "VppRMS:" << g_ConditionList[i].second.GetRangeVppRMS().GetLeft() << g_ConditionList[i].second.GetRangeVppRMS().GetRight();
 
 			}// 15. 记录发送节点日志
 			
@@ -1020,13 +1020,15 @@ void TaskDataSend::run()
 						break;
 					}
 				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(320));            //硬件配置后会有一定时间的缓慢上升期，默认20ms，最大320ms
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));            //硬件配置后会有一定时间的缓慢上升期，默认20ms，最大320ms
 			}
 			if (!ackReceived)
 			{
 				WRITE_TASK_DATA_SEND_DBG("No 0xA0 ACK received, aborting this group!\n");
 				break;                                                                  // 或 return，或继续重试，视你的业务需求
 			}
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(320));            //硬件配置后会有一定时间的缓慢上升期，默认20ms，最大320ms
 
 			/*******************在收到0xA0回包后，等待配置完成后的第一个0x28包**************************/
 			TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release); // 先清零

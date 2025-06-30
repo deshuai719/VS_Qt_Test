@@ -267,7 +267,8 @@ namespace DlgMenuARG{
         void Connect();
         void InitARG();
 
-        void AddARG(double, unsigned long long, unsigned int, unsigned char, unsigned char, unsigned char, unsigned char); 
+        void AddARG(
+            double db, unsigned long long, unsigned int, unsigned char, unsigned char, unsigned char, unsigned char);
         //新增：重载AddARG
         void AddARG(double db, unsigned long long freq, unsigned int dur,
             unsigned char dl, unsigned char dr, unsigned char al, unsigned char ar,

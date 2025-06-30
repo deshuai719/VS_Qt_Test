@@ -1,4 +1,4 @@
-#include "DataConstruct.hpp"
+﻿#include "DataConstruct.hpp"
 #include <cstdio>
 
 namespace DCWZ{
@@ -498,7 +498,7 @@ namespace DCWZ{
 
     DC_DN_MNIC_64K_RCT_GENERATE::DC_DN_MNIC_64K_RCT_GENERATE(ARG_RTC_GENERATE a)
         :DataConstruct(a.GetRegCfgARG()), SampDataGenerator(a.GetAudioARG()), PacksBuffer(new PackInfo),
-        Amp((std::round(std::pow(10, SampDataGenerator.GetArg().GetDB() / 20) * 10000) / 10000) * 32767),
+        Amp((std::round(std::pow(10, SampDataGenerator.GetArg().GetDB() / 20) * 10000) / 10000) * 32767),//10^(dB/20)：将分贝转换为线性幅值,乘以 32767：将幅值映射到 16 位有符号整型的最大值（音频常用范围）,10000/10000 是为了保留4位小数后再乘，减少精度损失 
         StepLen(SampDataGenerator.GetArg().GetFreq() / 125),
         SendPacksNum(SampDataGenerator.GetArg().GetDur() * 125),
         PackCnt(-1)

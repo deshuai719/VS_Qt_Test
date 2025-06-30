@@ -987,27 +987,27 @@ void TaskDataSend::run()
 			
 			}
 		
-			//// cfgCmd: 指向GetRegCfgCMD()返回的字节流
-			//const uint8_t* cfgCmd = reinterpret_cast<const uint8_t*>(DCWZ::DataConstruct::GetRegCfgCMD());
-			//// 1. 取出8个unsigned int
-			//unsigned int vals[8];
-			//for (int i = 0; i < 8; ++i) 
-			//{
-			//	// 注意字节序，假设小端
-			//	vals[i] = *(const unsigned int*)(cfgCmd + (0x41 + i) * 4);
-			//}
-			//// 2. 取出推DL、DR、AL、AR
-			//unsigned int DL = vals[0] & 0xFF; // 低8位
-			//unsigned int DR = vals[2] & 0xFF;
-			//unsigned int AL = vals[4] & 0xFF;
-			//unsigned int AR = vals[6] & 0xFF;
+			// cfgCmd: 指向GetRegCfgCMD()返回的字节流
+			const uint8_t* cfgCmd = reinterpret_cast<const uint8_t*>(DCWZ::DataConstruct::GetRegCfgCMD());
+			// 1. 取出8个unsigned int
+			unsigned int vals[8];
+			for (int i = 0; i < 8; ++i) 
+			{
+				// 注意字节序，假设小端
+				vals[i] = *(const unsigned int*)(cfgCmd + (0x41 + i) * 4);
+			}
+			// 2. 取出推DL、DR、AL、AR
+			unsigned int DL = vals[0] & 0xFF; // 低8位
+			unsigned int DR = vals[2] & 0xFF;
+			unsigned int AL = vals[4] & 0xFF;
+			unsigned int AR = vals[6] & 0xFF;
 
-			//qDebug() << "配置参数Digital:" << 30-DL*1.5 << "PGA:" << DR*1.0-18 << "Playback:" << AL*1.5-126 << "Headset:" << AR*1.0-40 ;
+			qDebug() << "配置参数Digital:" << 30-DL*1.5 << "PGA:" << DR*1.0-18 << "Playback:" << AL*1.5-126 << "Headset:" << AR*1.0-40 ;
 
 
 			/**********************新增：在发送0x38数据包前执行检测收0xAO回包代码************************/
 			bool ackReceived = false;
-			for (int tryCount = 0; tryCount < 100 && Loop; ++tryCount)                  // 最多等1秒
+			for (int tryCount = 0; tryCount < 200 && Loop; ++tryCount)                  // 最多等2秒
 			{
 				RcvData DataUp;
 				TaskDataSend::QueueParamAck.rear(DataUp);                               // 取回包（确保你的0xA0回包都进了这个队列）
@@ -1020,7 +1020,7 @@ void TaskDataSend::run()
 						break;
 					}
 				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));            //硬件配置后会有一定时间的缓慢上升期，默认20ms，最大320ms
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));            //硬件配置后会有一定时间的缓慢上升期，默认20ms，最大320ms
 			}
 			if (!ackReceived)
 			{
@@ -1031,28 +1031,27 @@ void TaskDataSend::run()
 			std::this_thread::sleep_for(std::chrono::milliseconds(320));            //硬件配置后会有一定时间的缓慢上升期，默认20ms，最大320ms
 
 			/*******************在收到0xA0回包后，等待配置完成后的第一个0x28包**************************/
+			int lastTimeStamp = DCR::DeviceCheckResultGlobal->GetUpPackCount();
+
 			TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release); // 先清零
 			bool got28 = false;
-			for (int wait28 = 0; wait28 < 200 && Loop; ++wait28) // 最多等2秒
-			{ 
+			for (int wait28 = 0; wait28 < 100 && Loop; ++wait28) // 最多等2秒
+			{
 				if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) {
-					got28 = true;
-					break;
+					int curTimeStamp = DCR::DeviceCheckResultGlobal->GetUpPackCount();
+					if (curTimeStamp != lastTimeStamp) { // 只响应新到的0x28包
+						got28 = true;
+						break;
+					}
 				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(2));
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			}
 			if (!got28) {
 				WRITE_TASK_DATA_SEND_DBG("No 0x28 status packet received after config, aborting!\n");
 				break;
 			}
 
-
-			
-
 			TaskChipStatParsing::bPackLogRecord = true;                                                         // 19. 启用芯片包日志记录
-
-
-
 
 			for (int i = 0; i < Node->GetData()->GetSendNum(); )                                                // 20. 发送每个数据包
 			{
@@ -1098,7 +1097,7 @@ void TaskDataSend::run()
 			WRITE_LOG_UP_RECORD("\n[本组参数下发结束:%04d]\n", i + 1);                                          // 27. 记录本组参数下发结束
 			TaskChipStatParsing::bPackLogRecord = false;                                                        // 28. 关闭芯片包日志记录
 			WRITE_TASK_DATA_SEND_DBG("Fluid Buffer Empty\n");
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));                                         // 29. 等待10ms
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));                                         // 29. 等待100ms
 			TaskTestStatistics::ContinousValidNum = Node->GetData()->GetDuration() * 125 - 1;                   // 30. 设置连续有效包数目标
 			StatisticMode Mode = TASKWZ::StatisticMode::STATISTICS_A_MIF;                                       // 31. 设置统计模式
 			TaskTestStatistics::QueueStatistcsMODE.front(Mode);                                                 // 32. 推送统计模式到队列
@@ -1115,7 +1114,7 @@ void TaskDataSend::run()
 		WRITE_TASK_DATA_SEND_DBG("Semaphore Acquire Statistics a time\n");
 		WRITE_LOG_UP_RECORD("\n[本次参数下发结束:%04d]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount());     // 37. 记录本次参数下发结束
 	}
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));                                                // 38. 等待100ms
+	std::this_thread::sleep_for(std::chrono::milliseconds(320));                                                // 38. 等待100ms
 	emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_OVER, StatisticMode::STATISTICS_A_MIF));                   // 39. 发送测试结束信号
 	WRITE_TASK_DATA_SEND_DBG("emit MsgOfStartEnd(TEST_OVER)\n");
 	SemaWaitForUI.acquire(1);                                                                                   // 40. 等待UI信号量，确保UI处理完毕

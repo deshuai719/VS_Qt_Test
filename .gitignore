@@ -49,7 +49,6 @@ qrc_*.cpp
 *.so
 *.dylib
 *.dll
-*.exe
 *.exp
 *.idb
 *.lib

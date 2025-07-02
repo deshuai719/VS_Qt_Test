@@ -1,4 +1,4 @@
-#include "FluidCtrl.hpp"
+ï»¿#include "FluidCtrl.hpp"
 
 namespace FCT{
     FluidCtrl::FluidCtrl(){}
@@ -9,20 +9,20 @@ namespace FCT{
         FluidStore(0);
     }
 
-    FLUID_TYPE FluidCtrl::FluidLoad(int Index)                                               //¶ÁÈ¡Ö¸¶¨Í¨µÀ£¨Index£©µÄÁ÷¿Ø»º³åÇøµÄµ±Ç°Öµ¡£
+    FLUID_TYPE FluidCtrl::FluidLoad(int Index)                                               //è¯»å–æŒ‡å®šé€šé“ï¼ˆIndexï¼‰çš„æµæ§ç¼“å†²åŒºçš„å½“å‰å€¼ã€‚
     {
-#if defined FLUID_IGNORE                                                                     //Èç¹û¶¨ÒåÁË FLUID_IGNORE£¬ÔòÖ±½Ó·µ»Ø2048£¨ÓÃÓÚ²âÊÔ»òºöÂÔÁ÷¿Ø£©¡£
+#if defined FLUID_IGNORE                                                                     //å¦‚æœå®šä¹‰äº† FLUID_IGNOREï¼Œåˆ™ç›´æ¥è¿”å›2048ï¼ˆç”¨äºæµ‹è¯•æˆ–å¿½ç•¥æµæ§ï¼‰ã€‚
         return 2048;
 #endif
-        return FluidCtrlBuffer[Index].load();                                                //·ñÔò·µ»ØÔ­×Ó±äÁ¿ FluidCtrlBuffer[Index] µÄÖµ¡£
+        return FluidCtrlBuffer[Index].load();                                                //å¦åˆ™è¿”å›åŸå­å˜é‡ FluidCtrlBuffer[Index] çš„å€¼ã€‚
     }
 
-    void FluidCtrl::FluidStore(int Index, FLUID_TYPE v)                                      //ÉèÖÃÖ¸¶¨Í¨µÀ£¨Index£©µÄÁ÷¿Ø»º³åÇøµÄÖµÎª v¡£
+    void FluidCtrl::FluidStore(int Index, FLUID_TYPE v)                                      //è®¾ç½®æŒ‡å®šé€šé“ï¼ˆIndexï¼‰çš„æµæ§ç¼“å†²åŒºçš„å€¼ä¸º vã€‚
     {
         FluidCtrlBuffer[Index].store(v);
     }
 
-    void FluidCtrl::FluidStore(FLUID_TYPE v)                                                 //½«ËùÓĞÍ¨µÀµÄÁ÷¿Ø»º³åÇøµÄÖµ¶¼ÉèÖÃÎª v¡£
+    void FluidCtrl::FluidStore(FLUID_TYPE v)                                                 //å°†æ‰€æœ‰é€šé“çš„æµæ§ç¼“å†²åŒºçš„å€¼éƒ½è®¾ç½®ä¸º vã€‚
     {
         for(int i = 0; i < MAX_FLUID_NUM; i++)
         {
@@ -30,40 +30,40 @@ namespace FCT{
         }
     }
 
-    FLUID_TYPE FluidCtrl::FluidFetchSub(int Index, FLUID_TYPE sub)                           //¶ÔÖ¸¶¨Í¨µÀµÄÁ÷¿Ø»º³åÇø×öÔ­×Ó¼õ·¨£¨¼õÈ¥ sub£©£¬²¢·µ»Ø¼õ·¨Ç°µÄ¾ÉÖµ¡£
+    FLUID_TYPE FluidCtrl::FluidFetchSub(int Index, FLUID_TYPE sub)                           //å¯¹æŒ‡å®šé€šé“çš„æµæ§ç¼“å†²åŒºåšåŸå­å‡æ³•ï¼ˆå‡å» subï¼‰ï¼Œå¹¶è¿”å›å‡æ³•å‰çš„æ—§å€¼ã€‚
     {
         return FluidCtrlBuffer[Index].fetch_sub(sub);
     }
 
-    FluidCheckRes FluidCtrl::FluidCheck(int Index, FLUID_TYPE Len, FLUID_TYPE Remain)        //¼ì²éÁ÷¿ØÊÇ·ñÂú×ãÌõ¼ş£¨²»ĞŞ¸Ä»º³åÇøµÄÖµ£©¡£
+    FluidCheckRes FluidCtrl::FluidCheck(int Index, FLUID_TYPE Len, FLUID_TYPE Remain)        //æ£€æŸ¥æµæ§æ˜¯å¦æ»¡è¶³æ¡ä»¶ï¼ˆä¸ä¿®æ”¹ç¼“å†²åŒºçš„å€¼ï¼‰ã€‚
     {
 #if defined FLUID_IGNORE
         return FLUID_SATISFY;
 #endif
-        if(FluidLoad(Index) > (Len + Remain))                                                //Èç¹ûµ±Ç°»º³åÇøÊ£ÓàÖµ´óÓÚ Len + Remain£¬·µ»Ø FLUID_SATISFY£¨ÔÊĞí·¢ËÍ£©¡£
+        if(FluidLoad(Index) > (Len + Remain))                                                //å¦‚æœå½“å‰ç¼“å†²åŒºå‰©ä½™å€¼å¤§äº Len + Remainï¼Œè¿”å› FLUID_SATISFYï¼ˆå…è®¸å‘é€ï¼‰ã€‚
         {
             return FLUID_SATISFY;
         }
         else
         {
-            return FLUID_REJECTION;                                                          //·ñÔò·µ»Ø FLUID_REJECTION£¨²»ÔÊĞí·¢ËÍ£©¡£
+            return FLUID_REJECTION;                                                          //å¦åˆ™è¿”å› FLUID_REJECTIONï¼ˆä¸å…è®¸å‘é€ï¼‰ã€‚
         }
     }
 
-    FluidCheckRes FluidCtrl::FluidCheckUpdate(int Index, FLUID_TYPE Len, FLUID_TYPE Remain)  //¼ì²éÁ÷¿Ø²¢Ô­×ÓĞÔµØ¼õÉÙ»º³åÇøµÄÖµ£¨¼´¡°ÏûºÄ¡±µô±¾´ÎÒª·¢ËÍµÄÊı¾İÁ¿£©¡£
+    FluidCheckRes FluidCtrl::FluidCheckUpdate(int Index, FLUID_TYPE Len, FLUID_TYPE Remain)  //æ£€æŸ¥æµæ§å¹¶åŸå­æ€§åœ°å‡å°‘ç¼“å†²åŒºçš„å€¼ï¼ˆå³â€œæ¶ˆè€—â€æ‰æœ¬æ¬¡è¦å‘é€çš„æ•°æ®é‡ï¼‰ã€‚
     {
 #if defined FLUID_IGNORE
         return FLUID_SATISFY;
 #endif
-        if(FluidFetchSub(Index, Len) > Remain)                                               //Èç¹û¼õÈ¥ Len ºóÊ£ÓàÖµ´óÓÚ Remain£¬·µ»Ø FLUID_SATISFY£¨ÔÊĞí·¢ËÍ£©¡£
+        if(FluidFetchSub(Index, Len)-Len > Remain)                                               //å¦‚æœå‡å» Len åå‰©ä½™å€¼å¤§äº Remainï¼Œè¿”å› FLUID_SATISFYï¼ˆå…è®¸å‘é€ï¼‰ã€‚
         {
             return FLUID_SATISFY;
         }
         else
         {
-            return FLUID_REJECTION;                                                          //·ñÔò·µ»Ø FLUID_REJECTION£¨²»ÔÊĞí·¢ËÍ£©¡£
+            return FLUID_REJECTION;                                                          //å¦åˆ™è¿”å› FLUID_REJECTIONï¼ˆä¸å…è®¸å‘é€ï¼‰ã€‚
         }
     }
 
-    std::unique_ptr<FluidCtrl> FluidCtrlGlob(new FluidCtrl);                                //´´½¨Ò»¸öÈ«¾ÖÎ¨Ò»µÄ FluidCtrl ÊµÀı£¬¹©È«¾ÖÁ÷¿ØÊ¹ÓÃ¡£
+    std::unique_ptr<FluidCtrl> FluidCtrlGlob(new FluidCtrl);                                //åˆ›å»ºä¸€ä¸ªå…¨å±€å”¯ä¸€çš„ FluidCtrl å®ä¾‹ï¼Œä¾›å…¨å±€æµæ§ä½¿ç”¨ã€‚
 };

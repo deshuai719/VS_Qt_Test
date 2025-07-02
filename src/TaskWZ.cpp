@@ -605,10 +605,10 @@ void TaskChipStatParsing::run()
 			if(FRAME_HEAD_STAR(Data.GetData().get())->msgID == 0x28)                                                                 // 判断数据包类型是否为0x28（芯片状态包）
 			{
 				FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac);            // 更新流控缓存
+				ReadyForSend38.store(true, std::memory_order_release);                                                               // 新增：收到0x28包后设置标志
 				DCR::DeviceCheckResultGlobal->SetTemperatureInner(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->fpga_heat); // 更新芯片内部温度
 				DCR::DeviceCheckResultGlobal->SetTemperatureEnv(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->ds18b20_16b); // 更新环境温度
 				DCR::DeviceCheckResultGlobal->SetUpPackCount(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->timeStamp_8ms);  // 更新上行包计数
-				ReadyForSend38.store(true, std::memory_order_release);                                                               // 新增：收到0x28包后设置标志
 				// 如果启用包日志记录，写入一条记录
 				if(bPackLogRecord)
 				{
@@ -922,6 +922,8 @@ void TaskDataSend::run()
 	OPEN_TASK_DATA_SEND_DBG(LogTaskDataSend.log);                                                               // 1. 打开数据发送任务的调试日志文件
 	OPEN_TASK_DATA_SEND_INFO_VERIFY(LogTaskDataSendInfoVerify.txt);                                             // 2. 打开数据发送信息校验日志
 	OPEN_LOG_UP_RECORD(LogUpRecord.log);                                                                        // 3. 打开上报记录日志
+	OPEN_CHECK_DELAY_DBG(CHECK_DELAY.txt);
+
 	emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_START, StatisticMode::STATISTICS_A_MIF));                  // 4. 发送测试开始信号
 	SemaWaitForUI.acquire(1);                                                                                   // 5. 等待UI信号量，确保UI准备好
 
@@ -953,6 +955,7 @@ void TaskDataSend::run()
 
 		
 			WRITE_LOG_UP_RECORD("\n第%d组参数与条件：\n", i + 1);                                                      //记录本组下发第几组条件和具体条件内容
+			WRITE_TASK_DATA_SEND_DBG("\n第%d组参数与条件：\n", i + 1);
 			if (i < g_ParamList.size()) {
 				const auto& param = g_ParamList[i];
 				WRITE_LOG_UP_PARAM_RECORD(                                                                  //记录本组下发参数的内容
@@ -1035,16 +1038,18 @@ void TaskDataSend::run()
 
 			TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release); // 先清零
 			bool got28 = false;
-			for (int wait28 = 0; wait28 < 100 && Loop; ++wait28) // 最多等2秒
+			for (int wait28 = 0; wait28 < 100 && Loop; ++wait28) // 
 			{
-				if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) {
+				if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) 
+				{
 					int curTimeStamp = DCR::DeviceCheckResultGlobal->GetUpPackCount();
-					if (curTimeStamp != lastTimeStamp) { // 只响应新到的0x28包
+					if (curTimeStamp  > lastTimeStamp+2) 
+					{ // 只响应新到的0x28包
 						got28 = true;
 						break;
 					}
 				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(10));
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			}
 			if (!got28) {
 				WRITE_TASK_DATA_SEND_DBG("No 0x28 status packet received after config, aborting!\n");
@@ -1053,32 +1058,57 @@ void TaskDataSend::run()
 
 			TaskChipStatParsing::bPackLogRecord = true;                                                         // 19. 启用芯片包日志记录
 
+			std::chrono::steady_clock::time_point lastSendTime = std::chrono::steady_clock::now();//新增：发包时间差
+			//TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release);
 			for (int i = 0; i < Node->GetData()->GetSendNum(); )                                                // 20. 发送每个数据包
 			{
 				/*if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) 
 				{*/
 					DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(i);                                         // 21. 获取第i个包的信息
 					// 判断流控是否满足，满足则发送
-					if (FCT::FluidCtrlGlob->FluidCheckUpdate(0, Pack.GetSegAll().GetLen(), FLUID_SIZE_INDEX0 / 4) == FCT::FluidCheckRes::FLUID_SATISFY)
+					int packLen = 512 ;
+					int remain = FLUID_SIZE_INDEX0 / 4;
+					int before = FCT::FluidCtrlGlob->FluidLoad(0); // 发送前剩余空间
+					//qDebug() << "[TaskDataSend] ReadyForSend38 =" << TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire);
+					if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) 
 					{
+						if (FCT::FluidCtrlGlob->FluidCheckUpdate(0, 512, FLUID_SIZE_INDEX0 / 4) == FCT::FluidCheckRes::FLUID_SATISFY)	  //512个采样点
+						{
+							// 2. 发送前获取当前时间
+							auto now = std::chrono::steady_clock::now();
+							// 3. 计算与上一次的时间差（单位：毫秒）
+							auto diffMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastSendTime).count();
+							// 4. 记录时间差
+							WRITE_TASK_DATA_SEND_DBG("Send interval: %lld ms\n", static_cast<long long>(diffMs));
 #ifndef TEST_WITHOUT_BOARD
-						SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());                      // 22. 发送数据包
+							// 5. 发送数据包
+							SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());                      // 22. 发送数据包
 #else
-						std::this_thread::sleep_for(std::chrono::milliseconds(10));                                 // 23. 模拟发送延时
+							std::this_thread::sleep_for(std::chrono::milliseconds(10));                                 // 23. 模拟发送延时
 #endif
-						i++;                                                                                        // 24. 发送下一个包
-						TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release); // 发送后清零
+							int after = FCT::FluidCtrlGlob->FluidLoad(0); // 发送后剩余空间
+							// 6. 更新上一次发送时间
+							lastSendTime = now;
+							WRITE_TASK_DATA_SEND_DBG("FluidCtrl: before=%d, send=%d, after=%d, remain=%d\n", before, packLen, after, remain);
+							i++;
+						}                                                                                    // 24. 发送下一个包
+						else
+						{
+							TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release);
+						}
 					}
-				/*}*/
-				//else
-				//{
-				//	std::this_thread::sleep_for(std::chrono::milliseconds(1));										// 流控不满足时进行1ms延时
-				//}
+					else
+					{
+						// 让出CPU，等待0x28包到来，避免空转
+						std::this_thread::yield();
+					}
+
 				if (!Loop)                                                                                      // 25. 如果Loop为false，提前退出
 				{
 					WRITE_TASK_DATA_SEND_DBG("break\n");
 					break;
 				}
+				
 			}
 			WRITE_TASK_DATA_SEND_DBG("Get Fluid\n");
                                                                                                                 // 等待缓冲区清空
@@ -1122,6 +1152,7 @@ void TaskDataSend::run()
 	CLOSE_LOG_UP_RECORD();                                                                                      // 41. 关闭上报记录日志
 	CLOSE_TASK_DATA_SEND_DBG();                                                                                 // 42. 关闭调试日志
 	CLOSE_TASK_DATA_SEND_INFO_VERIFY();                                                                         // 43. 关闭信息校验日志
+	CLOSE_CHECK_DELAY_DBG();
 }
 
 void TaskDataSend::close()

@@ -1,4 +1,4 @@
-#ifndef _DATA_CONSTRUCT_HPP_
+﻿#ifndef _DATA_CONSTRUCT_HPP_
 #define _DATA_CONSTRUCT_HPP_
 
 #include "DataFrameWz.hpp"

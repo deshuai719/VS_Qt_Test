@@ -1,4 +1,6 @@
-#include "SocketWZ.hpp"
+﻿#include "SocketWZ.hpp"
+#include <QDebug>
+#include "LogWZ.hpp"
 
 SOCKWZ::Socket::Socket()
     :wsa(),                                                                      // 初始化 WinSock 数据结构，通常为 WSADATA 类型
@@ -103,7 +105,24 @@ int SOCKWZ::Socket::Send(char* buf, int len)
         UnLock();
         return SOCKET_ERROR;
     }
+    // 发送前记录时间
+    auto start = std::chrono::steady_clock::now();
+
     int ret = sendto(sock, buf, len, 0, (sockaddr*)&chipAddr, sizeof(sockaddr));
+
+    // 发送后记录时间
+    auto end = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
+    // 日志：记录耗时和返回值
+    WRITE_TASK_DATA_SEND_DBG("[Socket::Send] sendto耗时: %lld us, ret=%d\n", static_cast<long long>(duration), ret);
+
+    // 如果发送失败，记录错误码
+    if (ret == SOCKET_ERROR) {
+        int err = WSAGetLastError();
+        qDebug() << "[Socket::Send] sendto failed, WSAGetLastError=" << err;
+    }
+
     UnLock();
     return ret;
 }

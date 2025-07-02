@@ -49,26 +49,27 @@ namespace LWZ{
 #define CLOSE_LOG(Index)   LWZ::Log::LogInstance->Close(Index)
 
 //调试日志开关
-//#define DBG_LOG
-#undef DBG_LOG
+#define DBG_LOG
+//#undef DBG_LOG
 
 #if defined DBG_LOG
 
-#define DBGWZ_EXPORTS
-#define DBG_FILE_MENU
-#define TASK_CONSTRUCT_DBG
-#define CENTRAL_WIDGET_DBG
-#define TASK_0X28_PARSING_DBG
-#define TASK_DISPATCH_DBG
-#define TASK_STATISTICS_DBG
+//#define DBGWZ_EXPORTS
+//#define DBG_FILE_MENU
+//#define TASK_CONSTRUCT_DBG
+//#define CENTRAL_WIDGET_DBG
+//#define TASK_0X28_PARSING_DBG
+//#define TASK_DISPATCH_DBG
+//#define TASK_STATISTICS_DBG
 #define TASK_DATA_SEND_DBG
-#define DLG_SIANDCFG_MENU_DBG
-#define TASK_DATA_CONSTRUCT_ARG_DBG
-#define TASK_DATA_SEND_INFO_VERIFY
-#define TASK_VERSION_GET_DBG
-#define DLG_MENU_AUDIO_ARG_DBG
-#define TASK_RCV_DBG
-#define MNIC_DBG
+//#define DLG_SIANDCFG_MENU_DBG
+//#define TASK_DATA_CONSTRUCT_ARG_DBG
+//#define TASK_DATA_SEND_INFO_VERIFY
+//#define TASK_VERSION_GET_DBG
+//#define DLG_MENU_AUDIO_ARG_DBG
+//#define TASK_RCV_DBG
+//#define MNIC_DBG
+#define TASK_STATISTICS_DBG
 
 #else
 
@@ -326,6 +327,20 @@ namespace LWZ{
 #undef LOG_UP_RECORD
 
 #endif // LOG_EXPORTS_WZ
+
+#if defined TASK_STATISTICS_DBG
+
+#define OPEN_CHECK_DELAY_DBG(path)   LWZ::Log::LogInstance->Init(LOG_TASK_STATISTICS_INDEX, QString(PRE_FILE_DBG + #path).toStdString().c_str())
+#define WRITE_CHECK_DELAY_DBG(fmt, ...)  LWZ::Log::LogInstance->Write(LOG_TASK_STATISTICS_INDEX, fmt, __VA_ARGS__)
+#define CLOSE_CHECK_DELAY_DBG()  LWZ::Log::LogInstance->Close(LOG_TASK_STATISTICS_INDEX)
+
+#else
+
+#define OPEN_CHECK_DELAY_DBG(path)
+#define WRITE_CHECK_DELAY_DBG(fmt, ...)
+#define CLOSE_CHECK_DELAY_DBG()
+
+#endif // TASK_STATISTICS_DBG
 
 #if defined LOG_UP_RECORD
 

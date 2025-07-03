@@ -1,4 +1,4 @@
-#include "DlgMenuCFG.hpp"
+﻿#include "DlgMenuCFG.hpp"
 
 namespace MenuSocketCFG{
     ModelItem::ModelItem()
@@ -544,9 +544,9 @@ namespace MenuSocketCFG{
     void DialogSockCFG::InitUI()
     {
         model = new Model;
-         model->AddItem(ModelItem(AddrType::LOCAL_IP, "192.167.2.141"));
+         model->AddItem(ModelItem(AddrType::LOCAL_IP, "192.167.2.140"));
          model->AddItem(ModelItem(AddrType::LOCAL_PORT, "8254"));
-         model->AddItem(ModelItem(AddrType::DEVICE_IP, "192.167.2.241"));
+         model->AddItem(ModelItem(AddrType::DEVICE_IP, "192.167.2.240"));
          model->AddItem(ModelItem(AddrType::DEVICE_PORT, "8204"));
         /* model->AddItem(ModelItem(AddrType::LOCAL_IP, CFGI::IniFileCFGGlobal->   ReadINI(CFGI::INI_NET_CFG, "NETADDR/LocalIP").toString()));
          model->AddItem(ModelItem(AddrType::LOCAL_PORT, CFGI::IniFileCFGGlobal-> ReadINI(CFGI::INI_NET_CFG, "NETADDR/LocalPort").toString()));

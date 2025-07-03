@@ -55,7 +55,7 @@ namespace FCT{
 #if defined FLUID_IGNORE
         return FLUID_SATISFY;
 #endif
-        if(FluidFetchSub(Index, Len)-Len > Remain)                                               //如果减去 Len 后剩余值大于 Remain，返回 FLUID_SATISFY（允许发送）。
+        if(FluidFetchSub(Index, Len) > Remain)                                               //如果减去 Len 后剩余值大于 Remain，返回 FLUID_SATISFY（允许发送）。
         {
             return FLUID_SATISFY;
         }

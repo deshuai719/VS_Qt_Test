@@ -6,6 +6,10 @@
 #include <sstream>
 #include <algorithm>
 
+#ifdef min
+#undef min
+#endif
+
 
 namespace LPWZ{
 
@@ -83,32 +87,44 @@ public:
                     }
                 }
                 for (auto& pair : chipData) {
-                    int validCount = 0;
-                    bool startCounting = false;
+                    int validCountCodec = 0;
+                    int validCountAdPow = 0;
+                    bool startCountingCodec = false;
+                    bool startCountingAdPow = false;
                     const auto& dataVec = pair.second.chipData;
-                    for (size_t i = 0; i + 2 < dataVec.size(); i += 3) {
-                        bool allTrue = true;
-                        for (int j = 0; j < 3; ++j) {
+
+                    // 统计Codec Left + Codec Right（每2行一组）
+                    for (size_t i = 0; i + 1 < dataVec.size(); i += 3) {
+                        // 假设第i行为Codec Left，第i+1行为Codec Right
+                        bool bothTrue = true;
+                        for (int j = 0; j < 2; ++j) {
                             if (dataVec[i + j].find("Res: TRUE") == std::string::npos) {
-                                allTrue = false;
+                                bothTrue = false;
                                 break;
                             }
                         }
-                        if (allTrue) {
-                            if (!startCounting) {
-                                startCounting = true; // 第一次遇到全TRUE的组，开始计数
-                            }
-                            if (startCounting) {
-                                ++validCount;
-                            }
+                        if (bothTrue) {
+                            if (!startCountingCodec) startCountingCodec = true;
+                            if (startCountingCodec) ++validCountCodec;
                         }
                         else {
-                            if (startCounting) {
-                                break; // 已经开始计数，遇到非全TRUE组，停止
-                            }
-                            // 没开始计数，继续找下一个三行组
+                            if (startCountingCodec) break;
+                        }
+                        // 跳到下一个三元组
+                    }
+
+                    // 统计AdPow（每3行的第3行为一组）
+                    for (size_t i = 2; i < dataVec.size(); i += 3) {
+                        if (dataVec[i].find("Res: TRUE") != std::string::npos) {
+                            if (!startCountingAdPow) startCountingAdPow = true;
+                            if (startCountingAdPow) ++validCountAdPow;
+                        }
+                        else {
+                            if (startCountingAdPow) break;
                         }
                     }
+
+                    int validCount = std::min(validCountCodec, validCountAdPow);
                     pair.second.validCount = validCount;
                     pair.second.Res = (validCount >= currentDur * 125 - 1) ? "成功" : "失败";
                 }

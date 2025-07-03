@@ -759,7 +759,7 @@ namespace CWD{
                                 DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()),                                  // 满足/总次数
                             Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetRangeSINAD())                 // SINAD范围
                         ));
-                        DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetCheckPacksOfMif(0);                     // MIF包计数清零
+                        DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetCheckPacksOfMif(0,0);                     // MIF包计数清零
                         DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetChipTestStat(DCR::WAITING_FOR_TESTING); // 状态设为等待测试
                     }
                 }

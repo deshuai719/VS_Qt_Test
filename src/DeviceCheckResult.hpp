@@ -1,4 +1,4 @@
-#ifndef _DEVICECHECKRESULT_HPP_
+﻿#ifndef _DEVICECHECKRESULT_HPP_
 #define _DEVICECHECKRESULT_HPP_
 
 #include "TestCondition.hpp"
@@ -18,8 +18,10 @@ namespace DCR{
     private:
         bool CheckResult;//当前测试结果
         bool IfOnline;//芯片是否在线
-        int CheckSatisfiedCount;//当前测试条件满足次数
-        int CheckPacksOfMif;//对应某一mif文件的上报包的已检测包数
+        int CheckSatisfiedCount;//当前测试条件累计合格次数
+        //int CheckPacksOfMif;  //当前测试条件有效合格次数
+        int CheckPacksOfMifCodec;  // 新增：前两通道为一组
+		int CheckPacksOfMifAdpow;  // 新增：第三通道独立
         TCOND::Range RangeSINAD;//记录一次测试中codec的SINAD的最大最小值
         ChipTestStat ChipTestSt;
 
@@ -32,17 +34,21 @@ namespace DCR{
         void SetCheckResult(bool checkResult);
         void SetIfOnline(bool ifOnline);
         void SetCheckSatisfiedCount(int checkCompleteCount);
-        void SetCheckPacksOfMif(int CheckPacks);
+        void SetCheckPacksOfMif(int CheckPacksCodec, int CheckAdpow);
         void SetRangeSINAD(TCOND::Range rangeSINAD);
         void SetChipTestStat(ChipTestStat st);
         bool GetCheckResult() const;
         bool GetIfOnline() const;
         int GetCheckSatisfiedCount() const;
         int GetCheckPacksOfMif() const;
+        int GetCheckPacksOfMifCodec() const;  // 新增：前两通道为一组
+        int GetCheckPacksOfMifAdpow() const;  // 新增：第三通道为一组
         TCOND::Range GetRangeSINAD() const;
         void UpdateCheckResult(bool res);
         void CheckSatisfiedCountInc();
-        void CheckPacksOfMifInc(bool res);
+        //void CheckPacksOfMifInc(bool res);
+        void CheckPacksOfMifCodecInc(bool res);   // 新增:前两通道组
+        void CheckPacksOfMifAdpowInc(bool res);   // 新增：第三通道
         void UpdateRangeSINAD(unsigned short sinad);
     };
 

@@ -1,9 +1,9 @@
-#include "DeviceCheckResult.hpp"
+﻿#include "DeviceCheckResult.hpp"
 
 namespace DCR{
 
     ChipCheckResult::ChipCheckResult()
-        :CheckResult(true), IfOnline(false), CheckSatisfiedCount(0), CheckPacksOfMif(0), RangeSINAD(), ChipTestSt(WAITING_FOR_TESTING)
+        :CheckResult(true), IfOnline(false), CheckSatisfiedCount(0), CheckPacksOfMifCodec(0), CheckPacksOfMifAdpow(0), RangeSINAD(), ChipTestSt(WAITING_FOR_TESTING)
     {}
 
     ChipCheckResult::~ChipCheckResult()
@@ -14,7 +14,8 @@ namespace DCR{
         CheckResult = true;
         IfOnline = false;
         CheckSatisfiedCount = 0;
-        CheckPacksOfMif = 0;
+        CheckPacksOfMifCodec = 0;
+        CheckPacksOfMifAdpow = 0;
         RangeSINAD.SetRange(0, 0);
         ChipTestSt = WAITING_FOR_TESTING;
     }
@@ -22,7 +23,8 @@ namespace DCR{
     void ChipCheckResult::Reset()
     {
         CheckResult = true;
-        CheckPacksOfMif = 0;
+        CheckPacksOfMifCodec = 0;
+        CheckPacksOfMifAdpow = 0;
         ChipTestSt = WAITING_FOR_TESTING;
     }
 
@@ -41,9 +43,12 @@ namespace DCR{
         CheckSatisfiedCount = checkSatisfiedCount;
     }
 
-    void ChipCheckResult::SetCheckPacksOfMif(int CheckPacks)
+    void ChipCheckResult::SetCheckPacksOfMif(int CheckPacksCodec, int CheckPacksAdpow)
     {
-        CheckPacksOfMif = CheckPacks;
+        
+        CheckPacksOfMifCodec = CheckPacksCodec;
+        CheckPacksOfMifAdpow = CheckPacksAdpow;
+
     }
 
     void ChipCheckResult::SetRangeSINAD(TCOND::Range rangeSINAD)
@@ -73,7 +78,17 @@ namespace DCR{
 
     int ChipCheckResult::GetCheckPacksOfMif() const
     {
-        return CheckPacksOfMif;
+        return std::min(CheckPacksOfMifCodec, CheckPacksOfMifAdpow);
+    }
+
+    int ChipCheckResult::GetCheckPacksOfMifCodec() const 
+    { 
+        return CheckPacksOfMifCodec;
+    }
+
+    int ChipCheckResult::GetCheckPacksOfMifAdpow() const 
+    { 
+        return CheckPacksOfMifAdpow;
     }
 
     TCOND::Range ChipCheckResult::GetRangeSINAD() const
@@ -91,7 +106,7 @@ namespace DCR{
         CheckSatisfiedCount++;
     }
 
-    void ChipCheckResult::CheckPacksOfMifInc(bool res)
+   /* void ChipCheckResult::CheckPacksOfMifInc(bool res)
     {
         if(IfOnline)
         {
@@ -115,6 +130,68 @@ namespace DCR{
                 }
                 break;
             case END_OF_TESTING:     
+                break;
+            default:
+                break;
+            }
+        }
+    }*/
+
+    void ChipCheckResult::CheckPacksOfMifCodecInc(bool res)
+    {
+        if (IfOnline)
+        {
+            switch (ChipTestSt)
+            {
+            case WAITING_FOR_TESTING:
+                if (res)
+                {
+                    SetChipTestStat(BE_TESTING);
+                    CheckPacksOfMifCodec++;
+                }
+                break;
+            case BE_TESTING:
+                if (res)
+                {
+                    CheckPacksOfMifCodec++;
+                }
+                else
+                {
+                    SetChipTestStat(END_OF_TESTING);
+                }
+                break;
+            case END_OF_TESTING:
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    void ChipCheckResult::CheckPacksOfMifAdpowInc(bool res)
+    {
+        if (IfOnline)
+        {
+            switch (ChipTestSt)
+            {
+            case WAITING_FOR_TESTING:
+                if (res)
+                {
+                    SetChipTestStat(BE_TESTING);
+                    CheckPacksOfMifCodec++;
+                }
+                break;
+            case BE_TESTING:
+                if (res)
+                {
+                    CheckPacksOfMifCodec++;
+                }
+                else
+                {
+                    SetChipTestStat(END_OF_TESTING);
+                }
+                break;
+            case END_OF_TESTING:
                 break;
             default:
                 break;

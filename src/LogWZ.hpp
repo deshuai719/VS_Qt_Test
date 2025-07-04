@@ -69,7 +69,7 @@ namespace LWZ{
 //#define DLG_MENU_AUDIO_ARG_DBG
 //#define TASK_RCV_DBG
 //#define MNIC_DBG
-#define TASK_STATISTICS_DBG
+//#define TASK_STATISTICS_DBG
 
 #else
 

@@ -596,7 +596,8 @@ void TaskChipStatParsing::init()
 	在发线程发送完一个mif结束后等待流控为空并延时1s之后开始统计每个芯片的连续接收有效计数
 */
 std::condition_variable TaskChipStatParsing::cvReadyForSend38;
-std::mutex TaskChipStatParsing::mtxReadyForSend38;
+std::mutex TaskChipStatParsing::mtxReadyForSend38; 
+std::chrono::steady_clock::time_point TaskChipStatParsing::last28Time;
 
 void TaskChipStatParsing::run()
 {
@@ -611,14 +612,14 @@ void TaskChipStatParsing::run()
 			if(FRAME_HEAD_STAR(Data.GetData().get())->msgID == 0x28)                                                                 // 判断数据包类型是否为0x28（芯片状态包）
 			{
 				FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac);            // 更新流控缓存
-
-				ReadyForSend38.store(true, std::memory_order_release);
+				//ReadyForSend38.store(true, std::memory_order_release);
+				/*******************收到0x28包时，记录时间戳并通知条件变量：************************************/
+				last28Time = std::chrono::steady_clock::now();
 				{
 					std::lock_guard<std::mutex> lk(mtxReadyForSend38);
 					ReadyForSend38.store(true, std::memory_order_release);
 					cvReadyForSend38.notify_all();
-				}                                                        // 新增：收到0x28包后设置标志
-
+				}
 				DCR::DeviceCheckResultGlobal->SetTemperatureInner(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->fpga_heat); // 更新芯片内部温度
 				DCR::DeviceCheckResultGlobal->SetTemperatureEnv(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->ds18b20_16b); // 更新环境温度
 				DCR::DeviceCheckResultGlobal->SetUpPackCount(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->timeStamp_8ms);  // 更新上行包计数
@@ -692,6 +693,7 @@ void TaskChipStatParsing::run()
 			}
 		}
 		Data.Clear();// 清理数据，释放内存
+
 	}
 	CLOSE_TASK_0X28_PARSING();// 关闭调试日志
 }
@@ -1037,7 +1039,7 @@ void TaskDataSend::run()
 						break;
 					}
 				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(10));            //硬件配置后会有一定时间的缓慢上升期，默认20ms，最大320ms
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));            //
 			}
 			if (!ackReceived)
 			{
@@ -1047,45 +1049,27 @@ void TaskDataSend::run()
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(320));            //硬件配置后会有一定时间的缓慢上升期，默认20ms，最大320ms
 
-			int lastTimeStamp = DCR::DeviceCheckResultGlobal->GetUpPackCount();
-
-			TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release); // 先清零
-			bool got28 = false;
-			for (int wait28 = 0; wait28 < 100 && Loop; ++wait28) // 
-			{
-				if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire))
-				{
-					int curTimeStamp = DCR::DeviceCheckResultGlobal->GetUpPackCount();
-					if (curTimeStamp > lastTimeStamp + 2)
-					{ // 只响应新到的0x28包
-						got28 = true;
-						break;
-					}
-				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			}
-			if (!got28) {
-				WRITE_TASK_DATA_SEND_DBG("No 0x28 status packet received after config, aborting!\n");
-				break;
-			}
-			//// 等待前先加锁并置 false
 			//int lastTimeStamp = DCR::DeviceCheckResultGlobal->GetUpPackCount();
-			//{
-			//	std::lock_guard<std::mutex> lk(TaskChipStatParsing::mtxReadyForSend38);
-			//	TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release);
-			//}
+
+			//TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release); // 先清零
 			//bool got28 = false;
-			//auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
-			//std::unique_lock<std::mutex> lk(TaskChipStatParsing::mtxReadyForSend38);
-			//while (Loop && !got28 && std::chrono::steady_clock::now() < deadline) {
-			//	TaskChipStatParsing::cvReadyForSend38.wait_until(lk, deadline, [&] {
-			//		return TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire);
-			//		});
-			//	if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) {
+			//int new28Count = 0;
+			//int lastCheckedTimeStamp = lastTimeStamp;
+			//for (int wait28 = 0; wait28 < 100 && Loop; ++wait28) // 
+			//{
+			//	std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			//	if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire))
+			//	{
 			//		int curTimeStamp = DCR::DeviceCheckResultGlobal->GetUpPackCount();
-			//		if (curTimeStamp > lastTimeStamp) {
-			//			got28 = true;
-			//			break;
+			//		if (curTimeStamp > lastTimeStamp  )
+			//		{ 
+			//			new28Count++;
+			//			lastCheckedTimeStamp = curTimeStamp;
+			//			if (new28Count >= 2)
+			//			{ // 等待第二个新0x28包
+			//				got28 = true;
+			//				break;
+			//			}
 			//		}
 			//	}
 			//}
@@ -1093,6 +1077,22 @@ void TaskDataSend::run()
 			//	WRITE_TASK_DATA_SEND_DBG("No 0x28 status packet received after config, aborting!\n");
 			//	break;
 			//}
+			int lastTimeStamp = DCR::DeviceCheckResultGlobal->GetUpPackCount();
+
+			{
+				std::unique_lock<std::mutex> lk(TaskChipStatParsing::mtxReadyForSend38);
+				TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release);
+				// 阻塞等待0x28包到来，超时时间略大于8ms，防止丢包
+				bool got28 = TaskChipStatParsing::cvReadyForSend38.wait_for(
+					lk, std::chrono::milliseconds(16), [] {
+						return TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire);
+					});
+				if (!got28) {
+					WRITE_TASK_DATA_SEND_DBG("No 0x28 status packet received after config, aborting!\n");
+					break;
+				}
+				// 收到0x28包后立即发0x38包
+			}
 
 			TaskChipStatParsing::bPackLogRecord = true;                                                         // 19. 启用芯片包日志记录
 
@@ -1104,22 +1104,22 @@ void TaskDataSend::run()
 				{*/
 					DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(i);                                         // 21. 获取第i个包的信息
 					// 判断流控是否满足，满足则发送
-					int packLen = 512 ;
-					int remain = FLUID_SIZE_INDEX0 / 4;
-					int before = FCT::FluidCtrlGlob->FluidLoad(0); // 发送前剩余空间
+					//int packLen = 512 ;
+					//int remain = FLUID_SIZE_INDEX0 / 4;
+					//int before = FCT::FluidCtrlGlob->FluidLoad(0); // 发送前剩余空间
 					//qDebug() << "[TaskDataSend] ReadyForSend38 =" << TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire);
-					// 2. 发送前获取当前时间
-					auto now = std::chrono::steady_clock::now();
+					//// 2. 发送前获取当前时间
+					//auto now = std::chrono::steady_clock::now();
 					if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) 
 					{
 						if (FCT::FluidCtrlGlob->FluidCheckUpdate(0, 512, FLUID_SIZE_INDEX0 / 4) == FCT::FluidCheckRes::FLUID_SATISFY)	  //512个采样点
 						{
 							//// 2. 发送前获取当前时间
 							//auto now = std::chrono::steady_clock::now();
-							// 3. 计算与上一次的时间差（单位：毫秒）
-							auto diffMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastSendTime).count();
-							// 4. 记录时间差
-							WRITE_TASK_DATA_SEND_DBG("Send interval: %lld ms\n", static_cast<long long>(diffMs));
+							//// 3. 计算与上一次的时间差（单位：毫秒）
+							//auto diffMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastSendTime).count();
+							//// 4. 记录时间差
+							//WRITE_TASK_DATA_SEND_DBG("Send interval: %lld ms\n", static_cast<long long>(diffMs));
 #ifndef TEST_WITHOUT_BOARD
 							// 5. 发送数据包
 							SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());                      // 22. 发送数据包
@@ -1127,9 +1127,9 @@ void TaskDataSend::run()
 							std::this_thread::sleep_for(std::chrono::milliseconds(10));                                 // 23. 模拟发送延时
 #endif
 							int after = FCT::FluidCtrlGlob->FluidLoad(0); // 发送后剩余空间
-							// 6. 更新上一次发送时间
-							lastSendTime = now;
-							WRITE_TASK_DATA_SEND_DBG("FluidCtrl: before=%d, send=%d, after=%d, remain=%d\n", before, packLen, after, remain);
+							//// 6. 更新上一次发送时间
+							//lastSendTime = now;
+							//WRITE_TASK_DATA_SEND_DBG("FluidCtrl: before=%d, send=%d, after=%d, remain=%d\n", before, packLen, after, remain);
 							i++;
 						}                                                                                    // 24. 发送下一个包
 						else
@@ -1137,11 +1137,11 @@ void TaskDataSend::run()
 							TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release);
 						}
 					}
-					else
-					{
-						// 让出CPU，等待0x28包到来，避免空转
-						std::this_thread::yield();
-					}
+					//else
+					//{
+					//	// 让出CPU，等待0x28包到来，避免空转
+					//	std::this_thread::yield();
+					//}
 
 				if (!Loop)                                                                                      // 25. 如果Loop为false，提前退出
 				{

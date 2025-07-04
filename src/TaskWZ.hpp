@@ -224,6 +224,8 @@ public:
 	static std::atomic<bool> ReadyForSend38;//新增：在28解析线程中确认是否准备好发送38包
 	static std::condition_variable cvReadyForSend38;
 	static std::mutex mtxReadyForSend38;
+	static std::chrono::steady_clock::time_point last28Time;//新增：记录发送28包时间
+	static std::atomic<bool> first38Sent;//新增：记录发送28包时间
 };
 
 #define CREATE_TASK_MNIC_PARSING	TASKWZ::worker_manager::create(new TASKWZ::TaskChipStatParsing(), TASKWZ::worker_type::EXECUTE_THREAD);

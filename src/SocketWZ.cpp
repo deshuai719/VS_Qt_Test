@@ -106,16 +106,19 @@ int SOCKWZ::Socket::Send(char* buf, int len)
         return SOCKET_ERROR;
     }
     // 发送前记录时间
-    auto start = std::chrono::steady_clock::now();
-
+    //auto start = std::chrono::steady_clock::now();
+    //WRITE_TASK_DATA_SEND_DBG("Before sendto, time = %lld us\n", std::chrono::duration_cast<std::chrono::microseconds>(start.time_since_epoch()).count());
     int ret = sendto(sock, buf, len, 0, (sockaddr*)&chipAddr, sizeof(sockaddr));
 
-    // 发送后记录时间
-    auto end = std::chrono::steady_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    //// 发送后记录时间
+    //auto end = std::chrono::steady_clock::now();
+    //auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
-    // 日志：记录耗时和返回值
-    WRITE_TASK_DATA_SEND_DBG("[Socket::Send] sendto耗时: %lld us, ret=%d\n", static_cast<long long>(duration), ret);
+    //WRITE_TASK_DATA_SEND_DBG("After sendto, time = %lld us, \nsendto耗时: %lld us\n",
+    //    std::chrono::duration_cast<std::chrono::microseconds>(end.time_since_epoch()).count(),
+    //    std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()); 
+    //// 日志：记录耗时和返回值
+    //WRITE_TASK_DATA_SEND_DBG("[Socket::Send] sendto耗时: %lld us, ret=%d\n", static_cast<long long>(duration), ret);
 
     // 如果发送失败，记录错误码
     if (ret == SOCKET_ERROR) {

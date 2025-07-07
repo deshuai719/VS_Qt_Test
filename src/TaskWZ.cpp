@@ -6,6 +6,7 @@
 #include <thread>
 
 
+
 namespace TASKWZ
 {
 
@@ -547,10 +548,24 @@ void task_dispatch::run()
 		{
 			switch (FRAME_HEAD_STAR(Data.GetData().get())->msgID)     // 读取数据包头部的 msgID 字段，判断数据类型
 			{
+				
 			case 0x28:
+			{
+				// 新增：在task_dispatch::run()的case 0x28:分支内添加如下代码
+				static int dispatch28Count = 0;
+				static auto lastDispatch28Time = std::chrono::steady_clock::now();
+
+				auto now = std::chrono::steady_clock::now();
+				auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastDispatch28Time).count();
+				qDebug() << "[分发] 0x28包序号:" << ++dispatch28Count << "时间间隔(ms):" << diff;
+				lastDispatch28Time = now;
+
+				
+
 				TaskChipStatParsing::QueueChipStatParsing.front(Data);// 如果是 0x28 类型的数据包，放入芯片状态解析队列
 				break;
 				/*新增：分发过程中进行ram_id的判断*/
+			}
 			case  0xa0:
 			{
 				auto ram_id = PTR_ARG_UP_A0(Data.GetData().get() + HEAD_DATA_LEN)->ram_id;//在分发过程添加ram_id的判断
@@ -614,7 +629,12 @@ void TaskChipStatParsing::run()
 				FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac);            // 更新流控缓存
 				//ReadyForSend38.store(true, std::memory_order_release);
 				/*******************收到0x28包时，记录时间戳并通知条件变量：************************************/
-				last28Time = std::chrono::steady_clock::now();
+				static int parse28Count = 0;
+				static auto lastParse28Time = std::chrono::steady_clock::now();
+				auto now = std::chrono::steady_clock::now();
+				auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastParse28Time).count();
+				qDebug() << "[解析] 0x28包序号:" << ++parse28Count << "时间间隔(ms):" << diff;
+				lastParse28Time = now;
 				{
 					std::lock_guard<std::mutex> lk(mtxReadyForSend38);
 					ReadyForSend38.store(true, std::memory_order_release);
@@ -1104,22 +1124,29 @@ void TaskDataSend::run()
 				{*/
 					DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(i);                                         // 21. 获取第i个包的信息
 					// 判断流控是否满足，满足则发送
-					//int packLen = 512 ;
-					//int remain = FLUID_SIZE_INDEX0 / 4;
-					//int before = FCT::FluidCtrlGlob->FluidLoad(0); // 发送前剩余空间
+					int packLen = 512 ;
+					int remain = FLUID_SIZE_INDEX0 / 4;
+					int before = FCT::FluidCtrlGlob->FluidLoad(0); // 发送前剩余空间
 					//qDebug() << "[TaskDataSend] ReadyForSend38 =" << TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire);
-					//// 2. 发送前获取当前时间
-					//auto now = std::chrono::steady_clock::now();
+					// 2. 发送前获取当前时间
+					auto now = std::chrono::steady_clock::now();
+					
+
 					if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) 
 					{
+						std::unique_lock<std::mutex> lk(TaskChipStatParsing::mtxReadyForSend38);
+						TaskChipStatParsing::cvReadyForSend38.wait(lk, [] {
+							return TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire);
+							});
+
 						if (FCT::FluidCtrlGlob->FluidCheckUpdate(0, 512, FLUID_SIZE_INDEX0 / 4) == FCT::FluidCheckRes::FLUID_SATISFY)	  //512个采样点
 						{
 							//// 2. 发送前获取当前时间
 							//auto now = std::chrono::steady_clock::now();
-							//// 3. 计算与上一次的时间差（单位：毫秒）
-							//auto diffMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastSendTime).count();
-							//// 4. 记录时间差
-							//WRITE_TASK_DATA_SEND_DBG("Send interval: %lld ms\n", static_cast<long long>(diffMs));
+							// 3. 计算与上一次的时间差（单位：毫秒）
+							auto diffMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastSendTime).count();
+							// 4. 记录时间差
+							WRITE_TASK_DATA_SEND_DBG("Send interval: %lld ms\n", static_cast<long long>(diffMs));
 #ifndef TEST_WITHOUT_BOARD
 							// 5. 发送数据包
 							SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());                      // 22. 发送数据包
@@ -1127,9 +1154,9 @@ void TaskDataSend::run()
 							std::this_thread::sleep_for(std::chrono::milliseconds(10));                                 // 23. 模拟发送延时
 #endif
 							int after = FCT::FluidCtrlGlob->FluidLoad(0); // 发送后剩余空间
-							//// 6. 更新上一次发送时间
-							//lastSendTime = now;
-							//WRITE_TASK_DATA_SEND_DBG("FluidCtrl: before=%d, send=%d, after=%d, remain=%d\n", before, packLen, after, remain);
+							// 6. 更新上一次发送时间
+							lastSendTime = now;
+							WRITE_TASK_DATA_SEND_DBG("FluidCtrl: before=%d, send=%d, after=%d, remain=%d\n", before, packLen, after, remain);
 							i++;
 						}                                                                                    // 24. 发送下一个包
 						else

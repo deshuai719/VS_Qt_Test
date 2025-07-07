@@ -1,4 +1,4 @@
-#ifndef _TOOLWZ_HPP_
+﻿#ifndef _TOOLWZ_HPP_
 #define _TOOLWZ_HPP_
 
 #include <mutex>
@@ -143,12 +143,12 @@ namespace TOOLWZ{
     {
     	_que[_front] = add;
     	std::unique_lock<std::mutex> lock(mtx);
-    	_front = (_front + 1) % _q_cell_num;//在front加1前，队列被取空，此时rear == front，不能再取
-    	if (_front == _rear)//在判断前由于front + 1,rear != front，队列非空，此时再取一次，取出了此次add操作的数据，队列又为空，rear == front
+    	_front = (_front + 1) % _q_cell_num;     //在front加1前，队列被取空，此时rear == front，不能再取
+    	if (_front == _rear)                     //在判断前由于front + 1,rear != front，队列非空，此时再取一次，取出了此次add操作的数据，队列又为空，rear == front
     	{
     		destruct_func(_que[_rear]);
-    		_rear = (_rear + 1) % _q_cell_num;//若前述成立，则执行该步，此时rear != front队列非空，但队列实际并无新的add操作被执行
-    	}										//综上，此操作要加锁
+    		_rear = (_rear + 1) % _q_cell_num;   //若前述成立，则执行该步，此时rear != front队列非空，但队列实际并无新的add操作被执行
+    	}                                        //综上，此操作要加锁
     	lock.unlock();
     	return;
     }

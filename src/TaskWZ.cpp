@@ -580,12 +580,15 @@ void task_dispatch::run()
 
 				auto now = std::chrono::steady_clock::now();
 				auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastDispatch28Time).count();
-				qDebug() << "[分发] 0x28包序号:" << ++dispatch28Count << "时间间隔(ms):" << diff;
+				qDebug() << "\n\n[分发] 0x28包序号:" << ++dispatch28Count << "时间间隔(ms):" << diff;
 				lastDispatch28Time = now;
 
 				
 
 				TaskChipStatParsing::QueueChipStatParsing.front(Data);// 如果是 0x28 类型的数据包，放入芯片状态解析队列
+				// 分发线程，分发0x28包后
+				qDebug() << "[分发] 0x28包序号:" << dispatch28Count
+					<< "队列长度:" << TaskChipStatParsing::QueueChipStatParsing.size();
 				break;
 				/*新增：分发过程中进行ram_id的判断*/
 			}
@@ -644,12 +647,20 @@ void TaskChipStatParsing::run()
 	while(Loop)
 	{
 		RcvData Data;
-		QueueChipStatParsing.rear(Data);                                                                                             // 从队列尾部取出一个数据包
+		// 测量队列等待时间
+		auto t0 = std::chrono::steady_clock::now();
+		QueueChipStatParsing.rear(Data);
+		auto t1 = std::chrono::steady_clock::now();
+		qDebug() << "队列等待耗时(us):" << std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();      
+		qDebug() << "[解析] 队列长度:" << QueueChipStatParsing.size();// 从队列尾部取出一个数据包
 		if(Data.GetData().get())
 		{
 			if(FRAME_HEAD_STAR(Data.GetData().get())->msgID == 0x28)                                                                 // 判断数据包类型是否为0x28（芯片状态包）
 			{
+				auto t2 = std::chrono::steady_clock::now();
 				FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac);            // 更新流控缓存
+				auto t3 = std::chrono::steady_clock::now();
+				qDebug() << "FluidStore本身耗时(us):" << std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
 				//ReadyForSend38.store(true, std::memory_order_release);
 				/*******************收到0x28包时，记录时间戳并通知条件变量：************************************/
 				static int parse28Count = 0;
@@ -663,6 +674,8 @@ void TaskChipStatParsing::run()
 					ReadyForSend38.store(true, std::memory_order_release);
 					cvReadyForSend38.notify_all();
 				}
+				
+
 				DCR::DeviceCheckResultGlobal->SetTemperatureInner(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->fpga_heat); // 更新芯片内部温度
 				DCR::DeviceCheckResultGlobal->SetTemperatureEnv(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->ds18b20_16b); // 更新环境温度
 				DCR::DeviceCheckResultGlobal->SetUpPackCount(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->timeStamp_8ms);  // 更新上行包计数
@@ -715,6 +728,7 @@ void TaskChipStatParsing::run()
 							// 如果启用芯片日志记录，写入详细记录
 							if(bPackLogRecord)
 							{
+								
 								WRITE_LOG_UP_CHIP_RECORD(i + 1, j + 1,
 									TCOND::TestCondition::SinadTransfer(Sinad[0]), Vpp[0], Rms[0], Res[0] ? " TRUE" : "FALSE",
 									TCOND::TestCondition::SinadTransfer(Sinad[1]), Vpp[1], Rms[1], Res[1] ? " TRUE" : "FALSE",
@@ -736,6 +750,7 @@ void TaskChipStatParsing::run()
 			}
 		}
 		Data.Clear();// 清理数据，释放内存
+		
 
 	}
 	CLOSE_TASK_0X28_PARSING();// 关闭调试日志

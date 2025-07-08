@@ -1,4 +1,5 @@
 ﻿#include "FluidCtrl.hpp"
+#include "TaskWZ.hpp"
 
 namespace FCT{
     FluidCtrl::FluidCtrl(){}
@@ -19,7 +20,10 @@ namespace FCT{
 
     void FluidCtrl::FluidStore(int Index, FLUID_TYPE v)                                      //设置指定通道（Index）的流控缓冲区的值为 v。
     {
+        //auto t1 = std::chrono::steady_clock::now();
         FluidCtrlBuffer[Index].store(v);
+        //auto t2 = std::chrono::steady_clock::now();
+        //qDebug() << "FluidStore单步耗时(us):" << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
     }
 
     void FluidCtrl::FluidStore(FLUID_TYPE v)                                                 //将所有通道的流控缓冲区的值都设置为 v。

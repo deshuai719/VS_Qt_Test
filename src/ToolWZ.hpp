@@ -44,6 +44,10 @@ namespace TOOLWZ{
     	void pop();
     	void clear();
     	void release_memory(); 
+        int size() const {
+            // 适用于循环队列
+            return (_front - _rear + _q_cell_num) % _q_cell_num;
+        }////打印队列长度
         // 新增阻塞出队
         //void blocking_rear(T& get);
         // 新增阻塞入队（可选）
@@ -93,7 +97,7 @@ namespace TOOLWZ{
         return true;
     }
 
-    //无阻塞入队
+    //无阻塞出队
     //template<typename T, int cells, void(*destruct_func)(T&)>
     //bool queue<T, cells, destruct_func>::rear(T& get)//函数内部赋值
     //{
@@ -129,7 +133,7 @@ namespace TOOLWZ{
     template<typename T, int cells, void(*destruct_func)(T&)>
 	bool queue<T, cells, destruct_func>::front(T& add)//新增：阻塞入队
     {
-        std::unique_lock<std::mutex> lock(mtx);
+        //std::unique_lock<std::mutex> lock(mtx);
         if ((_front + 1) % _q_cell_num == _rear)
             return false;
         _que[_front] = add;

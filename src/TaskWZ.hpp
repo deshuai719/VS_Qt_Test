@@ -154,7 +154,17 @@ public:
 
 #define CREATE_TASK_END(arg)	TASKWZ::worker_manager::create(new TASKWZ::task_end(arg), TASKWZ::worker_type::END_TASK_BY_TYPE);
 
-//
+// RcvData内存池声明
+class RcvDataBufferPool {
+public:
+	static std::shared_ptr<char[]> acquire();
+	static void clear();
+private:
+	static std::vector<std::shared_ptr<char[]>> pool;
+	static std::mutex pool_mutex;
+};
+
+//数据收线程数据定义
 
 class RcvData{
 	std::shared_ptr<char[]> Data;

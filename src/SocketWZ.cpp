@@ -144,10 +144,11 @@ int SOCKWZ::Socket::Recv(char* buf, int len)
     fd_set readfds;
     FD_ZERO(&readfds);
     FD_SET(sock, &readfds);
-    timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = 2000; // 最多等2ms，精度更高
-    int sel = select(0, &readfds, nullptr, nullptr, &tv);
+    //timeval tv;
+    //tv.tv_sec = 0;
+    //tv.tv_usec = 2000; // 最多等2ms，精度更高
+    //int sel = select(0, &readfds, nullptr, nullptr, &tv);
+    int sel = select(0, &readfds, nullptr, nullptr, nullptr);
     int ret = SOCKET_ERROR;
     if (sel > 0 && FD_ISSET(sock, &readfds)) {
         ret = recvfrom(sock, buf, len, 0, (sockaddr*)&chipAddr, &socklen);

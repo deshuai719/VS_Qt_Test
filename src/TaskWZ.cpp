@@ -381,40 +381,63 @@ void task_end::clear()
 }
 
 //task_rcv
+//RcvData对象池实现
+std::vector<std::shared_ptr<char[]>> TASKWZ::RcvDataBufferPool::pool;
+std::mutex TASKWZ::RcvDataBufferPool::pool_mutex;
 
-RcvData::RcvData():Data(nullptr), Len(0){}
-
-RcvData::RcvData(int len):Data(new char[len]), Len(len){}
-
-RcvData::RcvData(const RcvData& cp):Data(cp.GetData()), Len(cp.GetLen()){}
-
-void RcvData::Clear()
-{
-	Data.reset();
+std::shared_ptr<char[]> TASKWZ::RcvDataBufferPool::acquire() {
+	std::lock_guard<std::mutex> lock(pool_mutex);
+	if (!pool.empty()) {
+		auto ptr = pool.back();
+		pool.pop_back();
+		return ptr;
+	}
+	return std::shared_ptr<char[]>(new char[800], [](char* p) {
+		std::lock_guard<std::mutex> lock(pool_mutex);
+		pool.push_back(std::shared_ptr<char[]>(p));
+		});
 }
 
-void RcvData::operator=(const RcvData& as)
+void TASKWZ::RcvDataBufferPool::clear() {
+	std::lock_guard<std::mutex> lock(pool_mutex);
+	pool.clear();
+}
+
+RcvData::RcvData():Data(nullptr), Len(0){}                                  //默认构造函数。Data初始化为空指针，Len为0。表示此时没有分配任何数据缓冲区。
+
+//RcvData::RcvData(int len):Data(new char[len]), Len(len){}                   //带长度参数的构造函数。分配len字节的char数组，Data用std::shared_ptr管理这块内存，Len记录长度。
+RcvData::RcvData(int len) :Data(RcvDataBufferPool::acquire()), Len(len) {}
+
+RcvData::RcvData(const RcvData& cp):Data(cp.GetData()), Len(cp.GetLen()){}  //拷贝构造函数。Data直接拷贝自cp的Data（即shared_ptr的引用计数+1），Len也拷贝。
+
+void RcvData::Clear()                                                       //清空数据。reset()会让Data的引用计数-1，如果为0则释放内存。
+{
+	//Data.reset();
+	Len = 0;													   //将Len置为0，表示没有数据。
+}
+
+void RcvData::operator=(const RcvData& as)                                  //赋值操作符。Data和Len都从as拷贝。Data的引用计数+1，原来的数据如果没人用会被释放。
 {
 	Data = as.GetData();
 	Len = as.GetLen();
 }
 
-const std::shared_ptr<char[]>& RcvData::GetData() const
+const std::shared_ptr<char[]>& RcvData::GetData() const                     //获取数据指针的接口。返回Data的引用，外部可以用get()拿到原始指针。
 {
 	return Data;
 }
 
-void RcvData::SetLen(int len)
+void RcvData::SetLen(int len)                                               //设置数据长度
 {
 	Len = len;
 }
 
-int RcvData::GetLen() const
+int RcvData::GetLen() const                                                 //获取数据长度
 {
 	return Len;
 }
 
-void RcvDataDestruct(RcvData& d)
+void RcvDataDestruct(RcvData& d)                                            //用于销毁RcvData对象时清理数据，调用Clear()释放内存。
 {
 	d.Clear();
 }

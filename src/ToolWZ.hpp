@@ -2,6 +2,7 @@
 #define _TOOLWZ_HPP_
 
 #include <mutex>
+#include <condition_variable>
 
 #define N_BITS_HIGH(n)									((0x1LL << (n)) - 1)
 #define RIGHT_SHIFT_U8(data, n)    (unsigned char)(((data) >> (n)) & N_BITS_HIGH(8))
@@ -25,6 +26,7 @@ namespace TOOLWZ{
     	T* _que;
     	unsigned int _q_sz, _q_cell_num, _q_cell_sz, _rear, _front;
     	std::mutex mtx;
+        std::condition_variable cv;
     public:
     	queue(unsigned int cell_num);
     	queue();
@@ -33,8 +35,7 @@ namespace TOOLWZ{
     	bool empty();
     	bool rear(T& get);
     	bool rear_with_destruct(T& get);
-    	bool front(T& 
-        );
+    	bool front(T&  );
     	bool get_with_overflow(T& get);
     	void add_even_full(T& add);
     	bool get_with_lock(T& get);
@@ -42,7 +43,11 @@ namespace TOOLWZ{
     	void rear_no_pop(T& get);
     	void pop();
     	void clear();
-    	void release_memory();
+    	void release_memory(); 
+        // 新增阻塞出队
+        //void blocking_rear(T& get);
+        // 新增阻塞入队（可选）
+        //void blocking_front(const T& add);
     };
 
     template<typename T, int cells, void(*destruct_func)(T&)>
@@ -77,20 +82,32 @@ namespace TOOLWZ{
     	return false;
     }
 
+    /******************************新增：阻塞出队**************************************/
     template<typename T, int cells, void(*destruct_func)(T&)>
-    bool queue<T, cells, destruct_func>::rear(T& get)//函数内部赋值
+	bool queue<T, cells, destruct_func>::rear(T& get)//新增：阻塞出队
     {
-    	// std::unique_lock<std::mutex> lock(mtx);
-    	if (_rear == _front)
-    	{
-    		// lock.unlock();
-    		return false;
-    	}
-    	get = _que[_rear];
-    	_rear = (_rear + 1) % _q_cell_num;
-    	// lock.unlock();
-    	return true;
+        std::unique_lock<std::mutex> lock(mtx);
+        cv.wait(lock, [this] { return _rear != _front; }); // 队列非空才继续
+        get = _que[_rear];
+        _rear = (_rear + 1) % _q_cell_num;
+        return true;
     }
+
+    //无阻塞入队
+    //template<typename T, int cells, void(*destruct_func)(T&)>
+    //bool queue<T, cells, destruct_func>::rear(T& get)//函数内部赋值
+    //{
+    //	// std::unique_lock<std::mutex> lock(mtx);
+    //	if (_rear == _front)
+    //	{
+    //		// lock.unlock();
+    //		return false;
+    //	}
+    //	get = _que[_rear];
+    //	_rear = (_rear + 1) % _q_cell_num;
+    //	// lock.unlock();
+    //	return true;
+    //}
 
     template<typename T, int cells, void(*destruct_func)(T&)>
     bool queue<T, cells, destruct_func>::rear_with_destruct(T& get)
@@ -108,20 +125,33 @@ namespace TOOLWZ{
     	return true;
     }
 
+    /*****************************新增：阻塞入队*****************************************/
     template<typename T, int cells, void(*destruct_func)(T&)>
-    bool queue<T, cells, destruct_func>::front(T& add)//函数内部赋值
+	bool queue<T, cells, destruct_func>::front(T& add)//新增：阻塞入队
     {
-    	// std::unique_lock<std::mutex> lock(mtx);
-    	if ((_front + 1) % _q_cell_num == _rear)
-    	{
-    		// lock.unlock();
-    		return false;
-    	}
-    	_que[_front] = add;
-    	_front = (_front + 1) % _q_cell_num;
-    	// lock.unlock();
-    	return true;
+        std::unique_lock<std::mutex> lock(mtx);
+        if ((_front + 1) % _q_cell_num == _rear)
+            return false;
+        _que[_front] = add;
+        _front = (_front + 1) % _q_cell_num;
+        cv.notify_one(); // 唤醒阻塞的出队线程
+        return true;
     }
+
+    //template<typename T, int cells, void(*destruct_func)(T&)>
+    //bool queue<T, cells, destruct_func>::front(T& add)//函数内部赋值
+    //{
+    //	// std::unique_lock<std::mutex> lock(mtx);
+    //	if ((_front + 1) % _q_cell_num == _rear)
+    //	{
+    //		// lock.unlock();
+    //		return false;
+    //	}
+    //	_que[_front] = add;
+    //	_front = (_front + 1) % _q_cell_num;
+    //	// lock.unlock();
+    //	return true;
+    //}
 
     template<typename T, int cells, void(*destruct_func)(T&)>
     bool queue<T, cells, destruct_func>::get_with_overflow(T& get)

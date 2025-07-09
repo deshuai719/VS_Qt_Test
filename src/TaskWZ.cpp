@@ -4,6 +4,7 @@
 #include <atomic>
 #include <chrono>
 #include <thread>
+#include <windows.h> 
 
 
 
@@ -55,6 +56,13 @@ bool worker::execute()
 	{
 		std::thread t(worker_manager::task_callback_func, &task);// 创建一个新线程，执行 worker_manager::task_callback_func，参数为当前 worker 的 task
 		th.swap(t);                                              // 把新线程对象 t 赋值给成员变量 th（管理线程生命周期）
+		//// 提升TaskChipStatParsing线程优先级
+		//if (task.addr && task.addr->type == TASK_CHIP_STAT_PARSING)
+		//{
+		//	HANDLE hThread = (HANDLE)th.native_handle();
+		//	// 设置为高优先级（可选：THREAD_PRIORITY_HIGHEST/ABOVE_NORMAL等）
+		//	SetThreadPriority(hThread, THREAD_PRIORITY_HIGHEST);
+		//}
 		return true;                                             // 返回 true，表示已启动线程
 	}
 	case EXECUTE_NO_THREAD:
@@ -382,38 +390,38 @@ void task_end::clear()
 
 //task_rcv
 //RcvData对象池实现
-std::vector<std::shared_ptr<char[]>> TASKWZ::RcvDataBufferPool::pool;
-std::mutex TASKWZ::RcvDataBufferPool::pool_mutex;
+//std::vector<std::shared_ptr<char[]>> TASKWZ::RcvDataBufferPool::pool;
+//std::mutex TASKWZ::RcvDataBufferPool::pool_mutex;
+//
+//std::shared_ptr<char[]> TASKWZ::RcvDataBufferPool::acquire() {
+//	std::lock_guard<std::mutex> lock(pool_mutex);
+//	if (!pool.empty()) {
+//		auto ptr = pool.back();
+//		pool.pop_back();
+//		return ptr;
+//	}
+//	return std::shared_ptr<char[]>(new char[800], [](char* p) {
+//		std::lock_guard<std::mutex> lock(pool_mutex);
+//		pool.push_back(std::shared_ptr<char[]>(p));
+//		});
+//}
 
-std::shared_ptr<char[]> TASKWZ::RcvDataBufferPool::acquire() {
-	std::lock_guard<std::mutex> lock(pool_mutex);
-	if (!pool.empty()) {
-		auto ptr = pool.back();
-		pool.pop_back();
-		return ptr;
-	}
-	return std::shared_ptr<char[]>(new char[800], [](char* p) {
-		std::lock_guard<std::mutex> lock(pool_mutex);
-		pool.push_back(std::shared_ptr<char[]>(p));
-		});
-}
-
-void TASKWZ::RcvDataBufferPool::clear() {
-	std::lock_guard<std::mutex> lock(pool_mutex);
-	pool.clear();
-}
+//void TASKWZ::RcvDataBufferPool::clear() {
+//	std::lock_guard<std::mutex> lock(pool_mutex);
+//	pool.clear();
+//}
 
 RcvData::RcvData():Data(nullptr), Len(0){}                                  //默认构造函数。Data初始化为空指针，Len为0。表示此时没有分配任何数据缓冲区。
 
-//RcvData::RcvData(int len):Data(new char[len]), Len(len){}                   //带长度参数的构造函数。分配len字节的char数组，Data用std::shared_ptr管理这块内存，Len记录长度。
-RcvData::RcvData(int len) :Data(RcvDataBufferPool::acquire()), Len(len) {}
+RcvData::RcvData(int len):Data(new char[len]), Len(len){}                   //带长度参数的构造函数。分配len字节的char数组，Data用std::shared_ptr管理这块内存，Len记录长度。
+//RcvData::RcvData(int len) :Data(RcvDataBufferPool::acquire()), Len(len) {}
 
 RcvData::RcvData(const RcvData& cp):Data(cp.GetData()), Len(cp.GetLen()){}  //拷贝构造函数。Data直接拷贝自cp的Data（即shared_ptr的引用计数+1），Len也拷贝。
 
 void RcvData::Clear()                                                       //清空数据。reset()会让Data的引用计数-1，如果为0则释放内存。
 {
-	//Data.reset();
-	Len = 0;													   //将Len置为0，表示没有数据。
+	Data.reset();
+	//Len = 0;													   //将Len置为0，表示没有数据。
 }
 
 void RcvData::operator=(const RcvData& as)                                  //赋值操作符。Data和Len都从as拷贝。Data的引用计数+1，原来的数据如果没人用会被释放。
@@ -650,6 +658,19 @@ void TaskChipStatParsing::run()
 		// 测量队列等待时间
 		auto t0 = std::chrono::steady_clock::now();
 		QueueChipStatParsing.rear(Data);
+		////QueueChipStatParsing.rear(Data);
+		//bool got = false;
+		//// 1. 优先阻塞等待信号（如有数据立刻出队）
+		//got = QueueChipStatParsing.rear(Data);
+		//if (!got) {
+		//	// 2. 如果长时间没数据（如信号丢失），定期自发轮询
+		//	for (int i = 0; i < 10 && !got && Loop; ++i) {
+		//		std::this_thread::sleep_for(std::chrono::microseconds(100)); // 10us轮询
+		//		got = QueueChipStatParsing.rear_nonblock(Data);
+		//	}
+		//}
+		//if (!got) continue; // 依然没数据，继续下一轮
+
 		auto t1 = std::chrono::steady_clock::now();
 		qDebug() << "队列等待耗时(us):" << std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();      
 		qDebug() << "[解析] 队列长度:" << QueueChipStatParsing.size();// 从队列尾部取出一个数据包
@@ -660,7 +681,7 @@ void TaskChipStatParsing::run()
 				auto t2 = std::chrono::steady_clock::now();
 				FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac);            // 更新流控缓存
 				auto t3 = std::chrono::steady_clock::now();
-				qDebug() << "FluidStore本身耗时(us):" << std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
+				qDebug()  << "FluidStore更新耗时(us):" << std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
 				//ReadyForSend38.store(true, std::memory_order_release);
 				/*******************收到0x28包时，记录时间戳并通知条件变量：************************************/
 				static int parse28Count = 0;
@@ -669,16 +690,21 @@ void TaskChipStatParsing::run()
 				auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastParse28Time).count();
 				qDebug() << "[解析] 0x28包序号:" << ++parse28Count << "时间间隔(ms):" << diff;
 				lastParse28Time = now;
-				{
-					std::lock_guard<std::mutex> lk(mtxReadyForSend38);
-					ReadyForSend38.store(true, std::memory_order_release);
-					cvReadyForSend38.notify_all();
-				}
 				
-
+				// 解析线程收到0x28包后
+				TaskChipStatParsing::ReadyForSend38.store(true, std::memory_order_release);
+				TaskChipStatParsing::cvReadyForSend38.notify_all();
+				auto t7 = std::chrono::steady_clock::now();
+				qDebug() << "[解析] 0x28包序号:" << parse28Count << "标志位更新耗时(us):" << std::chrono::duration_cast<std::chrono::microseconds>(t7 - now).count();
 				DCR::DeviceCheckResultGlobal->SetTemperatureInner(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->fpga_heat); // 更新芯片内部温度
+				auto t4 = std::chrono::steady_clock::now();
+				qDebug() << "[解析] 0x28包序号:" << parse28Count << "SetTemperatureInner更新耗时(us):" << std::chrono::duration_cast<std::chrono::microseconds>(t4 - t7).count();
 				DCR::DeviceCheckResultGlobal->SetTemperatureEnv(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->ds18b20_16b); // 更新环境温度
+				auto t5 = std::chrono::steady_clock::now();
+				qDebug() << "[解析] 0x28包序号:" << parse28Count << "SetTemperatureEnv更新耗时(us):" << std::chrono::duration_cast<std::chrono::microseconds>(t5 - t4).count();
 				DCR::DeviceCheckResultGlobal->SetUpPackCount(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->timeStamp_8ms);  // 更新上行包计数
+				auto t6 = std::chrono::steady_clock::now();
+				qDebug() << "[解析] 0x28包序号:" << parse28Count << "SetUpPackCount更新耗时(us):" << std::chrono::duration_cast<std::chrono::microseconds>(t6 - t5).count();
 				// 如果启用包日志记录，写入一条记录
 				if(bPackLogRecord)
 				{
@@ -1107,36 +1133,9 @@ void TaskDataSend::run()
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(320));            //硬件配置后会有一定时间的缓慢上升期，默认20ms，最大320ms
 
-			//int lastTimeStamp = DCR::DeviceCheckResultGlobal->GetUpPackCount();
 
-			//TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release); // 先清零
-			//bool got28 = false;
-			//int new28Count = 0;
-			//int lastCheckedTimeStamp = lastTimeStamp;
-			//for (int wait28 = 0; wait28 < 100 && Loop; ++wait28) // 
-			//{
-			//	std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			//	if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire))
-			//	{
-			//		int curTimeStamp = DCR::DeviceCheckResultGlobal->GetUpPackCount();
-			//		if (curTimeStamp > lastTimeStamp  )
-			//		{ 
-			//			new28Count++;
-			//			lastCheckedTimeStamp = curTimeStamp;
-			//			if (new28Count >= 2)
-			//			{ // 等待第二个新0x28包
-			//				got28 = true;
-			//				break;
-			//			}
-			//		}
-			//	}
-			//}
-			//if (!got28) {
-			//	WRITE_TASK_DATA_SEND_DBG("No 0x28 status packet received after config, aborting!\n");
-			//	break;
-			//}
+
 			int lastTimeStamp = DCR::DeviceCheckResultGlobal->GetUpPackCount();
-
 			{
 				std::unique_lock<std::mutex> lk(TaskChipStatParsing::mtxReadyForSend38);
 				TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release);
@@ -1170,12 +1169,12 @@ void TaskDataSend::run()
 					auto now = std::chrono::steady_clock::now();
 					
 
-					if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) 
+					/*if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) 
 					{
 						std::unique_lock<std::mutex> lk(TaskChipStatParsing::mtxReadyForSend38);
 						TaskChipStatParsing::cvReadyForSend38.wait(lk, [] {
 							return TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire);
-							});
+							});*/
 
 						if (FCT::FluidCtrlGlob->FluidCheckUpdate(0, 512, FLUID_SIZE_INDEX0 / 4) == FCT::FluidCheckRes::FLUID_SATISFY)	  //512个采样点
 						{
@@ -1197,16 +1196,16 @@ void TaskDataSend::run()
 							WRITE_TASK_DATA_SEND_DBG("FluidCtrl: before=%d, send=%d, after=%d, remain=%d\n", before, packLen, after, remain);
 							i++;
 						}                                                                                    // 24. 发送下一个包
-						else
+						/*else
 						{
 							TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release);
-						}
-					}
-					//else
-					//{
-					//	// 让出CPU，等待0x28包到来，避免空转
-					//	std::this_thread::yield();
+						}*/
 					//}
+					else
+					{
+						// 让出CPU，等待0x28包到来，避免空转
+						std::this_thread::yield();
+					}
 
 				if (!Loop)                                                                                      // 25. 如果Loop为false，提前退出
 				{

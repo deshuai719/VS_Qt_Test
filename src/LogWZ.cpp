@@ -1,4 +1,4 @@
-#include "LogWZ.hpp"
+﻿#include "LogWZ.hpp"
 #include <cstdarg>
 
 LWZ::Log::Log(int LogNum)
@@ -11,11 +11,13 @@ LWZ::Log::Log(int LogNum)
     for(int i = 0; i < LogNum; ++i)
     {
         LogFile[i] = nullptr;
-    }
+    }  
+    //startLogThread();
 }
 
 LWZ::Log::~Log()
 {
+    //stopLogThread();
     for(int i = 0; i < LOG_NUM; ++i)
     {
         if(LogFile[i] != nullptr)
@@ -25,6 +27,48 @@ LWZ::Log::~Log()
         }
     }
 }
+//
+//void LWZ::Log::WriteAsync(int LogIndex, const char* format, ...) 
+//{
+//    char buf[1024];
+//    va_list args;
+//    va_start(args, format);
+//    vsnprintf(buf, sizeof(buf), format, args);
+//    va_end(args);
+//
+//    {
+//        std::lock_guard<std::mutex> lock(logMutex_);
+//        logQueue_.push(LogMsg{ LogIndex, buf });
+//    }
+//    logCv_.notify_one();
+//}
+//
+//void LWZ::Log::logThreadFunc() {
+//    while (running_ || !logQueue_.empty()) {
+//        std::unique_lock<std::mutex> lock(logMutex_);
+//        logCv_.wait(lock, [this] { return !logQueue_.empty() || !running_; });
+//        while (!logQueue_.empty()) {
+//            LogMsg msg = std::move(logQueue_.front());
+//            logQueue_.pop();
+//            lock.unlock();
+//            // 调用原有同步写入
+//            this->Write(msg.idx, "%s", msg.msg.c_str());
+//            lock.lock();
+//        }
+//    }
+//}
+//
+//void LWZ::Log::startLogThread() {
+//    running_ = true;
+//    logThread_ = std::thread(&Log::logThreadFunc, this);
+//}
+//
+//void LWZ::Log::stopLogThread() {
+//    running_ = false;
+//    logCv_.notify_all();
+//    if (logThread_.joinable())
+//        logThread_.join();
+//}
 
 void LWZ::Log::Init(int LogIndex, const char* path)
 {

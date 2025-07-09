@@ -34,6 +34,7 @@ namespace TOOLWZ{
 
     	bool empty();
     	bool rear(T& get);
+        //bool rear_nonblock(T& get);
     	bool rear_with_destruct(T& get);
     	bool front(T&  );
     	bool get_with_overflow(T& get);
@@ -97,9 +98,9 @@ namespace TOOLWZ{
         return true;
     }
 
-    //无阻塞出队
+    ////无阻塞出队
     //template<typename T, int cells, void(*destruct_func)(T&)>
-    //bool queue<T, cells, destruct_func>::rear(T& get)//函数内部赋值
+    //bool queue<T, cells, destruct_func>:: rear(T& get)//函数内部赋值
     //{
     //	// std::unique_lock<std::mutex> lock(mtx);
     //	if (_rear == _front)

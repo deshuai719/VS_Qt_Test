@@ -4,12 +4,6 @@
 #include <cstdio>
 #include <memory>
 #include <QDir>
-//#include <thread>
-//#include <queue>
-//#include <mutex>
-//#include <condition_variable>
-//#include <string>
-//#include <atomic>
 
 #define DEFAULT_LOG_PATH "./LOG/"
 #define PRE_FILE_DBG QString(DEFAULT_LOG_PATH)
@@ -45,25 +39,6 @@ namespace LWZ{
         void Init(int LogIndex, const char* path);
         void Write(int LogIndex, const char* format, ...);
         void Close(int LogIndex);
-
-    //    // ==== 异步日志相关 ====
-    //    void WriteAsync(int LogIndex, const char* format, ...);
-
-    //private:
-    //    struct LogMsg {
-    //        int idx;
-    //        std::string msg;
-    //    };
-    //    std::queue<LogMsg> logQueue_;
-    //    std::mutex logMutex_;
-    //    std::condition_variable logCv_;
-    //    std::thread logThread_;
-    //    std::atomic<bool> running_{ true };
-
-    //    void logThreadFunc();
-    //    void startLogThread();
-    //    void stopLogThread();
-
     public:
         static Log* LogInstance;
     };
@@ -86,7 +61,7 @@ namespace LWZ{
 //#define TASK_0X28_PARSING_DBG
 //#define TASK_DISPATCH_DBG
 //#define TASK_STATISTICS_DBG
-//#define TASK_DATA_SEND_DBG
+#define TASK_DATA_SEND_DBG
 //#define DLG_SIANDCFG_MENU_DBG
 //#define TASK_DATA_CONSTRUCT_ARG_DBG
 //#define TASK_DATA_SEND_INFO_VERIFY

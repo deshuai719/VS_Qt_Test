@@ -25,7 +25,7 @@ namespace TOOLWZ{
     public:
     	T* _que;
     	unsigned int _q_sz, _q_cell_num, _q_cell_sz, _rear, _front;
-    	std::mutex mtx;
+    	std::mutex mtx; 
         std::condition_variable cv;
     public:
     	queue(unsigned int cell_num);
@@ -34,9 +34,9 @@ namespace TOOLWZ{
 
     	bool empty();
     	bool rear(T& get);
-        //bool rear_nonblock(T& get);
     	bool rear_with_destruct(T& get);
-    	bool front(T&  );
+    	bool front(T& 
+        );
     	bool get_with_overflow(T& get);
     	void add_even_full(T& add);
     	bool get_with_lock(T& get);
@@ -44,15 +44,7 @@ namespace TOOLWZ{
     	void rear_no_pop(T& get);
     	void pop();
     	void clear();
-    	void release_memory(); 
-        int size() const {
-            // 适用于循环队列
-            return (_front - _rear + _q_cell_num) % _q_cell_num;
-        }////打印队列长度
-        // 新增阻塞出队
-        //void blocking_rear(T& get);
-        // 新增阻塞入队（可选）
-        //void blocking_front(const T& add);
+    	void release_memory();
     };
 
     template<typename T, int cells, void(*destruct_func)(T&)>
@@ -87,9 +79,10 @@ namespace TOOLWZ{
     	return false;
     }
 
+
     /******************************新增：阻塞出队**************************************/
     template<typename T, int cells, void(*destruct_func)(T&)>
-	bool queue<T, cells, destruct_func>::rear(T& get)//新增：阻塞出队
+    bool queue<T, cells, destruct_func>::rear(T& get)//新增：阻塞出队
     {
         std::unique_lock<std::mutex> lock(mtx);
         cv.wait(lock, [this] { return _rear != _front; }); // 队列非空才继续
@@ -132,7 +125,7 @@ namespace TOOLWZ{
 
     /*****************************新增：阻塞入队*****************************************/
     template<typename T, int cells, void(*destruct_func)(T&)>
-	bool queue<T, cells, destruct_func>::front(T& add)//新增：阻塞入队
+    bool queue<T, cells, destruct_func>::front(T& add)//新增：阻塞入队
     {
         //std::unique_lock<std::mutex> lock(mtx);
         if ((_front + 1) % _q_cell_num == _rear)
@@ -178,12 +171,12 @@ namespace TOOLWZ{
     {
     	_que[_front] = add;
     	std::unique_lock<std::mutex> lock(mtx);
-    	_front = (_front + 1) % _q_cell_num;     //在front加1前，队列被取空，此时rear == front，不能再取
-    	if (_front == _rear)                     //在判断前由于front + 1,rear != front，队列非空，此时再取一次，取出了此次add操作的数据，队列又为空，rear == front
+    	_front = (_front + 1) % _q_cell_num;//在front加1前，队列被取空，此时rear == front，不能再取
+    	if (_front == _rear)//在判断前由于front + 1,rear != front，队列非空，此时再取一次，取出了此次add操作的数据，队列又为空，rear == front
     	{
     		destruct_func(_que[_rear]);
-    		_rear = (_rear + 1) % _q_cell_num;   //若前述成立，则执行该步，此时rear != front队列非空，但队列实际并无新的add操作被执行
-    	}                                        //综上，此操作要加锁
+    		_rear = (_rear + 1) % _q_cell_num;//若前述成立，则执行该步，此时rear != front队列非空，但队列实际并无新的add操作被执行
+    	}										//综上，此操作要加锁
     	lock.unlock();
     	return;
     }

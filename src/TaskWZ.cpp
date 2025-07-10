@@ -620,7 +620,7 @@ void TaskChipStatParsing::run()
 					ReadyForSend38.store(true, std::memory_order_release);
 					cvReadyForSend38.notify_all();
 				}
-				DCR::DeviceCheckResultGlobal->SetTemperatureInner(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->fpga_heat); // 更新芯片内部温度
+				DCR::DeviceCheckResultGlobal->SetTemperatureInner(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->fpga_heat ); // 更新芯片内部温度
 				DCR::DeviceCheckResultGlobal->SetTemperatureEnv(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->ds18b20_16b); // 更新环境温度
 				DCR::DeviceCheckResultGlobal->SetUpPackCount(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->timeStamp_8ms);  // 更新上行包计数
 				// 如果启用包日志记录，写入一条记录
@@ -767,20 +767,23 @@ void TaskTestStatistics::run()
 				for(int j = 0; j < 4; j++)
 				{
 					//打印统计的连续有效包数
-					//qDebug() << "Board" << i << "Chip" << j << "连续有效包数:"<< DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMif()<< "要求:" << ContinousValidNum;
-					if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMif() < ContinousValidNum)// 判断该芯片的连续有效包数是否小于要求
-					{
-						WRITE_TASK_STATISTICS_DBG("Check Result A Mif: False\n");
-						if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckResult())                    // 如果之前检测结果为 true，需要更新统计
-						{
-							DCR::DeviceCheckResultGlobal->ChipSatisfiedNumDec();                                       // 满足芯片数减一
-							if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline())
+					qDebug() << "Board" << i << "Chip" << j << "连续有效包数:"<< DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifCodec()<< "要求:" << ContinousValidNum;
+					qDebug() << "Board" << i << "Chip" << j << "连续有效包数:" << DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifAdpow() << "要求:" << ContinousValidNum;
+					if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifCodec() < ContinousValidNum
+						|| DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifAdpow() < ContinousValidNum)// 判断该芯片的连续有效包数是否小于要求
 							{
-								DCR::DeviceCheckResultGlobal->ChipUnSatisfiedNumInc();                                 // 如果芯片在线，不满足芯片数加一
+								WRITE_TASK_STATISTICS_DBG("Check Result A Mif: False\n");
+								if (DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckResult())                    // 如果之前检测结果为 true，需要更新统计
+								{
+									DCR::DeviceCheckResultGlobal->ChipSatisfiedNumDec();                                       // 满足芯片数减一
+									if (DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline())
+									{
+										DCR::DeviceCheckResultGlobal->ChipUnSatisfiedNumInc();                                 // 如果芯片在线，不满足芯片数加一
+									}
+								}
+								DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).UpdateCheckResult(false);               // 更新检测结果为 false
 							}
-						}
-						DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).UpdateCheckResult(false);               // 更新检测结果为 false
-					}
+						
 					else
 					{
 						WRITE_TASK_STATISTICS_DBG("Check Result A Mif: True\n");
@@ -956,6 +959,14 @@ void TaskDataSend::run()
 		std::shared_ptr<DCWZ::DataNode> Node = DCWZ::DataMana::DataListGlobal.GetHead();                        // 13. 获取数据链表头节点
 		for (int i = 0; Node != nullptr && Loop; Node = Node->GetNext(), i++)                                   // 14. 遍历所有数据节点
 		{
+			/*****************************在每组参数下发前重置所有芯片的检查结果***********************************************/ 
+			for (int board = 0; board < 8; ++board) {
+				for (int chip = 0; chip < 4; ++chip) {
+					DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetCheckPacksOfMif(0, 0);
+					DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetChipTestStat(DCR::WAITING_FOR_TESTING);
+				}
+			}
+
 			WRITE_TASK_DATA_SEND_DBG("Send Node\n");  
 			if (i < g_ConditionList.size()) //从文件中读取对应序号的条件设置为全局条件
 			{

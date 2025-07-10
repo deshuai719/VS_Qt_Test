@@ -24,6 +24,9 @@ namespace DCR{
 		int CheckPacksOfMifAdpow;  // 新增：第三通道独立
         TCOND::Range RangeSINAD;//记录一次测试中codec的SINAD的最大最小值
         ChipTestStat ChipTestSt;
+        // 在 ChipCheckResult 中添加
+        ChipTestStat ChipTestStCodec;
+        ChipTestStat ChipTestStAdpow;
 
     public:
         ChipCheckResult();

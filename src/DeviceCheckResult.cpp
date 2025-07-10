@@ -1,4 +1,5 @@
 ﻿#include "DeviceCheckResult.hpp"
+#include <QDebug>
 
 namespace DCR{
 
@@ -18,6 +19,8 @@ namespace DCR{
         CheckPacksOfMifAdpow = 0;
         RangeSINAD.SetRange(0, 0);
         ChipTestSt = WAITING_FOR_TESTING;
+        ChipTestStCodec = WAITING_FOR_TESTING;
+        ChipTestStAdpow = WAITING_FOR_TESTING;
     }
 
     void ChipCheckResult::Reset()
@@ -26,6 +29,8 @@ namespace DCR{
         CheckPacksOfMifCodec = 0;
         CheckPacksOfMifAdpow = 0;
         ChipTestSt = WAITING_FOR_TESTING;
+        ChipTestStCodec = WAITING_FOR_TESTING;
+        ChipTestStAdpow = WAITING_FOR_TESTING;
     }
 
     void ChipCheckResult::SetCheckResult(bool checkResult)
@@ -59,7 +64,12 @@ namespace DCR{
     void ChipCheckResult::SetChipTestStat(ChipTestStat st)
     {
         ChipTestSt = st;
+        //新增，同步状态
+        ChipTestStCodec = st;
+        ChipTestStAdpow = st;
     }
+
+   
 
     bool ChipCheckResult::GetCheckResult() const
     {
@@ -78,6 +88,8 @@ namespace DCR{
 
     int ChipCheckResult::GetCheckPacksOfMif() const
     {
+        //qDebug() << "CheckPacksOfMifCodec:" << CheckPacksOfMifCodec
+        //    << "CheckPacksOfMifAdpow:" << CheckPacksOfMifAdpow;
         return std::min(CheckPacksOfMifCodec, CheckPacksOfMifAdpow);
     }
 
@@ -139,28 +151,21 @@ namespace DCR{
 
     void ChipCheckResult::CheckPacksOfMifCodecInc(bool res)
     {
-        if (IfOnline)
-        {
-            switch (ChipTestSt)
-            {
+        if (IfOnline) {
+            switch (ChipTestStCodec) {
             case WAITING_FOR_TESTING:
-                if (res)
-                {
-                    SetChipTestStat(BE_TESTING);
+                if (res) {
+                    ChipTestStCodec = BE_TESTING;
                     CheckPacksOfMifCodec++;
                 }
                 break;
             case BE_TESTING:
-                if (res)
-                {
+                if (res) {
                     CheckPacksOfMifCodec++;
                 }
-                else
-                {
-                    SetChipTestStat(END_OF_TESTING);
+                else {
+                    ChipTestStCodec = END_OF_TESTING;
                 }
-                break;
-            case END_OF_TESTING:
                 break;
             default:
                 break;
@@ -170,34 +175,28 @@ namespace DCR{
 
     void ChipCheckResult::CheckPacksOfMifAdpowInc(bool res)
     {
-        if (IfOnline)
-        {
-            switch (ChipTestSt)
-            {
+        if (IfOnline) {
+            switch (ChipTestStAdpow) {
             case WAITING_FOR_TESTING:
-                if (res)
-                {
-                    SetChipTestStat(BE_TESTING);
-                    CheckPacksOfMifCodec++;
+                if (res) {
+                    ChipTestStAdpow = BE_TESTING;
+                    CheckPacksOfMifAdpow++;
                 }
                 break;
             case BE_TESTING:
-                if (res)
-                {
-                    CheckPacksOfMifCodec++;
+                if (res) {
+                    CheckPacksOfMifAdpow++;
                 }
-                else
-                {
-                    SetChipTestStat(END_OF_TESTING);
+                else {
+                    ChipTestStAdpow = END_OF_TESTING;
                 }
-                break;
-            case END_OF_TESTING:
                 break;
             default:
                 break;
             }
         }
     }
+
 
     //动态统计一次测试过程中 SINAD 的最大最小值区间。
     void ChipCheckResult::UpdateRangeSINAD(unsigned short sinad)

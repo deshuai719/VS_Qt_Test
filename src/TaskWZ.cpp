@@ -1,6 +1,7 @@
 ﻿#include "TaskWZ.hpp"
 #include "GlobalConditionList.hpp"
 #include <QDebug>
+#include <QThread>
 #include <atomic>
 #include <chrono>
 #include <thread>
@@ -514,6 +515,7 @@ void task_rcv::close()
 {
 	WRITE_TASK_RCV_DBG("task_rcv::close\n"); // 1. 写调试日志，记录关闭操作
 	Loop = false;                           // 2. 设置 Loop 为 false，通知 run() 循环安全退出
+	QueueRcv.exit();						 // 3. 调用接收队列的 exit() 方法，清理队列资源
 }
 
 void task_rcv::clear()
@@ -574,6 +576,7 @@ void task_dispatch::run()
 void task_dispatch::close()
 {
 	Loop = false;
+	task_rcv::QueueRcv.exit(); // 唤醒阻塞的 rear，确保线程能安全退出
 }
 
 void task_dispatch::clear()
@@ -606,7 +609,12 @@ void TaskChipStatParsing::run()
 	while(Loop)
 	{
 		RcvData Data;
-		QueueChipStatParsing.rear(Data);                                                                                             // 从队列尾部取出一个数据包
+		//QueueChipStatParsing.rear(Data);                                                                                             // 从队列尾部取出一个数据包
+		auto t0 = std::chrono::steady_clock::now();
+		QueueChipStatParsing.rear(Data);
+		auto t1 = std::chrono::steady_clock::now();
+		// 记录队列等待耗时
+		//qDebug() << "[TaskChipStatParsing] rear耗时:" << std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count() << "us";
 		if(Data.GetData().get())
 		{
 			if(FRAME_HEAD_STAR(Data.GetData().get())->msgID == 0x28)                                                                 // 判断数据包类型是否为0x28（芯片状态包）
@@ -616,10 +624,14 @@ void TaskChipStatParsing::run()
 				/*******************收到0x28包时，记录时间戳并通知条件变量：************************************/
 				last28Time = std::chrono::steady_clock::now();
 				{
+					//std::lock_guard<std::mutex> lk(mtxReadyForSend38);
+					//qDebug() << "准备加锁" << reinterpret_cast<quintptr>(QThread::currentThreadId());
 					std::lock_guard<std::mutex> lk(mtxReadyForSend38);
+					//qDebug() << "加锁成功" << reinterpret_cast<quintptr>(QThread::currentThreadId());
 					ReadyForSend38.store(true, std::memory_order_release);
 					cvReadyForSend38.notify_all();
 				}
+
 				DCR::DeviceCheckResultGlobal->SetTemperatureInner(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->fpga_heat ); // 更新芯片内部温度
 				DCR::DeviceCheckResultGlobal->SetTemperatureEnv(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->ds18b20_16b); // 更新环境温度
 				DCR::DeviceCheckResultGlobal->SetUpPackCount(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->timeStamp_8ms);  // 更新上行包计数
@@ -701,6 +713,7 @@ void TaskChipStatParsing::run()
 void TaskChipStatParsing::close()
 {
 	Loop = FALSE;
+	QueueChipStatParsing.exit();
 }
 
 void TaskChipStatParsing::clear()
@@ -767,8 +780,8 @@ void TaskTestStatistics::run()
 				for(int j = 0; j < 4; j++)
 				{
 					//打印统计的连续有效包数
-					qDebug() << "Board" << i << "Chip" << j << "连续有效包数:"<< DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifCodec()<< "要求:" << ContinousValidNum;
-					qDebug() << "Board" << i << "Chip" << j << "连续有效包数:" << DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifAdpow() << "要求:" << ContinousValidNum;
+					/*qDebug() << "Board" << i << "Chip" << j << "连续有效包数:"<< DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifCodec()<< "要求:" << ContinousValidNum;
+					qDebug() << "Board" << i << "Chip" << j << "连续有效包数:" << DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifAdpow() << "要求:" << ContinousValidNum;*/
 					if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifCodec() < ContinousValidNum
 						|| DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifAdpow() < ContinousValidNum)// 判断该芯片的连续有效包数是否小于要求
 							{
@@ -818,6 +831,7 @@ void TaskTestStatistics::run()
 void TaskTestStatistics::close()
 {
 	Loop = false;
+	QueueStatistcsMODE.exit();
 }
 
 void TaskTestStatistics::clear()
@@ -1209,6 +1223,7 @@ void TaskDataSend::run()
 void TaskDataSend::close()
 {
 	Loop = false;
+	QueueParamAck.exit();
 	TASKWZ::TaskDataSend::SemaWaitForUI.release(1);
 }
 
@@ -1235,7 +1250,6 @@ void TaskVersionParsing::init()
 {
 	Loop = true;
 }
-
 
 void TaskVersionParsing::run()
 {
@@ -1274,7 +1288,7 @@ void TaskVersionParsing::run()
 
 		for (int i = 0; i < 100; i++)                                                                                                      // 10. 最多尝试100次从队列取出上行数据包
 		{
-			QueueVeriosnParsing.rear(DataUp);                                                                                              // 11. 从版本号解析队列取出数据包
+			QueueVeriosnParsing.try_rear(DataUp);                                                                                              // 11. 从版本号解析队列取出数据包
 			if (DataUp.GetData())                                                                                                          // 12. 如果取到数据
 			{
 				WRITE_TASK_VERSION_GET_DBG("ram_id = %d, chk_fail = %d, cmd_ack = %d\n",
@@ -1312,7 +1326,7 @@ void TaskVersionParsing::run()
 				}
 
                                                                                                                                            // 19. 如果不是有效应答，切换到外部源并重试
-				uint8_t SwitchingLocalSRC[14] = { 0xA0, 0x0F, 0x0A, 0x00, 0x81, 0x15, 0x01, 0x00, 0x50, 0x00, 0x18, 0x00, 0x02, 0xFD };
+				uint8_t SwitchingLocalSRC[14] = { 0xA0, 0x0F, 0x0A, 0x00, 0x81, 0x15, 0x01, 0x00, 0x50, 0x00, 0x18, 0x00, 0x00, 0xFF };
 				SOCKWZ::SockGlob::Send((char*)SwitchingLocalSRC, 14);
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));                                                               // 20. 等待100ms后重试
 			}
@@ -1326,6 +1340,7 @@ void TaskVersionParsing::run()
 void TaskVersionParsing::close()
 {
 	Loop = false;
+	QueueVeriosnParsing.exit(); // 唤醒阻塞线程，确保安全退出
 }
 
 void TaskVersionParsing::clear()

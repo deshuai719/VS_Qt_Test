@@ -416,6 +416,7 @@ namespace DCR{
     {
         int t = data;
         t = (t * 503.975) / 65536 - 273.15;
+        //t = (t * 503.975) / 65536;
         return t;
     }
 

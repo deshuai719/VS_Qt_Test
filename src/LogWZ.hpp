@@ -65,7 +65,7 @@ namespace LWZ{
 //#define DLG_SIANDCFG_MENU_DBG
 //#define TASK_DATA_CONSTRUCT_ARG_DBG
 //#define TASK_DATA_SEND_INFO_VERIFY
-#define TASK_VERSION_GET_DBG
+//#define TASK_VERSION_GET_DBG
 //#define DLG_MENU_AUDIO_ARG_DBG
 //#define TASK_RCV_DBG
 //#define MNIC_DBG

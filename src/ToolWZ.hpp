@@ -3,6 +3,7 @@
 
 #include <mutex>
 #include <condition_variable>
+#include <QDebug>
 
 #define N_BITS_HIGH(n)									((0x1LL << (n)) - 1)
 #define RIGHT_SHIFT_U8(data, n)    (unsigned char)(((data) >> (n)) & N_BITS_HIGH(8))
@@ -27,6 +28,7 @@ namespace TOOLWZ{
     	unsigned int _q_sz, _q_cell_num, _q_cell_sz, _rear, _front;
     	std::mutex mtx; 
         std::condition_variable cv;
+        bool exit_flag = false; // 新增：退出标志
     public:
     	queue(unsigned int cell_num);
     	queue();
@@ -34,6 +36,7 @@ namespace TOOLWZ{
 
     	bool empty();
     	bool rear(T& get);
+        bool try_rear(T& get);
     	bool rear_with_destruct(T& get);
     	bool front(T& 
         );
@@ -45,6 +48,7 @@ namespace TOOLWZ{
     	void pop();
     	void clear();
     	void release_memory();
+        void exit(); // 建议补充声明
     };
 
     template<typename T, int cells, void(*destruct_func)(T&)>
@@ -84,28 +88,30 @@ namespace TOOLWZ{
     template<typename T, int cells, void(*destruct_func)(T&)>
     bool queue<T, cells, destruct_func>::rear(T& get)//新增：阻塞出队
     {
+        //qDebug() << "[queue] rear wait, front=" << _front << " rear=" << _rear;
         std::unique_lock<std::mutex> lock(mtx);
-        cv.wait(lock, [this] { return _rear != _front; }); // 队列非空才继续
+        cv.wait(lock, [this] { return _rear != _front || exit_flag; }); // 队列非空才继续,增加退出条件
+        if (exit_flag && _rear == _front) return false; // 退出且队列空，直接返回
         get = _que[_rear];
         _rear = (_rear + 1) % _q_cell_num;
         return true;
     }
 
     ////无阻塞出队
-    //template<typename T, int cells, void(*destruct_func)(T&)>
-    //bool queue<T, cells, destruct_func>:: rear(T& get)//函数内部赋值
-    //{
-    //	// std::unique_lock<std::mutex> lock(mtx);
-    //	if (_rear == _front)
-    //	{
-    //		// lock.unlock();
-    //		return false;
-    //	}
-    //	get = _que[_rear];
-    //	_rear = (_rear + 1) % _q_cell_num;
-    //	// lock.unlock();
-    //	return true;
-    //}
+    template<typename T, int cells, void(*destruct_func)(T&)>
+    bool queue<T, cells, destruct_func>:: try_rear(T& get)//函数内部赋值
+    {
+    	// std::unique_lock<std::mutex> lock(mtx);
+    	if (_rear == _front)
+    	{
+    		// lock.unlock();
+    		return false;
+    	}
+    	get = _que[_rear];
+    	_rear = (_rear + 1) % _q_cell_num;
+    	// lock.unlock();
+    	return true;
+    }
 
     template<typename T, int cells, void(*destruct_func)(T&)>
     bool queue<T, cells, destruct_func>::rear_with_destruct(T& get)
@@ -128,12 +134,24 @@ namespace TOOLWZ{
     bool queue<T, cells, destruct_func>::front(T& add)//新增：阻塞入队
     {
         //std::unique_lock<std::mutex> lock(mtx);
+        //qDebug() << "[queue] front notify_one, front=" << _front << " rear=" << _rear;
         if ((_front + 1) % _q_cell_num == _rear)
             return false;
         _que[_front] = add;
         _front = (_front + 1) % _q_cell_num;
         cv.notify_one(); // 唤醒阻塞的出队线程
         return true;
+    }
+
+    template<typename T, int cells, void(*destruct_func)(T&)>
+    void queue<T, cells, destruct_func>::exit()
+    {
+        //qDebug() << "[queue] exit notify_all, exit_flag=" << exit_flag;
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            exit_flag = true;
+        }
+        cv.notify_all();
     }
 
     //template<typename T, int cells, void(*destruct_func)(T&)>
@@ -254,6 +272,7 @@ namespace TOOLWZ{
     	}
     	_rear = 0;
     	_front = 0;
+		exit_flag = false;//新增：退出标志复位
     }
 
     template<typename T, int cells, void(*destruct_func)(T&)>
@@ -278,6 +297,7 @@ namespace TOOLWZ{
     		_q_cell_num = 0;
     		_rear = 0;
     		_front = 0;
+			exit_flag = false;// 新增：退出标志复位
     	}
     }
 

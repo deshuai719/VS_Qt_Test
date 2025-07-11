@@ -630,7 +630,7 @@ namespace DlgMenuARG{
         painter->fillRect(Rc[11], Brush[1]);
 
         painter->drawText(Rc[0],    QString("%1").arg(row));
-        painter->drawText(Rc[1],    Qt::AlignCenter, "判断条件");
+        painter->drawText(Rc[1],    Qt::AlignCenter, "条件");
         painter->drawText(Rc[2],    Qt::AlignCenter, "上移");
         painter->drawText(Rc[3],    Qt::AlignCenter, "下移");
         painter->drawText(Rc[4],    Qt::AlignCenter, QString("%1").arg(Arg.GetAudioARG().GetDB(), 1, 'f', 1, '0'));
@@ -835,7 +835,7 @@ namespace DlgMenuARG{
             painter->fillRect(Rc[11], Brush[1]);
 
             painter->drawText(Rc[0], "序号");
-            painter->drawText(Rc[1], "音量");
+            painter->drawText(Rc[1], "条件");
             painter->drawText(Rc[2], "上移");
             painter->drawText(Rc[3], "下移");
             painter->drawText(Rc[4], Qt::AlignCenter, "幅度/dB");
@@ -1180,10 +1180,10 @@ namespace DlgMenuARG{
             double dB = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, DB)).toDouble();
             unsigned long long Freq = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Freq)).toULongLong();
             unsigned int Dur = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Dur)).toUInt();
-            double dl = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, DL)).toDouble();
-            double dr = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, DR)).toDouble();
-            double al = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, AL)).toDouble();
-            double ar = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, AR)).toDouble();
+            double dl = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Digital)).toDouble();
+            double dr = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, PGA)).toDouble();
+            double al = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Playback)).toDouble();
+            double ar = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, KEYITEM(i, Headset)).toDouble();
 
             DCWZ::ARG_RTC_GENERATE param(
                 SDG::ARG(dB, Freq, Dur),
@@ -1478,10 +1478,10 @@ namespace DlgMenuARG{
             double al_db = arg.GetAL() * 1.5 - 126;
             double ar_db = arg.GetAR() * 1.0 - 40;
 
-            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/DL").arg(i), QString::number(dl_db));
-            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/DR").arg(i), QString::number(dr_db));
-            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/AL").arg(i), QString::number(al_db));
-            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/AR").arg(i), QString::number(ar_db));
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/Digital").arg(i), QString::number(dl_db));
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/PGA").arg(i), QString::number(dr_db));
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/Playback").arg(i), QString::number(al_db));
+            CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_TYPE::INI_CENTRALIZE, QString("ITEM%1/Headset").arg(i), QString::number(ar_db));
 
             //新增： 保存判定条件
             const TCOND::TestCondition& codecCond = model->Items[i].GetJudgeCondCodec();

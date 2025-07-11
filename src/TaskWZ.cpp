@@ -290,7 +290,7 @@ void worker_manager::task_callback_func(TOOLWZ::data_wz<task_wz, 20, task_destru
 {
 	t->addr->init();							 // 1. 调用任务对象的 init() 方法，进行任务初始化
 	t->addr->run();								// 2. 调用任务对象的 run() 方法，执行任务的主要逻辑
-	t = 0;										// 3. 将指针 t 置为 0（仅清空本地指针，不释放内存，防止误用）
+	//t = 0;										// 3. 将指针 t 置为 0（仅清空本地指针，不释放内存，防止误用）
 }
 
 TOOLWZ::data_wz<worker, sizeof(worker), worker_destruct> worker_manager::workers;
@@ -435,6 +435,7 @@ void task_rcv::run()
 	OPEN_TASK_RCV_DBG(LogTaskRcv.txt);                               // 1. 打开接收任务的调试日志文件
 
 #ifndef TEST_WITHOUT_BOARD                                           // 2. 如果没有定义 TEST_WITHOUT_BOARD（即实际硬件环境）
+	//RcvData Data(800);                                           // 4. 创建一个长度为800字节的接收数据对象 Data
 	while (Loop)                                                     // 3. 只要 Loop 为 true，就持续循环接收数据
 	{
 		RcvData Data(800);                                           // 4. 创建一个长度为800字节的接收数据对象 Data
@@ -459,7 +460,19 @@ void task_rcv::run()
 			WRITE_TASK_RCV_DBG("Data recived, Len = %d\n", res);     // 14. 记录接收到的数据长度
 		}
 		Data.SetLen(res);                                            // 15. 设置Data对象的实际数据长度
+		/*static std::chrono::steady_clock::time_point lastEnqueueTime;
+		static bool firstEnqueue = true;*/
 		QueueRcv.front(Data);                                        // 16. 将Data对象放入接收队列的队首，供后续任务处理
+
+		//auto now = std::chrono::steady_clock::now();
+		//if (!firstEnqueue) {
+		//	auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastEnqueueTime).count();
+		//	qDebug() << "[QueueRcv.front] 两次入队间隔(ms):" << interval;
+		//}
+		//else {
+		//	firstEnqueue = false;
+		//}
+		//lastEnqueueTime = now;
 		Data.Clear();                                                // 17. 清理Data对象，释放内存
 	}
                                                                      // 18. 循环结束后，日志关闭在函数结尾
@@ -610,11 +623,13 @@ void TaskChipStatParsing::run()
 	{
 		RcvData Data;
 		//QueueChipStatParsing.rear(Data);                                                                                             // 从队列尾部取出一个数据包
-		auto t0 = std::chrono::steady_clock::now();
+		//auto t0 = std::chrono::steady_clock::now();
 		QueueChipStatParsing.rear(Data);
-		auto t1 = std::chrono::steady_clock::now();
+		//auto t1 = std::chrono::steady_clock::now();
 		// 记录队列等待耗时
 		//qDebug() << "[TaskChipStatParsing] rear耗时:" << std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count() << "us";
+
+		//auto t2 = std::chrono::steady_clock::now();
 		if(Data.GetData().get())
 		{
 			if(FRAME_HEAD_STAR(Data.GetData().get())->msgID == 0x28)                                                                 // 判断数据包类型是否为0x28（芯片状态包）
@@ -705,6 +720,8 @@ void TaskChipStatParsing::run()
 			}
 		}
 		Data.Clear();// 清理数据，释放内存
+		//auto t3 = std::chrono::steady_clock::now();
+		//qDebug() << "[TaskChipStatParsing] 解析耗时:" << std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count() << "us";
 
 	}
 	CLOSE_TASK_0X28_PARSING();// 关闭调试日志
@@ -780,8 +797,8 @@ void TaskTestStatistics::run()
 				for(int j = 0; j < 4; j++)
 				{
 					//打印统计的连续有效包数
-					/*qDebug() << "Board" << i << "Chip" << j << "连续有效包数:"<< DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifCodec()<< "要求:" << ContinousValidNum;
-					qDebug() << "Board" << i << "Chip" << j << "连续有效包数:" << DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifAdpow() << "要求:" << ContinousValidNum;*/
+					/*qDebug() << "Board" << i << "Chip" << j << "Codec连续有效包数:"<< DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifCodec()<< "要求:" << ContinousValidNum;
+					qDebug() << "Board" << i << "Chip" << j << "Adpow连续有效包数:" << DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifAdpow() << "要求:" << ContinousValidNum;*/
 					if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifCodec() < ContinousValidNum
 						|| DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifAdpow() < ContinousValidNum)// 判断该芯片的连续有效包数是否小于要求
 							{
@@ -973,14 +990,7 @@ void TaskDataSend::run()
 		std::shared_ptr<DCWZ::DataNode> Node = DCWZ::DataMana::DataListGlobal.GetHead();                        // 13. 获取数据链表头节点
 		for (int i = 0; Node != nullptr && Loop; Node = Node->GetNext(), i++)                                   // 14. 遍历所有数据节点
 		{
-			/*****************************在每组参数下发前重置所有芯片的检查结果***********************************************/ 
-			for (int board = 0; board < 8; ++board) {
-				for (int chip = 0; chip < 4; ++chip) {
-					DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetCheckPacksOfMif(0, 0);
-					DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetChipTestStat(DCR::WAITING_FOR_TESTING);
-				}
-			}
-
+		
 			WRITE_TASK_DATA_SEND_DBG("Send Node\n");  
 			if (i < g_ConditionList.size()) //从文件中读取对应序号的条件设置为全局条件
 			{
@@ -1119,6 +1129,13 @@ void TaskDataSend::run()
 				// 收到0x28包后立即发0x38包
 			}
 
+			/*****************************在每组参数下发前重置所有芯片的检查结果***********************************************/
+		for (int board = 0; board < 8; ++board) {
+			for (int chip = 0; chip < 4; ++chip) {
+				DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetCheckPacksOfMif(0, 0);
+				DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetChipTestStat(DCR::WAITING_FOR_TESTING);
+			}
+		}
 			TaskChipStatParsing::bPackLogRecord = true;                                                         // 19. 启用芯片包日志记录
 
 			std::chrono::steady_clock::time_point lastSendTime = std::chrono::steady_clock::now();//新增：发包时间差

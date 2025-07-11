@@ -135,7 +135,7 @@ public:
                     }
                     outFile << pair.first << ", ";
                     outFile << "Res:" << pair.second.Res << "，";
-                    outFile << " 有效包数：" << pair.second.validCount << "\n";
+                    outFile << " 连续有效包：" << pair.second.validCount << "\n";
                     for (const auto& data : pair.second.chipData) {
                         outFile << data << "\n";
                     }

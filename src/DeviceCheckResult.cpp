@@ -149,6 +149,34 @@ namespace DCR{
         }
     }*/
 
+    void ChipCheckResult::CheckPacksOfMifAdpowInc(bool res)
+    {
+        /*qDebug() << "AdpowInc: IfOnline=" << IfOnline
+            << "State=" << ChipTestStAdpow
+            << "Res=" << res
+            << "Count=" << CheckPacksOfMifAdpow;*/
+        if (IfOnline) {
+            switch (ChipTestStAdpow) {
+            case WAITING_FOR_TESTING:
+                if (res) {
+                    ChipTestStAdpow = BE_TESTING;
+                    CheckPacksOfMifAdpow++;
+                }
+                break;
+            case BE_TESTING:
+                if (res) {
+                    CheckPacksOfMifAdpow++;
+                }
+                else {
+                    ChipTestStAdpow = END_OF_TESTING;
+                }
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
     void ChipCheckResult::CheckPacksOfMifCodecInc(bool res)
     {
         if (IfOnline) {
@@ -173,29 +201,29 @@ namespace DCR{
         }
     }
 
-    void ChipCheckResult::CheckPacksOfMifAdpowInc(bool res)
-    {
-        if (IfOnline) {
-            switch (ChipTestStAdpow) {
-            case WAITING_FOR_TESTING:
-                if (res) {
-                    ChipTestStAdpow = BE_TESTING;
-                    CheckPacksOfMifAdpow++;
-                }
-                break;
-            case BE_TESTING:
-                if (res) {
-                    CheckPacksOfMifAdpow++;
-                }
-                else {
-                    ChipTestStAdpow = END_OF_TESTING;
-                }
-                break;
-            default:
-                break;
-            }
-        }
-    }
+    //void ChipCheckResult::CheckPacksOfMifAdpowInc(bool res)
+    //{
+    //    if (IfOnline) {
+    //        switch (ChipTestStAdpow) {
+    //        case WAITING_FOR_TESTING:
+    //            if (res) {
+    //                ChipTestStAdpow = BE_TESTING;
+    //                CheckPacksOfMifAdpow++;
+    //            }
+    //            break;
+    //        case BE_TESTING:
+    //            if (res) {
+    //                CheckPacksOfMifAdpow++;
+    //            }
+    //            else {
+    //                ChipTestStAdpow = END_OF_TESTING;
+    //            }
+    //            break;
+    //        default:
+    //            break;
+    //        }
+    //    }
+    //}
 
 
     //动态统计一次测试过程中 SINAD 的最大最小值区间。

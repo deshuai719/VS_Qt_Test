@@ -759,8 +759,8 @@ namespace CWD{
                                 DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()),                                  // 满足/总次数
                             Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetRangeSINAD())                 // SINAD范围
                         ));
-                        DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetCheckPacksOfMif(0,0);                     // MIF包计数清零
-                        DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetChipTestStat(DCR::WAITING_FOR_TESTING); // 状态设为等待测试
+                        //DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetCheckPacksOfMif(0,0);                     // MIF包计数清零
+                        //DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetChipTestStat(DCR::WAITING_FOR_TESTING); // 状态设为等待测试
                     }
                 }
                 WRITE_CENTRAL_WIDGET_DBG("for(for()) after\n");                                                           // 记录调试信息
@@ -836,7 +836,11 @@ namespace CWD{
 
     void CentralWidget::ClockEvent()
     {
-        PTestTime.setText(QString("%1:%2:%3").arg(ClockVal / 3600, 2, 10).arg(ClockVal / 60, 2, 10).arg(ClockVal, 2, 10));
+        //PTestTime.setText(QString("%1:%2:%3").arg(ClockVal / 3600, 2, 10).arg(ClockVal / 60, 2, 10).arg(ClockVal, 2, 10));
+        PTestTime.setText(QString("%1:%2:%3")
+            .arg(ClockVal / 3600, 2, 10, QChar('0'))
+            .arg((ClockVal / 60) % 60, 2, 10, QChar('0'))
+            .arg(ClockVal % 60, 2, 10, QChar('0')));
         ClockVal++;
     }
 

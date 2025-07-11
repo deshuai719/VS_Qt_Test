@@ -1,6 +1,8 @@
 ﻿#include "SocketWZ.hpp"
 #include <QDebug>
 #include "LogWZ.hpp"
+#include <winsock2.h>
+#include <chrono>
 
 SOCKWZ::Socket::Socket()
     :wsa(),                                                                      // 初始化 WinSock 数据结构，通常为 WSADATA 类型
@@ -54,8 +56,9 @@ bool SOCKWZ::Socket::Connect(QString localip,
             UnLock();
             return false;
         }
-        u_long iMode = 1;
-        ioctlsocket(sock, FIONBIO, &iMode);                                      // 设置 socket 为非阻塞模式
+        //u_long iMode = 1;
+        //u_long iMode = 0;                                                        //直接设置为阻塞模式
+        //ioctlsocket(sock, FIONBIO, &iMode);                                      // 设置 socket 为非阻塞模式
 
         localPort = localport.toUShort();                                        // 将本地端口字符串转为无符号短整型
         localAddr.sin_family = AF_INET;                                          // 地址族设为 IPv4
@@ -98,50 +101,73 @@ void SOCKWZ::Socket::DisConnect()
 
 int SOCKWZ::Socket::Send(char* buf, int len)
 {
-    Lock();
-    // std::unique_lock<std::mutex> lk(mtx);
     if(sock == INVALID_SOCKET)
     {
-        UnLock();
         return SOCKET_ERROR;
     }
-    // 发送前记录时间
-    //auto start = std::chrono::steady_clock::now();
-    //WRITE_TASK_DATA_SEND_DBG("Before sendto, time = %lld us\n", std::chrono::duration_cast<std::chrono::microseconds>(start.time_since_epoch()).count());
-    int ret = sendto(sock, buf, len, 0, (sockaddr*)&chipAddr, sizeof(sockaddr));
+    //// 记录开始时间
+    //auto start = std::chrono::high_resolution_clock::now();
 
-    //// 发送后记录时间
-    //auto end = std::chrono::steady_clock::now();
+    //// 记录结束时间
+    //auto end = std::chrono::high_resolution_clock::now();
     //auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
-    //WRITE_TASK_DATA_SEND_DBG("After sendto, time = %lld us, \nsendto耗时: %lld us\n",
-    //    std::chrono::duration_cast<std::chrono::microseconds>(end.time_since_epoch()).count(),
-    //    std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()); 
-    //// 日志：记录耗时和返回值
-    //WRITE_TASK_DATA_SEND_DBG("[Socket::Send] sendto耗时: %lld us, ret=%d\n", static_cast<long long>(duration), ret);
+    int ret = sendto(sock, buf, len, 0, (sockaddr*)&chipAddr, sizeof(sockaddr));
 
-    // 如果发送失败，记录错误码
     if (ret == SOCKET_ERROR) {
         int err = WSAGetLastError();
         qDebug() << "[Socket::Send] sendto failed, WSAGetLastError=" << err;
     }
 
-    UnLock();
+    //// 打印耗时（微秒）
+    //qDebug() << "[Socket::Send] sendto耗时:" << duration << "微秒";
     return ret;
 }
+
+//int SOCKWZ::Socket::Recv(char* buf, int len)
+//{
+//    int socklen = sizeof(sockaddr);
+//    //Lock();
+//    // std::unique_lock<std::mutex> lk(mtx);
+//    if(sock == INVALID_SOCKET)
+//    {
+//        //UnLock();
+//        return SOCKET_ERROR;
+//    }
+//    int ret = recvfrom(sock, buf, len, 0, (sockaddr*)&chipAddr, &socklen);
+//    //UnLock();
+//    return ret;
+//}
 
 int SOCKWZ::Socket::Recv(char* buf, int len)
 {
     int socklen = sizeof(sockaddr);
-    Lock();
-    // std::unique_lock<std::mutex> lk(mtx);
-    if(sock == INVALID_SOCKET)
+    //Lock();
+    if (sock == INVALID_SOCKET)
     {
-        UnLock();
+        //UnLock();
         return SOCKET_ERROR;
     }
-    int ret = recvfrom(sock, buf, len, 0, (sockaddr*)&chipAddr, &socklen);
-    UnLock();
+
+    // 设置8ms超时
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(sock, &readfds);
+    timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 8000; // 8ms
+
+    int sel = select(0, &readfds, nullptr, nullptr, &timeout);
+    //qDebug() << "select returned:" << sel;
+    int ret = SOCKET_ERROR;
+    if (sel > 0 && FD_ISSET(sock, &readfds)) {
+        ret = recvfrom(sock, buf, len, 0, (sockaddr*)&chipAddr, &socklen);
+        /*qDebug() << "recvfrom ret:" << ret;*/
+    }
+   /* else {
+        qDebug() << "no data, timeout or error";
+    }*/
+    //UnLock();
     return ret;
 }
 
@@ -197,7 +223,7 @@ void SOCKWZ::SockGlob::Clear()
 
 int SOCKWZ::SockGlob::Send(char *buf, int len)
 {
-    std::unique_lock<std::mutex> lk(mtx);
+    //std::unique_lock<std::mutex> lk(mtx);
     if(Sock != nullptr)
     {
         return Sock->Send(buf, len);
@@ -207,7 +233,7 @@ int SOCKWZ::SockGlob::Send(char *buf, int len)
 
 int SOCKWZ::SockGlob::Recv(char* buf, int len)
 {
-    std::unique_lock<std::mutex> lk(mtx);
+    //std::unique_lock<std::mutex> lk(mtx);
     if(Sock != nullptr)
     {
         return Sock->Recv(buf, len);

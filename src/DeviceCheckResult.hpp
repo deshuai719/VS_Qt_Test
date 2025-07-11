@@ -37,7 +37,7 @@ namespace DCR{
         void SetCheckResult(bool checkResult);
         void SetIfOnline(bool ifOnline);
         void SetCheckSatisfiedCount(int checkCompleteCount);
-        void SetCheckPacksOfMif(int CheckPacksCodec, int CheckAdpow);
+        void SetCheckPacksOfMif(int CheckPacksCodec, int CheckPacksAdpow);
         void SetRangeSINAD(TCOND::Range rangeSINAD);
         void SetChipTestStat(ChipTestStat st);
         bool GetCheckResult() const;

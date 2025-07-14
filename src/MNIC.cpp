@@ -1,4 +1,4 @@
-#include "MNIC.h"
+﻿#include "MNIC.h"
 #include "LogWZ.hpp"
 
 MNIC::MNIC(QWidget* parent)
@@ -164,11 +164,13 @@ void MNIC::SinadConfig()
 
 void MNIC::LogON()
 {
+    g_logOn = true; // 新增：打开日志
     qDebug() << "Log ON";
 }
 
 void MNIC::LogOFF()
 {
+    g_logOn = false; // 新增：关闭日志
     qDebug() << "Log OFF";
 }
 

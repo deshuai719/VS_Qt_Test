@@ -3,20 +3,19 @@
 
 namespace DCR{
 
-    ChipCheckResult::ChipCheckResult()
-        :CheckResult(true), IfOnline(false), CheckSatisfiedCount(0), CheckPacksOfMifCodec(0), CheckPacksOfMifAdpow(0), RangeSINAD(), ChipTestSt(WAITING_FOR_TESTING)
+    ChipCheckResult::ChipCheckResult()  
+        : CheckResult(true), IfOnline(false), CheckSatisfiedCount(0), CheckPacksOfMifCodec(0), CheckPacksOfMifAdpow(0), TotalValidCodec(0), TotalValidAdpow(0), RangeSINAD(), ChipTestSt(WAITING_FOR_TESTING),  
+        ChipTestStCodec(WAITING_FOR_TESTING), ChipTestStAdpow(WAITING_FOR_TESTING) // 初始化 ChipTestStCodec 和 ChipTestStAdpow  
     {}
 
-    ChipCheckResult::~ChipCheckResult()
+    ChipCheckResult::~ChipCheckResult() 
     {}
 
-    void ChipCheckResult::Init()
+   /* void ChipCheckResult::Init()
     {
         CheckResult = true;
         IfOnline = false;
         CheckSatisfiedCount = 0;
-        CheckPacksOfMifCodec = 0;
-        CheckPacksOfMifAdpow = 0;
         RangeSINAD.SetRange(0, 0);
         ChipTestSt = WAITING_FOR_TESTING;
         ChipTestStCodec = WAITING_FOR_TESTING;
@@ -28,6 +27,33 @@ namespace DCR{
         CheckResult = true;
         CheckPacksOfMifCodec = 0;
         CheckPacksOfMifAdpow = 0;
+        ChipTestSt = WAITING_FOR_TESTING;
+        ChipTestStCodec = WAITING_FOR_TESTING;
+        ChipTestStAdpow = WAITING_FOR_TESTING;
+    }*/
+
+    void ChipCheckResult::Init()
+    {
+        CheckResult = true;
+        IfOnline = false;
+        CheckSatisfiedCount = 0;
+        CheckPacksOfMifCodec = 0;
+        CheckPacksOfMifAdpow = 0;
+        TotalValidCodec = 0;      // 新增
+        TotalValidAdpow = 0;      // 新增
+        RangeSINAD.SetRange(0, 0);
+        ChipTestSt = WAITING_FOR_TESTING;
+        ChipTestStCodec = WAITING_FOR_TESTING;
+        ChipTestStAdpow = WAITING_FOR_TESTING;
+    }
+
+    void ChipCheckResult::Reset()
+    {
+        CheckResult = true;
+        CheckPacksOfMifCodec = 0;
+        CheckPacksOfMifAdpow = 0;
+        TotalValidCodec = 0;      // 新增
+        TotalValidAdpow = 0;      // 新增
         ChipTestSt = WAITING_FOR_TESTING;
         ChipTestStCodec = WAITING_FOR_TESTING;
         ChipTestStAdpow = WAITING_FOR_TESTING;
@@ -46,6 +72,12 @@ namespace DCR{
     void ChipCheckResult::SetCheckSatisfiedCount(int checkSatisfiedCount)
     {
         CheckSatisfiedCount = checkSatisfiedCount;
+    }
+
+    void ChipCheckResult::SetTotalValid(int totalCodec, int totalAdpow)
+    {
+        TotalValidCodec = totalCodec;
+        TotalValidAdpow = totalAdpow;
     }
 
     void ChipCheckResult::SetCheckPacksOfMif(int CheckPacksCodec, int CheckPacksAdpow)
@@ -69,8 +101,6 @@ namespace DCR{
         ChipTestStAdpow = st;
     }
 
-   
-
     bool ChipCheckResult::GetCheckResult() const
     {
         return CheckResult;
@@ -93,12 +123,22 @@ namespace DCR{
         return std::min(CheckPacksOfMifCodec, CheckPacksOfMifAdpow);
     }
 
-    int ChipCheckResult::GetCheckPacksOfMifCodec() const 
+	int ChipCheckResult::GetTotalValidCodec() const//获取累计有效的Codec包数
+    { 
+        return TotalValidCodec; 
+    
+    }
+	int ChipCheckResult::GetTotalValidAdpow() const //获取累计有效的Adpow包数
+    {
+        return TotalValidAdpow; 
+    }
+
+	int ChipCheckResult::GetCheckPacksOfMifCodec() const //获取连续有效的Codec包数
     { 
         return CheckPacksOfMifCodec;
     }
 
-    int ChipCheckResult::GetCheckPacksOfMifAdpow() const 
+	int ChipCheckResult::GetCheckPacksOfMifAdpow() const //获取连续有效的Adpow包数
     { 
         return CheckPacksOfMifAdpow;
     }
@@ -148,6 +188,17 @@ namespace DCR{
             }
         }
     }*/
+
+    void ChipCheckResult::TotalValidCodecInc(bool valid)
+    {
+        if (valid) 
+            ++TotalValidCodec;
+    }
+    void ChipCheckResult::TotalValidAdpowInc(bool valid)
+    {
+        if (valid) 
+            ++TotalValidAdpow;
+    }
 
     void ChipCheckResult::CheckPacksOfMifAdpowInc(bool res)
     {

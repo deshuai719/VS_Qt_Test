@@ -22,6 +22,8 @@ namespace DCR{
         //int CheckPacksOfMif;  //当前测试条件有效合格次数
         int CheckPacksOfMifCodec;  // 新增：前两通道为一组
 		int CheckPacksOfMifAdpow;  // 新增：第三通道独立
+        int TotalValidCodec = 0;   // Codec总有效包数
+        int TotalValidAdpow = 0;   // Adpow总有效包数
         TCOND::Range RangeSINAD;//记录一次测试中codec的SINAD的最大最小值
         ChipTestStat ChipTestSt;
         // 在 ChipCheckResult 中添加
@@ -38,14 +40,19 @@ namespace DCR{
         void SetIfOnline(bool ifOnline);
         void SetCheckSatisfiedCount(int checkCompleteCount);
         void SetCheckPacksOfMif(int CheckPacksCodec, int CheckPacksAdpow);
+        void SetTotalValid(int totalCodec, int totalAdpow);
         void SetRangeSINAD(TCOND::Range rangeSINAD);
         void SetChipTestStat(ChipTestStat st);
+        void TotalValidCodecInc(bool valid);
+        void TotalValidAdpowInc(bool valid);
         bool GetCheckResult() const;
         bool GetIfOnline() const;
         int GetCheckSatisfiedCount() const;
         int GetCheckPacksOfMif() const;
         int GetCheckPacksOfMifCodec() const;  // 新增：前两通道为一组
         int GetCheckPacksOfMifAdpow() const;  // 新增：第三通道为一组
+        int GetTotalValidCodec() const;
+        int GetTotalValidAdpow() const;
         TCOND::Range GetRangeSINAD() const;
         void UpdateCheckResult(bool res);
         void CheckSatisfiedCountInc();

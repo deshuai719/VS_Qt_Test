@@ -5,10 +5,15 @@
 #include <atomic>
 #include <chrono>
 #include <thread>
+#include <vector>
+#include <string>
+
+
 
 
 namespace TASKWZ
 {
+std::vector<std::string> TaskChipStatParsing::ChipFailInfo[8][4];
 
 task_wz::task_wz() :QObject(), type(TASK_EMPTY) {}
 
@@ -695,6 +700,9 @@ void TaskChipStatParsing::run()
 							Res[2] &= DCR::DeviceCheckResultGlobal->GetCondition()[1].CheckAll(Sinad[2], Vpp[2], Rms[2]);
 							DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).CheckPacksOfMifCodecInc(Res[0] && Res[1] );
 							DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).CheckPacksOfMifAdpowInc(Res[2]);
+							DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).TotalValidCodecInc(Res[0] && Res[1]);
+							DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).TotalValidAdpowInc(Res[2]);
+
 
 							// 如果启用芯片日志记录，写入详细记录
 							if(bPackLogRecord)
@@ -703,6 +711,37 @@ void TaskChipStatParsing::run()
 									TCOND::TestCondition::SinadTransfer(Sinad[0]), Vpp[0], Rms[0], Res[0] ? " TRUE" : "FALSE",
 									TCOND::TestCondition::SinadTransfer(Sinad[1]), Vpp[1], Rms[1], Res[1] ? " TRUE" : "FALSE",
 									TCOND::TestCondition::SinadTransfer(Sinad[2]), Vpp[2], Rms[2], Res[2] ? " TRUE" : "FALSE");
+
+								if (!Res[0]) 
+								{
+									TaskChipStatParsing::ChipFailInfo[i][j].push_back(
+										QString("Codec fail: SINAD=%1, Vpp=%2, Rms=%3")
+										.arg(TCOND::TestCondition::SinadTransfer(Sinad[0]), 3, 10, QChar(' ')) // 宽度3，右对齐
+										.arg(Vpp[0], 5, 10, QChar(' ')) // 宽度5，右对齐
+										.arg(Rms[0], 5, 10, QChar(' ')) // 宽度5，右对齐
+										.toStdString()
+									);
+								}
+								if (!Res[1]) 
+								{
+									TaskChipStatParsing::ChipFailInfo[i][j].push_back(
+										QString("Codec fail: SINAD=%1, Vpp=%2, Rms=%3")
+										.arg(TCOND::TestCondition::SinadTransfer(Sinad[1]), 3, 10, QChar(' ')) // 宽度3，右对齐
+										.arg(Vpp[1], 5, 10, QChar(' ')) // 宽度5，右对齐
+										.arg(Rms[1], 5, 10, QChar(' ')) // 宽度5，右对齐
+										.toStdString()
+									);
+								}
+								if (!Res[2]) 
+								{
+									TaskChipStatParsing::ChipFailInfo[i][j].push_back(
+										QString("Adpow fail: SINAD=%1, Vpp=%2, Rms=%3")
+										.arg(TCOND::TestCondition::SinadTransfer(Sinad[2]), 3, 10, QChar(' ')) // 宽度3，右对齐
+										.arg(Vpp[2], 5, 10, QChar(' ')) // 宽度5，右对齐
+										.arg(Rms[2], 5, 10, QChar(' ')) // 宽度5，右对齐
+										.toStdString()
+									);
+								}
 							}
 						}
 						else// 当前芯片不在线
@@ -714,6 +753,7 @@ void TaskChipStatParsing::run()
 								DCR::DeviceCheckResultGlobal->ChipOnlineNumDec();
 							}
 							DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetCheckPacksOfMif(0,0);
+							DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetTotalValid(0, 0); 
 						}
 					}
 				}
@@ -972,6 +1012,7 @@ void TaskDataSend::run()
 	OPEN_TASK_DATA_SEND_DBG(LogTaskDataSend.log);                                                               // 1. 打开数据发送任务的调试日志文件
 	OPEN_TASK_DATA_SEND_INFO_VERIFY(LogTaskDataSendInfoVerify.txt);                                             // 2. 打开数据发送信息校验日志
 	OPEN_LOG_UP_RECORD(LogUpRecord.log);                                                                        // 3. 打开上报记录日志
+	OPEN_LOG_SE_RECORD(LogSeRecord.log);
 	OPEN_CHECK_DELAY_DBG(CHECK_DELAY.txt);
 
 	emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_START, StatisticMode::STATISTICS_A_MIF));                  // 4. 发送测试开始信号
@@ -986,11 +1027,11 @@ void TaskDataSend::run()
 	while (Loop && TestCount--)                                                                                 // 10. 主循环，Loop为true且TestCount大于0时循环
 	{
 		WRITE_TASK_DATA_SEND_DBG("TestCount = %lld\n", TestCount);                                              // 11. 记录当前测试次数
-		WRITE_LOG_UP_RECORD("\n[本次参数下发开始:%04d]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1); // 12. 记录本次参数下发开始
+		WRITE_LOG_UP_RECORD("\n[第%04d次参数下发开始]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1); // 12. 记录本次参数下发开始
+		WRITE_LOG_SE_RECORD("\n[第%04d次参数下发开始]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1);
 		std::shared_ptr<DCWZ::DataNode> Node = DCWZ::DataMana::DataListGlobal.GetHead();                        // 13. 获取数据链表头节点
 		for (int i = 0; Node != nullptr && Loop; Node = Node->GetNext(), i++)                                   // 14. 遍历所有数据节点
 		{
-		
 			WRITE_TASK_DATA_SEND_DBG("Send Node\n");  
 			if (i < g_ConditionList.size()) //从文件中读取对应序号的条件设置为全局条件
 			{
@@ -1002,14 +1043,27 @@ void TaskDataSend::run()
 			DCR::DeviceCheckResultGlobal->GetCondition()[1] = g_ConditionList[i].second;
 
 
-			WRITE_LOG_UP_RECORD("\n[本组参数下发开始:%04d]\n", i + 1);                                              //  记录本组参数下发开始
+			WRITE_LOG_UP_RECORD("[第%04d本组参数下发开始]\n", i + 1);                                              //  记录本组参数下发开始
+			WRITE_LOG_SE_RECORD("[第%04d本组参数下发开始]\n", i + 1);
 
 		
-			WRITE_LOG_UP_RECORD("\n第%d组参数与条件：\n", i + 1);                                                      //记录本组下发第几组条件和具体条件内容
-			WRITE_TASK_DATA_SEND_DBG("\n第%d组参数与条件：\n", i + 1);
+			WRITE_LOG_UP_RECORD("第%d组参数与条件：\n", i + 1);                                                      //记录本组下发第几组条件和具体条件内容
+			WRITE_LOG_SE_RECORD("第%d组参数与条件：\n", i + 1);
+			WRITE_TASK_DATA_SEND_DBG("第%d组参数与条件：\n", i + 1);
 			if (i < g_ParamList.size()) {
 				const auto& param = g_ParamList[i];
-				WRITE_LOG_UP_PARAM_RECORD(                                                                  //记录本组下发参数的内容
+				WRITE_LOG_UP_PARAM_RECORD
+				(                                                                  //记录本组下发参数的内容
+					param.GetAudioARG().GetDB(),
+					param.GetAudioARG().GetFreq(),
+					param.GetAudioARG().GetDur(),
+					static_cast<signed char>(param.GetRegCfgARG().GetDL()),
+					static_cast<signed char>(param.GetRegCfgARG().GetDR()),
+					static_cast<signed char>(param.GetRegCfgARG().GetAL()),
+					static_cast<signed char>(param.GetRegCfgARG().GetAR())
+				);
+				WRITE_LOG_SE_PARAM_RECORD
+				(                                                                  //记录本组下发参数的内容
 					param.GetAudioARG().GetDB(),
 					param.GetAudioARG().GetFreq(),
 					param.GetAudioARG().GetDur(),
@@ -1023,11 +1077,20 @@ void TaskDataSend::run()
 				g_ConditionList[i].first.GetRangeVppPTP().GetLeft(), g_ConditionList[i].first.GetRangeVppPTP().GetRight(),
 				g_ConditionList[i].first.GetRangeVppRMS().GetLeft(), g_ConditionList[i].first.GetRangeVppRMS().GetRight()
 			);
+			WRITE_LOG_SE_CODEC_COND_RECORD(
+				g_ConditionList[i].first.GetRangeSINAD().GetLeft(), g_ConditionList[i].first.GetRangeSINAD().GetRight(),
+				g_ConditionList[i].first.GetRangeVppPTP().GetLeft(), g_ConditionList[i].first.GetRangeVppPTP().GetRight(),
+				g_ConditionList[i].first.GetRangeVppRMS().GetLeft(), g_ConditionList[i].first.GetRangeVppRMS().GetRight()
+			);
 			WRITE_LOG_UP_ADPOW_COND_RECORD(
 				g_ConditionList[i].second.GetRangeSINAD().GetLeft(), g_ConditionList[i].second.GetRangeSINAD().GetRight(),
 				g_ConditionList[i].second.GetRangeVppPTP().GetLeft(), g_ConditionList[i].second.GetRangeVppPTP().GetRight(),
 				g_ConditionList[i].second.GetRangeVppRMS().GetLeft(), g_ConditionList[i].second.GetRangeVppRMS().GetRight()); // 记录条件范围
-			qDebug() << typeid(g_ConditionList[i].first.GetRangeSINAD().GetLeft()).name();//确认GetLeft中数据的类型，此处为int
+			WRITE_LOG_SE_ADPOW_COND_RECORD(
+				g_ConditionList[i].second.GetRangeSINAD().GetLeft(), g_ConditionList[i].second.GetRangeSINAD().GetRight(),
+				g_ConditionList[i].second.GetRangeVppPTP().GetLeft(), g_ConditionList[i].second.GetRangeVppPTP().GetRight(),
+				g_ConditionList[i].second.GetRangeVppRMS().GetLeft(), g_ConditionList[i].second.GetRangeVppRMS().GetRight());
+			//qDebug() << typeid(g_ConditionList[i].first.GetRangeSINAD().GetLeft()).name();//确认GetLeft中数据的类型，此处为int
 			// 输出本次下发到全局的条件
 			qDebug() << "第" << i + 1 << "组条件：";
 			qDebug() << "  CodecCond SINAD:" << g_ConditionList[i].first.GetRangeSINAD().GetLeft() << g_ConditionList[i].first.GetRangeSINAD().GetRight()
@@ -1084,35 +1147,8 @@ void TaskDataSend::run()
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(320));            //硬件配置后会有一定时间的缓慢上升期，默认20ms，最大320ms
 
+			/************************************收到0x28包后立即发0x38包*************************************************************/
 			//int lastTimeStamp = DCR::DeviceCheckResultGlobal->GetUpPackCount();
-
-			//TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release); // 先清零
-			//bool got28 = false;
-			//int new28Count = 0;
-			//int lastCheckedTimeStamp = lastTimeStamp;
-			//for (int wait28 = 0; wait28 < 100 && Loop; ++wait28) // 
-			//{
-			//	std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			//	if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire))
-			//	{
-			//		int curTimeStamp = DCR::DeviceCheckResultGlobal->GetUpPackCount();
-			//		if (curTimeStamp > lastTimeStamp  )
-			//		{ 
-			//			new28Count++;
-			//			lastCheckedTimeStamp = curTimeStamp;
-			//			if (new28Count >= 2)
-			//			{ // 等待第二个新0x28包
-			//				got28 = true;
-			//				break;
-			//			}
-			//		}
-			//	}
-			//}
-			//if (!got28) {
-			//	WRITE_TASK_DATA_SEND_DBG("No 0x28 status packet received after config, aborting!\n");
-			//	break;
-			//}
-			int lastTimeStamp = DCR::DeviceCheckResultGlobal->GetUpPackCount();
 
 			{
 				std::unique_lock<std::mutex> lk(TaskChipStatParsing::mtxReadyForSend38);
@@ -1133,52 +1169,34 @@ void TaskDataSend::run()
 		for (int board = 0; board < 8; ++board) {
 			for (int chip = 0; chip < 4; ++chip) {
 				DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetCheckPacksOfMif(0, 0);
+				DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetTotalValid(0, 0);
 				DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetChipTestStat(DCR::WAITING_FOR_TESTING);
 			}
 		}
 			TaskChipStatParsing::bPackLogRecord = true;                                                         // 19. 启用芯片包日志记录
 
-			std::chrono::steady_clock::time_point lastSendTime = std::chrono::steady_clock::now();//新增：发包时间差
-			//TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release);
+			//std::chrono::steady_clock::time_point lastSendTime = std::chrono::steady_clock::now();//新增：发包时间差
 			for (int i = 0; i < Node->GetData()->GetSendNum(); )                                                // 20. 发送每个数据包
 			{
-				/*if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) 
-				{*/
 					DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(i);                                         // 21. 获取第i个包的信息
-					// 判断流控是否满足，满足则发送
-					//int packLen = 512 ;
-					//int remain = FLUID_SIZE_INDEX0 / 4;
-					//int before = FCT::FluidCtrlGlob->FluidLoad(0); // 发送前剩余空间
-					//qDebug() << "[TaskDataSend] ReadyForSend38 =" << TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire);
-					//// 2. 发送前获取当前时间
-					//auto now = std::chrono::steady_clock::now();
-					if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) 
-					{
+					
+					/*if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) 
+					{*/
 						if (FCT::FluidCtrlGlob->FluidCheckUpdate(0, 512, FLUID_SIZE_INDEX0 / 4) == FCT::FluidCheckRes::FLUID_SATISFY)	  //512个采样点
 						{
-							//// 2. 发送前获取当前时间
-							//auto now = std::chrono::steady_clock::now();
-							//// 3. 计算与上一次的时间差（单位：毫秒）
-							//auto diffMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastSendTime).count();
-							//// 4. 记录时间差
-							//WRITE_TASK_DATA_SEND_DBG("Send interval: %lld ms\n", static_cast<long long>(diffMs));
 #ifndef TEST_WITHOUT_BOARD
-							// 5. 发送数据包
 							SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());                      // 22. 发送数据包
 #else
 							std::this_thread::sleep_for(std::chrono::milliseconds(10));                                 // 23. 模拟发送延时
 #endif
-							int after = FCT::FluidCtrlGlob->FluidLoad(0); // 发送后剩余空间
-							//// 6. 更新上一次发送时间
-							//lastSendTime = now;
-							//WRITE_TASK_DATA_SEND_DBG("FluidCtrl: before=%d, send=%d, after=%d, remain=%d\n", before, packLen, after, remain);
+							//int after = FCT::FluidCtrlGlob->FluidLoad(0); // 发送后剩余空间
 							i++;
 						}                                                                                    // 24. 发送下一个包
 						else
 						{
-							TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release);
+							std::this_thread::yield();
 						}
-					}
+					//}
 					//else
 					//{
 					//	// 让出CPU，等待0x28包到来，避免空转
@@ -1206,11 +1224,41 @@ void TaskDataSend::run()
 					break;
 				}
 			}
-			WRITE_LOG_UP_RECORD("\n[本组参数下发结束:%04d]\n", i + 1);                                          // 27. 记录本组参数下发结束
+			TaskTestStatistics::ContinousValidNum = Node->GetData()->GetDuration() * 125 - 1;                   // 30. 设置连续有效包数目标
+			/*************************简要版本日志输出***************************************************/
+			
+			for (int i = 0; i < 8; ++i) {
+				for (int j = 0; j < 4; ++j) {
+					if (!TaskChipStatParsing::ChipFailInfo[i][j].empty()) {
+						int totalValidCodec = DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetTotalValidCodec();
+						int totalValidAdpow = DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetTotalValidAdpow();
+						int contCodec = DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifCodec();
+						int contAdpow = DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifAdpow();
+						long long target = TaskTestStatistics::ContinousValidNum;
+
+						WRITE_LOG_SE_RECORD(
+							"Chip[%d][%d] fail info:\n"
+							"Codec累计有效包数:%3d, 连续有效包数:%3d, 目标:%3d, 结果:%s\n"
+							"Adpow累计有效包数:%3d, 连续有效包数:%3d, 目标:%3d, 结果:%s\n",
+							i + 1, j + 1,
+							totalValidCodec, contCodec, target, contCodec >= target ? "成功" : "失败",
+							totalValidAdpow, contAdpow, target, contAdpow >= target ? "成功" : "失败"
+						);
+						for (const auto& info : TaskChipStatParsing::ChipFailInfo[i][j]) {
+							WRITE_LOG_SE_RECORD("%s\n", info.c_str());
+						}
+					}
+					TaskChipStatParsing::ChipFailInfo[i][j].clear(); // 清空，准备下次组
+				}
+			}
+
+			WRITE_LOG_UP_RECORD("\n[第%03d组参数下发结束]\n", i + 1);                                          // 27. 记录本组参数下发结束
+			WRITE_LOG_SE_RECORD("\n[第%03d组参数下发结束]\n", i + 1);
 			TaskChipStatParsing::bPackLogRecord = false;                                                        // 28. 关闭芯片包日志记录
+
 			WRITE_TASK_DATA_SEND_DBG("Fluid Buffer Empty\n");
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));                                         // 29. 等待100ms
-			TaskTestStatistics::ContinousValidNum = Node->GetData()->GetDuration() * 125 - 1;                   // 30. 设置连续有效包数目标
+			//TaskTestStatistics::ContinousValidNum = Node->GetData()->GetDuration() * 125 - 1;                   // 30. 设置连续有效包数目标
 			StatisticMode Mode = TASKWZ::StatisticMode::STATISTICS_A_MIF;                                       // 31. 设置统计模式
 			TaskTestStatistics::QueueStatistcsMODE.front(Mode);                                                 // 32. 推送统计模式到队列
 			WRITE_TASK_DATA_SEND_DBG("Semaphore Release Statistics a mif\n");
@@ -1224,14 +1272,16 @@ void TaskDataSend::run()
 		WRITE_TASK_DATA_SEND_DBG("Semaphore Release Statistics a time\n");
 		SemaWaitForUI.acquire(1);                                                                               // 36. 等待UI信号量，等待统计完成
 		WRITE_TASK_DATA_SEND_DBG("Semaphore Acquire Statistics a time\n");
-		WRITE_LOG_UP_RECORD("\n[本次参数下发结束:%04d]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount());     // 37. 记录本次参数下发结束
+		WRITE_LOG_UP_RECORD("\n[第%03d次参数下发结束]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount());     // 37. 记录本次参数下发结束
+		WRITE_LOG_SE_RECORD("\n[第%03d次参数下发结束]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount());
 	}
-	std::this_thread::sleep_for(std::chrono::milliseconds(320));                                                // 38. 等待100ms
+	std::this_thread::sleep_for(std::chrono::milliseconds(100));                                                // 38. 等待100ms
 	emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_OVER, StatisticMode::STATISTICS_A_MIF));                   // 39. 发送测试结束信号
 	WRITE_TASK_DATA_SEND_DBG("emit MsgOfStartEnd(TEST_OVER)\n");
 	SemaWaitForUI.acquire(1);                                                                                   // 40. 等待UI信号量，确保UI处理完毕
 	WRITE_TASK_DATA_SEND_DBG("Semaphore Acquire Over\n");
 	CLOSE_LOG_UP_RECORD();                                                                                      // 41. 关闭上报记录日志
+	CLOSE_LOG_SE_RECORD();
 	CLOSE_TASK_DATA_SEND_DBG();                                                                                 // 42. 关闭调试日志
 	CLOSE_TASK_DATA_SEND_INFO_VERIFY();                                                                         // 43. 关闭信息校验日志
 	CLOSE_CHECK_DELAY_DBG();

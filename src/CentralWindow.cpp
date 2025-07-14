@@ -1,4 +1,8 @@
 ﻿#include "CentralWindow.hpp"
+#include <QDesktopServices>
+#include <QUrl>
+#include <QFileInfo>
+#include <QMessageBox>
 
 
 namespace CWD{
@@ -727,8 +731,18 @@ namespace CWD{
         WRITE_CENTRAL_WIDGET_DBG("StartTest(), End\n");                                                 // 写调试日志，记录离开StartTest函数
     }
 
-    void CentralWidget::OpenLog()
-    {}
+    void CentralWidget::OpenLog()//打开简要日志LogSeRecord.log
+    {
+        QString logPath = QCoreApplication::applicationDirPath() + "/LOG/LogSeRecord.log";
+        QFileInfo fi(logPath);
+        if (fi.exists()) {
+            QDesktopServices::openUrl(QUrl::fromLocalFile(logPath));
+        }
+      /*  else {
+             可选：弹窗提示文件不存在
+            QMessageBox::warning(nullptr, "提示", "日志文件不存在！");
+        }*/
+    }
 
     void CentralWidget::UpdateCheckResult(TASKWZ::MsgToCentralWt msg)
     {

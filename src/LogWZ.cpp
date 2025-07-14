@@ -1,4 +1,4 @@
-#include "LogWZ.hpp"
+﻿#include "LogWZ.hpp"
 #include <cstdarg>
 
 LWZ::Log::Log(int LogNum)
@@ -71,3 +71,4 @@ void LWZ::Log::Close(int LogIndex)
 }
 
 LWZ::Log* LWZ::Log::LogInstance = new Log(LOG_NUM);
+bool g_logOn = false;

@@ -27,6 +27,7 @@
 #define LOG_MNIC_INDEX 15
 
 #define LOG_UP_RECORD_INDEX 16//上报包信息记录
+#define LOG_SE_RECORD_INDEX 16//上报包简要信息记录
 
 namespace LWZ{
 
@@ -43,6 +44,10 @@ namespace LWZ{
         static Log* LogInstance;
     };
 };
+
+extern bool g_logOn;//定义全局日志开关变量
+#define WRITE_LOG_IF_ON(Index, Format, ...) \
+    do { if (g_logOn) LWZ::Log::LogInstance->Write(Index, Format, ##__VA_ARGS__); } while(0)//日志输出条件宏
 
 #define OPEN_LOG(Index, Path)   LWZ::Log::LogInstance->Init(Index, Path)
 #define WRITE_LOG(Index, Format, ...)   LWZ::Log::LogInstance->Write(Index, Format, __VA_ARGS__)
@@ -321,6 +326,7 @@ namespace LWZ{
 #if defined LOG_EXPORTS_WZ
 
 #define LOG_UP_RECORD
+#define LOG_SE_RECORD
 
 #else
 
@@ -344,17 +350,32 @@ namespace LWZ{
 
 #if defined LOG_UP_RECORD
 
-#define OPEN_LOG_UP_RECORD(path)   LWZ::Log::LogInstance->Init(LOG_UP_RECORD_INDEX, QString(PRE_FILE_DBG + #path).toStdString().c_str())
-#define WRITE_LOG_UP_RECORD(fmt, ...)   LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, fmt, __VA_ARGS__)
-#define WRITE_LOG_UP_PARAM_RECORD(...) LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  参数: dB=%.2f, Freq=%llu, Dur=%u, Digital=%d, PGA=%d, Playback=%d, Headset=%d\n", __VA_ARGS__)//新增：日志写参数
-#define WRITE_LOG_UP_CODEC_COND_RECORD(...)  LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  Codec SINAD[%d,%d], VppPTP[%d,%d], VppRMS[%d,%d]\n", __VA_ARGS__)//新增：日志写判定条件
-#define WRITE_LOG_UP_ADPOW_COND_RECORD(...)  LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  Adpow SINAD[%d,%d], VppPTP[%d,%d], VppRMS[%d,%d]\n", __VA_ARGS__)//新增：日志写判定条件
-#define WRITE_LOG_UP_PACK_RECORD(...)   LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "\n测试次数：%4d, 时标:%5d\n", __VA_ARGS__)
-#define WRITE_LOG_UP_CHIP_RECORD(...)   LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  芯片编号：J[%d]S[%d]\n    Codec Left [Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s],\n    Codec Right[Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s],\n    AdPow      [Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s]\n", __VA_ARGS__)
-#define CLOSE_LOG_UP_RECORD()   LWZ::Log::LogInstance->Close(LOG_UP_RECORD_INDEX)
+#define OPEN_LOG_UP_RECORD(path)   do { if (g_logOn)LWZ::Log::LogInstance->Init(LOG_UP_RECORD_INDEX, QString(PRE_FILE_DBG + #path).toStdString().c_str()); } while(0)
+#define WRITE_LOG_UP_RECORD(fmt, ...)   do { if (g_logOn)LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, fmt, __VA_ARGS__); } while(0)
+#define WRITE_LOG_UP_PARAM_RECORD(...) do { if (g_logOn)LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  参数: dB=%.2f, Freq=%llu, Dur=%u, Digital=%d, PGA=%d, Playback=%d, Headset=%d\n", __VA_ARGS__); } while(0)//新增：日志写参数
+#define WRITE_LOG_UP_CODEC_COND_RECORD(...)  do { if (g_logOn)LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  Codec SINAD[%d,%d], VppPTP[%d,%d], VppRMS[%d,%d]\n", __VA_ARGS__); } while(0)//新增：日志写判定条件
+#define WRITE_LOG_UP_ADPOW_COND_RECORD(...)  do { if (g_logOn)LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  Adpow SINAD[%d,%d], VppPTP[%d,%d], VppRMS[%d,%d]\n", __VA_ARGS__); } while(0)//新增：日志写判定条件
+#define WRITE_LOG_UP_PACK_RECORD(...)   do { if (g_logOn)LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "\n测试次数：%4d, 时标:%5d\n", __VA_ARGS__); } while(0)
+#define WRITE_LOG_UP_CHIP_RECORD(...)   do { if (g_logOn)LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  芯片编号：J[%d]S[%d]\n    Codec Left [Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s],\n    Codec Right[Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s],\n    AdPow      [Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s]\n", __VA_ARGS__); } while(0)
+#define CLOSE_LOG_UP_RECORD()   do { if (g_logOn)LWZ::Log::LogInstance->Close(LOG_UP_RECORD_INDEX); } while(0)
 
 #else
+#endif
+
+
+//简化版本日志
+
+#if defined LOG_SE_RECORD
+
+#define OPEN_LOG_SE_RECORD(path)   LWZ::Log::LogInstance->Init(LOG_SE_RECORD_INDEX, QString(PRE_FILE_DBG + #path).toStdString().c_str()); 
+#define WRITE_LOG_SE_RECORD(fmt, ...)   LWZ::Log::LogInstance->Write(LOG_SE_RECORD_INDEX, fmt, __VA_ARGS__); 
+#define WRITE_LOG_SE_PARAM_RECORD(...) LWZ::Log::LogInstance->Write(LOG_SE_RECORD_INDEX, "  参数: dB=%.2f, Freq=%llu, Dur=%u, Digital=%d, PGA=%d, Playback=%d, Headset=%d\n", __VA_ARGS__);//新增：日志写参数
+#define WRITE_LOG_SE_CODEC_COND_RECORD(...)  LWZ::Log::LogInstance->Write(LOG_SE_RECORD_INDEX, "  Codec SINAD[%d,%d], VppPTP[%d,%d], VppRMS[%d,%d]\n", __VA_ARGS__); //新增：日志写判定条件
+#define WRITE_LOG_SE_ADPOW_COND_RECORD(...)  LWZ::Log::LogInstance->Write(LOG_SE_RECORD_INDEX, "  Adpow SINAD[%d,%d], VppPTP[%d,%d], VppRMS[%d,%d]\n", __VA_ARGS__);//新增：日志写判定条件
+#define CLOSE_LOG_SE_RECORD()   LWZ::Log::LogInstance->Close(LOG_SE_RECORD_INDEX); 
+
+#else
+#endif
+
 
 #endif // LOG_UP_RECORD
-
-#endif  // _LOGWZ_HPP_

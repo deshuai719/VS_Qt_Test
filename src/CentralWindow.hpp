@@ -23,7 +23,7 @@
 #include "TestCondition.hpp"
 #include "TaskWZ.hpp"
 
-#define VERSION_NUM "圆芯Codec测试软件2503111002--V0"
+#define VERSION_NUM "圆芯Codec测试软件2507111002--V0"
 
 namespace CWD{
 

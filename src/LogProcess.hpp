@@ -42,7 +42,7 @@ public:
         std::string currentTimestamp;                                                              // 当前参数块的时标
 
         while (std::getline(inFile, line)) {                                                       // 逐行读取输入文件
-            if (line.find("[本组参数下发开始:") != std::string::npos)                                      // 检查是否为参数块的开始
+            if (line.find("[组参数下发开始:") != std::string::npos)                                      // 检查是否为参数块的开始
             {
                 inParameterBlock = true;                                                           // 进入参数块
                 outFile << line << "\n\n";                                                         // 原样输出该行并空一行
@@ -57,7 +57,7 @@ public:
 
             if (inParameterBlock) {
                 // 2. 识别并缓存参数与条件内容
-                if (!readingParamBlock && line.find("组参数与条件：") != std::string::npos) {
+                if (!readingParamBlock && line.find("组参数与条件") != std::string::npos) {
                     readingParamBlock = true;
                     paramBlockLineCount = 0;
                 }
@@ -74,7 +74,7 @@ public:
                 }
             }
 
-            if (line.find("[本组参数下发结束:") != std::string::npos) {
+            if (line.find("[组参数下发结束") != std::string::npos) {
                 inParameterBlock = false;
                 // 新增：统计每个芯片编号的有效包数
                 int currentDur = 1; // 默认值

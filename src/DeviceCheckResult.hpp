@@ -70,6 +70,7 @@ namespace DCR{
         int ChipNum;//每张板卡芯片数
         int CheckCount;//总测试次数
         int CheckCompletedCount;//测试完成(包含未通过的)次数
+        int CheckedGroupCount; // 新增：已测试组数
         int ChipOnLineNum;//在线芯片数
         int ChipSatisfiedNum;//满足测试条件的芯片数
         int ChipUnSatisfiedNum;//不满足测试条件的芯片数
@@ -88,6 +89,7 @@ namespace DCR{
         ChipCheckResult& GetChipCheckResult(int boardIndex, int chipIndex);
         void SetCheckCount(int checkCount);
         void SetCheckCompletedCount(int checkCompletedCount);
+        void SetCheckedGroupCount(int count);
         void SetChipOnLineNum(int chipOnLineNum);
         void SetChipSatisfiedNum(int chipSatisfiedNum);
         void SetChipUnSatisfiedNum(int chipUnSatisfiedNum);
@@ -96,12 +98,14 @@ namespace DCR{
         void SetUpPackCount(unsigned short count);
         int GetCheckCount() const;
         int GetCheckCompletedCount() const;
+        int GetCheckedGroupCount() const;
         int GetChipOnLineNum() const;
         int GetChipSatisfiedNum() const;
         int GetChipUnSatisfiedNum() const;
         double GetTemperatureInner() const;
         double GetTempeartureEnv() const;
         void CheckCompletedCountInc();
+        void CheckedGroupCountInc();
         void ChipOnlineNumInc();
         void ChipOnlineNumDec();
         void ChipSatisfiedNumInc();

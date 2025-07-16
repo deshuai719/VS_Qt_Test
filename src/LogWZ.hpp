@@ -27,7 +27,7 @@
 #define LOG_MNIC_INDEX 15
 
 #define LOG_UP_RECORD_INDEX 16//上报包信息记录
-#define LOG_SE_RECORD_INDEX 16//上报包简要信息记录
+#define LOG_SE_RECORD_INDEX 17//上报包简要信息记录
 
 namespace LWZ{
 
@@ -66,7 +66,7 @@ extern bool g_logOn;//定义全局日志开关变量
 //#define TASK_0X28_PARSING_DBG
 //#define TASK_DISPATCH_DBG
 //#define TASK_STATISTICS_DBG
-//#define TASK_DATA_SEND_DBG
+#define TASK_DATA_SEND_DBG
 //#define DLG_SIANDCFG_MENU_DBG
 //#define TASK_DATA_CONSTRUCT_ARG_DBG
 //#define TASK_DATA_SEND_INFO_VERIFY

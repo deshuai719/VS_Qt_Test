@@ -1,4 +1,5 @@
 ﻿#include "CentralWindow.hpp"
+#include "DlgMenuFile.hpp"
 #include <QDesktopServices>
 #include <QUrl>
 #include <QFileInfo>
@@ -515,12 +516,103 @@ namespace CWD{
 
     void CentralWidget::InitUI()
     {
-        LocalIP             .setText("本机IPPORT:00.00.00.00:0000");
+       /* LocalIP             .setText("本机IPPORT:00.00.00.00:0000");
         DeviceIP            .setText("设备IPPORT:00.00.00.00:0000");
         VersionNum          .setText("版本号:--");
         ChipType            .setText("芯片型号:AIC9628BM");
         TemperatureInner    .setText("FPGA温度:--℃");
-        TemperatureEnv      .setText("环境温度:--℃");
+        TemperatureEnv      .setText("环境温度:--℃");*/
+
+        // 标签名
+        QLabel* labelLocalIP = new QLabel("本机IP", this);
+        QLabel* labelDeviceIP = new QLabel("设备IP", this);
+        QLabel* labelVersion = new QLabel("版本号", this);
+        QLabel* labelChipType = new QLabel("芯片型号", this);
+        QLabel* labelTempInner = new QLabel("FPGA温度", this);
+        QLabel* labelTempEnv = new QLabel("环境温度", this);
+
+        // 冒号
+        QLabel* colon1 = new QLabel(":", this);
+        QLabel* colon2 = new QLabel(":", this);
+        QLabel* colon3 = new QLabel(":", this);
+        QLabel* colon4 = new QLabel(":", this);
+        QLabel* colon5 = new QLabel(":", this);
+        QLabel* colon6 = new QLabel(":", this);
+
+        // 内容
+        LocalIP.setParent(this);
+        DeviceIP.setParent(this);
+        VersionNum.setParent(this);
+        ChipType.setParent(this);
+        TemperatureInner.setParent(this);
+        TemperatureEnv.setParent(this);
+
+        LocalIP.setText("00.00.00.00:0000");
+        DeviceIP.setText("00.00.00.00:0000");
+        VersionNum.setText("--");
+        ChipType.setText("AIC9628BM");
+        TemperatureInner.setText("--℃");
+        TemperatureEnv.setText("--℃");
+
+        // 统一宽度
+        int labelWidth = 60;
+        int colonWidth = 10;
+        labelLocalIP->setFixedWidth(labelWidth);
+        labelDeviceIP->setFixedWidth(labelWidth);
+        labelVersion->setFixedWidth(labelWidth);
+        labelChipType->setFixedWidth(labelWidth);
+        labelTempInner->setFixedWidth(labelWidth);
+        labelTempEnv->setFixedWidth(labelWidth);
+
+        colon1->setFixedWidth(colonWidth);
+        colon2->setFixedWidth(colonWidth);
+        colon3->setFixedWidth(colonWidth);
+        colon4->setFixedWidth(colonWidth);
+        colon5->setFixedWidth(colonWidth);
+        colon6->setFixedWidth(colonWidth);
+
+        // 内容左对齐
+        LocalIP.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        DeviceIP.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        VersionNum.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        ChipType.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        TemperatureInner.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        TemperatureEnv.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+
+        // 行布局
+        QHBoxLayout* row1 = new QHBoxLayout;
+        row1->addWidget(labelLocalIP);
+        row1->addWidget(colon1);
+        row1->addWidget(&LocalIP);
+        row1->addSpacing(30);
+        row1->addWidget(labelDeviceIP);
+        row1->addWidget(colon2);
+        row1->addWidget(&DeviceIP);
+
+        QHBoxLayout* row2 = new QHBoxLayout;
+        row2->addWidget(labelVersion);
+        row2->addWidget(colon3);
+        row2->addWidget(&VersionNum);
+        row2->addSpacing(30);
+        row2->addWidget(labelChipType);
+        row2->addWidget(colon4);
+        row2->addWidget(&ChipType);
+
+        QHBoxLayout* row3 = new QHBoxLayout;
+        row3->addWidget(labelTempInner);
+        row3->addWidget(colon5);
+        row3->addWidget(&TemperatureInner);
+        row3->addSpacing(30);
+        row3->addWidget(labelTempEnv);
+        row3->addWidget(colon6);
+        row3->addWidget(&TemperatureEnv);
+
+        QVBoxLayout* statLayout = new QVBoxLayout;
+        statLayout->addLayout(row1);
+        statLayout->addLayout(row2);
+        statLayout->addLayout(row3);
+
+        GbStat.setLayout(statLayout);
 
         for(int i = 0; i < 8; i++)
         {
@@ -538,14 +630,14 @@ namespace CWD{
 
         Filter = new RetEventFilter(this);
 
-        LocalIP         .setFixedWidth(200);
+      /*  LocalIP         .setFixedWidth(200);
         DeviceIP        .setFixedWidth(200);
         VersionNum      .setFixedWidth(200);
         ChipType        .setFixedWidth(200);
         TemperatureInner.setFixedWidth(200);
-        TemperatureEnv  .setFixedWidth(200);
+        TemperatureEnv  .setFixedWidth(200);*/
         LTestNum.setText("总测试次数");
-        LTestedNum.setText("已测试次数");
+        LTestedNum.setText("已测试");
         LTestTime.setText("总测试时间");
         LOnlineChipNum.setText("芯片在线数量");
         LSatisfiedChipNum.setText("测试通过数量");
@@ -569,25 +661,25 @@ namespace CWD{
         PSatisfiedChipNum.setMaximumWidth(60);
         PRejectionChipNum.setMaximumWidth(60);
 
-        HlIP.addWidget(&LocalIP);
-        // HlIP.addStretch();
-        HlIP.addSpacing(30);
-        HlIP.addWidget(&DeviceIP);
-        HlIP.addStretch();
-        HlNum.addWidget(&VersionNum);
-        // HlNum.addStretch();
-        HlNum.addSpacing(30);
-        HlNum.addWidget(&ChipType);
-        HlNum.addStretch();
-        HlTemp.addWidget(&TemperatureInner);
-        // HlTemp.addStretch();
-        HlTemp.addSpacing(30);
-        HlTemp.addWidget(&TemperatureEnv);
-        HlTemp.addStretch();
-        VlStat.addLayout(&HlIP);
-        VlStat.addLayout(&HlNum);
-        VlStat.addLayout(&HlTemp);
-        GbStat.setLayout(&VlStat);
+        //HlIP.addWidget(&LocalIP);
+        //// HlIP.addStretch();
+        //HlIP.addSpacing(30);
+        //HlIP.addWidget(&DeviceIP);
+        //HlIP.addStretch();
+        //HlNum.addWidget(&VersionNum);
+        //// HlNum.addStretch();
+        //HlNum.addSpacing(30);
+        //HlNum.addWidget(&ChipType);
+        //HlNum.addStretch();
+        //HlTemp.addWidget(&TemperatureInner);
+        //// HlTemp.addStretch();
+        //HlTemp.addSpacing(30);
+        //HlTemp.addWidget(&TemperatureEnv);
+        //HlTemp.addStretch();
+        //VlStat.addLayout(&HlIP);
+        //VlStat.addLayout(&HlNum);
+        //VlStat.addLayout(&HlTemp);
+        //GbStat.setLayout(&VlStat);
 
         HlTestNum.addWidget(&LTestNum);
         HlTestNum.addStretch();
@@ -680,8 +772,8 @@ namespace CWD{
 
     void CentralWidget::UpdateSockInfo()
     {
-        LocalIP.setText("本机IPPORT: " + SOCKWZ::SockGlob::Sock->GetAddr()[0] + ":" + SOCKWZ::SockGlob::Sock->GetAddr()[1]);
-        DeviceIP.setText("设备IPPORT: " + SOCKWZ::SockGlob::Sock->GetAddr()[2] + ":" + SOCKWZ::SockGlob::Sock->GetAddr()[3]);
+        LocalIP.setText(  SOCKWZ::SockGlob::Sock->GetAddr()[0] + ":" + SOCKWZ::SockGlob::Sock->GetAddr()[1]);
+        DeviceIP.setText( SOCKWZ::SockGlob::Sock->GetAddr()[2] + ":" + SOCKWZ::SockGlob::Sock->GetAddr()[3]);
     }
 
     void CentralWidget::StartTest()
@@ -690,7 +782,7 @@ namespace CWD{
 
         if (StatOfBtnStart)                                                                                                         // 如果当前是“开始测试”状态（按钮未被按下，准备开始测试）
         {
-            PTestedNum.setText("0");                                                                                                // 已测试次数清零，界面显示为0
+            PTestedNum.setText("0(0/0)");                                                                                                // 已测试次数清零，界面显示为0
             TOOLWZ::stack_wz<TASKWZ::task_type> stack_join;                                                                         // 创建一个任务类型栈，用于后续批量join任务
             stack_join.push(TASKWZ::task_type::TASK_END);                                                                           // 压入“结束任务”类型
             stack_join.push(TASKWZ::task_type::TASK_JOIN);                                                                          // 压入“join任务”类型
@@ -731,7 +823,8 @@ namespace CWD{
         WRITE_CENTRAL_WIDGET_DBG("StartTest(), End\n");                                                 // 写调试日志，记录离开StartTest函数
     }
 
-    void CentralWidget::OpenLog()//打开简要日志LogSeRecord.log
+    /***********************打开简要日志LogSeRecord.log*********************************/
+    void CentralWidget::OpenLog()
     {
         QString logPath = QCoreApplication::applicationDirPath() + "/LOG/LogSeRecord.log";
         QFileInfo fi(logPath);
@@ -796,7 +889,10 @@ namespace CWD{
                         ));
                     }
                 }
-                PTestedNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1));        // 更新已测试次数
+                //PTestedNum.setText(QString("%1(%2/%3)")
+                //    .arg(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1)
+                //    .arg(DCR::DeviceCheckResultGlobal->GetCheckedGroupCount() + 1)
+                //    .arg(CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, "NUMBER/rowCount").toInt()));// 更新已测试次数
                 POnlineChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipOnLineNum()));              // 更新在线芯片数
                 PSatisfiedChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipSatisfiedNum()));        // 更新通过芯片数
                 PRejectionChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipUnSatisfiedNum()));      // 更新失败芯片数
@@ -823,7 +919,7 @@ namespace CWD{
             stack_end.push(TASKWZ::TASK_DATA_SEND);                                                                       // 压入“数据发送任务”
             CREATE_TASK_END(stack_end);                                                                                   // 批量关闭任务
             StatOfBtnStart = true;                                                                                        // 状态切换为“未测试”
-            BtnStartTest.setText("开始测试");                                                                                 // 按钮文本切换为“开始测试”
+            BtnStartTest.setText("开始测试");                                                                             // 按钮文本切换为“开始测试”
             LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", "./LOG/LogUpRecordProcessed.log");                   // 处理日志文件
             lock.unlock();                                                                                                // 解锁
         }
@@ -842,7 +938,7 @@ namespace CWD{
         // arg(TASKWZ::TaskVersionParsing::Version.HOUR, 2, 16 , QChar(u'0')).arg(TASKWZ::TaskVersionParsing::Version.MIN, 2, 16, QChar(u'0')).
         // arg(TASKWZ::TaskVersionParsing::Version.SEC, 2, 16  , QChar(u'0')).arg(TASKWZ::TaskVersionParsing::Version.VER, 4, 16, QChar(u'0')));
 
-        VersionNum.setText(QString("版本号:20%1-%2-%3-%4-%5:R%6").arg(TASKWZ::TaskVersionParsing::Version.YEAR, 2, 16, QChar(u'0')).
+        VersionNum.setText(QString("20%1-%2-%3-%4-%5:R%6").arg(TASKWZ::TaskVersionParsing::Version.YEAR, 2, 16, QChar(u'0')).
         arg(TASKWZ::TaskVersionParsing::Version.MONTH, 2, 16, QChar(u'0')).arg(TASKWZ::TaskVersionParsing::Version.DAY, 2, 16, QChar(u'0')).
         arg(TASKWZ::TaskVersionParsing::Version.HOUR, 2, 16, QChar(u'0')).arg(TASKWZ::TaskVersionParsing::Version.MIN, 2, 16, QChar(u'0')).
         arg(TASKWZ::TaskVersionParsing::Version.VER, 5, 10, QChar(u'0')));
@@ -856,6 +952,12 @@ namespace CWD{
             .arg((ClockVal / 60) % 60, 2, 10, QChar('0'))
             .arg(ClockVal % 60, 2, 10, QChar('0')));
         ClockVal++;
+
+        // 新增：每秒刷新已测试次数/组数
+        PTestedNum.setText(QString("%1(%2/%3)")
+            .arg(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()+1)//传输已测试的次数
+            .arg(DCR::DeviceCheckResultGlobal->GetCheckedGroupCount())//传输已测试的组值
+            .arg(CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, "NUMBER/rowCount").toInt()));//从文件中读取总的测试组数
     }
 
     void CentralWidget::NetConnected()
@@ -878,8 +980,8 @@ namespace CWD{
     {
         WRITE_CENTRAL_WIDGET_DBG("CentralWidget::TimingDetectionEvent(), Enter\n");
         UpdateChipOnlineStatus(); // 每秒刷新一次在线状态和颜色
-        TemperatureInner.setText(QString("FPGA温度:%1℃").arg(DCR::DeviceCheckResultGlobal->GetTemperatureInner(), 4, 'f', 1, '0'));
-        TemperatureEnv.setText(QString("环境温度:%1℃").arg(DCR::DeviceCheckResultGlobal->GetTempeartureEnv(), 4, 'f', 1, '0'));
+        TemperatureInner.setText(QString("%1℃").arg(DCR::DeviceCheckResultGlobal->GetTemperatureInner(), 4, 'f', 1, '0'));
+        TemperatureEnv.setText(QString("%1℃").arg(DCR::DeviceCheckResultGlobal->GetTempeartureEnv(), 4, 'f', 1, '0'));
         if(DCR::DeviceCheckResultGlobal->GetUpPackCount() == UpPackCount)
         {
             if(IfNoticeMNICWhenDisconnect)

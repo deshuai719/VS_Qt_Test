@@ -303,12 +303,12 @@ namespace DCR{
     //设备检测结果类
 
     DeviceCheckResult::DeviceCheckResult()
-        :Condition(nullptr), CheckResult(nullptr), 
-        BoardNum(0), ChipNum(0), CheckCount(0), 
-        CheckCompletedCount(0), ChipOnLineNum(0), 
-        ChipSatisfiedNum(0), ChipUnSatisfiedNum(0),
-        TemperatureInner(0), TemperatureEnviroment(0),
-        UpPackCount(0)
+        :Condition(nullptr), CheckResult(nullptr),
+        BoardNum(0), ChipNum(0), CheckCount(0),
+        CheckCompletedCount(0), CheckedGroupCount(0),
+        ChipOnLineNum(0), ChipSatisfiedNum(0), 
+        ChipUnSatisfiedNum(0),TemperatureInner(0),
+        TemperatureEnviroment(0),UpPackCount(0)
     {}
 
     DeviceCheckResult::~DeviceCheckResult()
@@ -336,6 +336,7 @@ namespace DCR{
             }
         }
         CheckCompletedCount = 0;
+        CheckedGroupCount = 0;
         ChipOnLineNum = 0;
         ChipSatisfiedNum = BoardNum * ChipNum;
         // ChipSatisfiedNum = 0;
@@ -352,6 +353,7 @@ namespace DCR{
             }
         }
         ChipSatisfiedNum = BoardNum * ChipNum;
+        CheckedGroupCount = 0;
         // ChipSatisfiedNum = 0;
         ChipUnSatisfiedNum = 0;
     }
@@ -384,6 +386,11 @@ namespace DCR{
     void DeviceCheckResult::SetCheckCompletedCount(int checkCompletedCount)
     {
         CheckCompletedCount = checkCompletedCount;
+    }
+
+    void DeviceCheckResult::SetCheckedGroupCount(int count) 
+    {
+        CheckedGroupCount = count;
     }
 
     void DeviceCheckResult::SetChipOnLineNum(int chipOnLineNum)
@@ -426,6 +433,11 @@ namespace DCR{
         return CheckCompletedCount;
     }
 
+    int DeviceCheckResult::GetCheckedGroupCount() const 
+    {
+        return CheckedGroupCount;
+    }
+
     int DeviceCheckResult::GetChipOnLineNum() const
     {
         return ChipOnLineNum;
@@ -454,6 +466,10 @@ namespace DCR{
     void DeviceCheckResult::CheckCompletedCountInc()
     {
         CheckCompletedCount++;
+    }
+
+    void DeviceCheckResult::CheckedGroupCountInc() {
+        CheckedGroupCount++;
     }
 
     void DeviceCheckResult::ChipOnlineNumInc()

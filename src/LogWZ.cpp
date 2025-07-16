@@ -71,4 +71,4 @@ void LWZ::Log::Close(int LogIndex)
 }
 
 LWZ::Log* LWZ::Log::LogInstance = new Log(LOG_NUM);
-bool g_logOn = false;
+bool g_logOn = true;

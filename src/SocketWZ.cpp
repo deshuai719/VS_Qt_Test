@@ -25,7 +25,65 @@ SOCKWZ::Socket::Socket()
 SOCKWZ::Socket::~Socket()
 {}
 
-bool SOCKWZ::Socket::Connect(QString localip,
+//bool SOCKWZ::Socket::Connect(QString localip,
+//    QString localport,
+//    QString chipip,
+//    QString chipport)
+//{
+//    Lock();                                                                      // 加锁，防止多线程同时操作 socket
+//
+//    // std::unique_lock<std::mutex> lk(mtx);                                     // 这行被注释掉，原本用于互斥锁保护
+//
+//    if (sock == INVALID_SOCKET)                                                  // 如果当前 socket 还未创建
+//    {
+//        SockAddr[0] = localip;                                                   // 保存本地IP
+//        SockAddr[1] = localport;                                                 // 保存本地端口
+//        SockAddr[2] = chipip;                                                    // 保存芯片IP
+//        SockAddr[3] = chipport;                                                  // 保存芯片端口
+//
+//        if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)                               // 初始化 WinSock2，失败则清理并返回
+//        {
+//            WSACleanup();
+//            UnLock();
+//            return false;
+//        }
+//        sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);                         // 创建 UDP socket
+//        if (sock == INVALID_SOCKET)                                              // 创建失败
+//        {
+//            "error";                                                             // 这行无实际作用
+//            closesocket(sock);                                                   // 关闭 socket（虽然已经无效）
+//            WSACleanup();                                                        // 清理 WinSock
+//            UnLock();
+//            return false;
+//        }
+//        //u_long iMode = 1;
+//        //u_long iMode = 0;                                                        //直接设置为阻塞模式
+//        //ioctlsocket(sock, FIONBIO, &iMode);                                      // 设置 socket 为非阻塞模式
+//
+//        localPort = localport.toUShort();                                        // 将本地端口字符串转为无符号短整型
+//        localAddr.sin_family = AF_INET;                                          // 地址族设为 IPv4
+//        localAddr.sin_port = htons(localPort);                                   // 本地端口号，主机字节序转网络字节序
+//        inet_pton(AF_INET, localip.toStdString().c_str(), &localAddr.sin_addr);  // 本地IP字符串转为网络地址
+//
+//        if (bind(sock, (sockaddr*)&localAddr, sizeof(sockaddr)) == SOCKET_ERROR) // 绑定本地地址和端口
+//        {
+//            closesocket(sock);                                                   // 绑定失败，关闭 socket
+//            WSACleanup();                                                        // 清理 WinSock
+//            UnLock();
+//            return false;
+//        }
+//
+//        memset(&chipAddr, 0, sizeof(sockaddr));                                  // 清空芯片地址结构体
+//        chipPort = chipport.toUShort();                                          // 芯片端口字符串转为无符号短整型
+//        chipAddr.sin_family = AF_INET;                                           // 地址族设为 IPv4
+//        chipAddr.sin_port = htons(chipPort);                                     // 芯片端口号，主机字节序转网络字节序
+//        inet_pton(AF_INET, chipip.toStdString().c_str(), &chipAddr.sin_addr);    // 芯片IP字符串转为网络地址
+//    }
+//    UnLock();                                                                    // 解锁
+//    return true;                                                                 // 返回连接成功
+//}
+
+int SOCKWZ::Socket::Connect(QString localip,
     QString localport,
     QString chipip,
     QString chipport)
@@ -41,20 +99,19 @@ bool SOCKWZ::Socket::Connect(QString localip,
         SockAddr[2] = chipip;                                                    // 保存芯片IP
         SockAddr[3] = chipport;                                                  // 保存芯片端口
 
-        if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)                               // 初始化 WinSock2，失败则清理并返回
-        {
+        if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+            int err = WSAGetLastError();
             WSACleanup();
             UnLock();
-            return false;
+            return err;
         }
-        sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);                         // 创建 UDP socket
-        if (sock == INVALID_SOCKET)                                              // 创建失败
-        {
-            "error";                                                             // 这行无实际作用
-            closesocket(sock);                                                   // 关闭 socket（虽然已经无效）
-            WSACleanup();                                                        // 清理 WinSock
+        sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        if (sock == INVALID_SOCKET) {
+            int err = WSAGetLastError();
+            closesocket(sock);
+            WSACleanup();
             UnLock();
-            return false;
+            return err;
         }
         //u_long iMode = 1;
         //u_long iMode = 0;                                                        //直接设置为阻塞模式
@@ -65,12 +122,12 @@ bool SOCKWZ::Socket::Connect(QString localip,
         localAddr.sin_port = htons(localPort);                                   // 本地端口号，主机字节序转网络字节序
         inet_pton(AF_INET, localip.toStdString().c_str(), &localAddr.sin_addr);  // 本地IP字符串转为网络地址
 
-        if (bind(sock, (sockaddr*)&localAddr, sizeof(sockaddr)) == SOCKET_ERROR) // 绑定本地地址和端口
-        {
-            closesocket(sock);                                                   // 绑定失败，关闭 socket
-            WSACleanup();                                                        // 清理 WinSock
+        if (bind(sock, (sockaddr*)&localAddr, sizeof(sockaddr)) == SOCKET_ERROR) {
+            int err = WSAGetLastError();
+            closesocket(sock);
+            WSACleanup();
             UnLock();
-            return false;
+            return err;
         }
 
         memset(&chipAddr, 0, sizeof(sockaddr));                                  // 清空芯片地址结构体
@@ -80,7 +137,7 @@ bool SOCKWZ::Socket::Connect(QString localip,
         inet_pton(AF_INET, chipip.toStdString().c_str(), &chipAddr.sin_addr);    // 芯片IP字符串转为网络地址
     }
     UnLock();                                                                    // 解锁
-    return true;                                                                 // 返回连接成功
+    return 0;                                                                 // 返回连接成功
 }
 
 void SOCKWZ::Socket::DisConnect()
@@ -114,10 +171,10 @@ int SOCKWZ::Socket::Send(char* buf, int len)
 
     int ret = sendto(sock, buf, len, 0, (sockaddr*)&chipAddr, sizeof(sockaddr));
 
-    if (ret == SOCKET_ERROR) {
+   /* if (ret == SOCKET_ERROR) {
         int err = WSAGetLastError();
         qDebug() << "[Socket::Send] sendto failed, WSAGetLastError=" << err;
-    }
+    }*/
 
     //// 打印耗时（微秒）
     //qDebug() << "[Socket::Send] sendto耗时:" << duration << "微秒";
@@ -188,17 +245,30 @@ const QString const* SOCKWZ::Socket::GetAddr() const
 
 //
 
-bool SOCKWZ::SockGlob::Connect(QString localip, 
-    QString localport, 
-    QString chipip, 
+//bool SOCKWZ::SockGlob::Connect(QString localip, 
+//    QString localport, 
+//    QString chipip, 
+//    QString chipport)
+//{
+//    std::unique_lock<std::mutex> lk(mtx);
+//    if(Sock != nullptr)
+//    {
+//        return Sock->Connect(localip, localport, chipip, chipport);
+//    }
+//    return false;
+//}
+
+int SOCKWZ::SockGlob::Connect(QString localip,
+    QString localport,
+    QString chipip,
     QString chipport)
 {
     std::unique_lock<std::mutex> lk(mtx);
-    if(Sock != nullptr)
+    if (Sock != nullptr)
     {
         return Sock->Connect(localip, localport, chipip, chipport);
     }
-    return false;
+    return WSAENOTSOCK; // 或其他合适的错误码
 }
 
 void SOCKWZ::SockGlob::DisConnect()

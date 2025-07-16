@@ -4,6 +4,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <QDebug>
+#include "LogWZ.hpp"
 
 #define N_BITS_HIGH(n)									((0x1LL << (n)) - 1)
 #define RIGHT_SHIFT_U8(data, n)    (unsigned char)(((data) >> (n)) & N_BITS_HIGH(8))
@@ -88,6 +89,20 @@ namespace TOOLWZ{
     template<typename T, int cells, void(*destruct_func)(T&)>
     bool queue<T, cells, destruct_func>::rear(T& get)//新增：阻塞出队
     {
+
+        //static std::chrono::steady_clock::time_point lastCallTime;
+        //static bool firstCall = true;
+        //auto now = std::chrono::steady_clock::now();
+        //if (!firstCall) {
+        //    auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastCallTime).count();
+        //    // 建议用统一日志宏，便于分析
+        //    WRITE_TASK_DATA_SEND_DBG("rear 两次调用间隔(ms): %lld\n", interval);
+        //}
+        //else {
+        //    firstCall = false;
+        //}
+        //lastCallTime = now;
+
         //qDebug() << "[queue] rear wait, front=" << _front << " rear=" << _rear;
         std::unique_lock<std::mutex> lock(mtx);
         cv.wait(lock, [this] { return _rear != _front || exit_flag; }); // 队列非空才继续,增加退出条件

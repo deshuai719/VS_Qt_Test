@@ -1,4 +1,4 @@
-#ifndef _SOCKETWZ_HPP_
+﻿#ifndef _SOCKETWZ_HPP_
 #define _SOCKETWZ_HPP_
 
 #include <QString>
@@ -24,10 +24,14 @@ namespace SOCKWZ{
     public:
         Socket();
         ~Socket();
-        bool Connect(QString localip, 
+    /*    bool Connect(QString localip, 
         QString localport, 
         QString chipip, 
-        QString chipport);
+        QString chipport);*/
+        int Connect(QString localip,
+            QString localport,
+            QString chipip,
+            QString chipport);
         void DisConnect();
         int Send(char* buf, int len);
         int Recv(char* buf, int len);
@@ -42,9 +46,13 @@ namespace SOCKWZ{
         static std::shared_ptr<Socket> Sock;
         static std::mutex mtx;
 
-        static bool Connect(QString localip, 
+     /*   static bool Connect(QString localip, 
             QString localport, 
             QString chipip, 
+            QString chipport);*/
+        static int Connect(QString localip,
+            QString localport,
+            QString chipip,
             QString chipport);
         static void DisConnect();
         static void Clear();

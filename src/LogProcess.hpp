@@ -17,7 +17,9 @@ class LogProcessor {
     struct ChipRes {
         std::string Res;
         std::vector<std::string> chipData;
-        int validCount = 0; // 新增：有效包数
+        int validCount = 0; // 新增：连续有效包数
+        int validCountCodecTotal = 0; // Codec累计有效包数
+        int validCountAdPowTotal = 0; // AdPow累计有效包数
     } ;
 public:
     // 处理日志文件
@@ -42,10 +44,10 @@ public:
         std::string currentTimestamp;                                                              // 当前参数块的时标
 
         while (std::getline(inFile, line)) {                                                       // 逐行读取输入文件
-            if (line.find("[组参数下发开始:") != std::string::npos)                                      // 检查是否为参数块的开始
+            if (line.find("组参数下发开始") != std::string::npos)                                      // 检查是否为参数块的开始
             {
                 inParameterBlock = true;                                                           // 进入参数块
-                outFile << line << "\n\n";                                                         // 原样输出该行并空一行
+                outFile << line << "\n";                                                         // 原样输出该行并空一行
                 //增加参数与条件缓存
                 paramBlockLines.clear();
                 readingParamBlock = false;
@@ -74,9 +76,10 @@ public:
                 }
             }
 
-            if (line.find("[组参数下发结束") != std::string::npos) {
+            if (line.find("组参数下发结束") != std::string::npos) {
                 inParameterBlock = false;
                 // 新增：统计每个芯片编号的有效包数
+                outFile << line << "\n\n";
                 int currentDur = 1; // 默认值
                 for (const auto& paramLine : paramBlockLines) {
                     size_t pos = paramLine.find("Dur=");
@@ -87,15 +90,17 @@ public:
                     }
                 }
                 for (auto& pair : chipData) {
-                    int validCountCodec = 0;
-                    int validCountAdPow = 0;
+                    int validCountCodec = 0;         // 连续有效包数
+                    int validCountAdPow = 0;         // 连续有效包数
+                    int validCountCodecTotal = 0;    // 累计有效包数
+                    int validCountAdPowTotal = 0;    // 累计有效包数
                     bool startCountingCodec = false;
                     bool startCountingAdPow = false;
                     const auto& dataVec = pair.second.chipData;
 
-                    // 统计Codec Left + Codec Right（每2行一组）
+
+                    // 连续有效包数统计（原有逻辑）
                     for (size_t i = 0; i + 1 < dataVec.size(); i += 3) {
-                        // 假设第i行为Codec Left，第i+1行为Codec Right
                         bool bothTrue = true;
                         for (int j = 0; j < 2; ++j) {
                             if (dataVec[i + j].find("Res: TRUE") == std::string::npos) {
@@ -110,10 +115,7 @@ public:
                         else {
                             if (startCountingCodec) break;
                         }
-                        // 跳到下一个三元组
                     }
-
-                    // 统计AdPow（每3行的第3行为一组）
                     for (size_t i = 2; i < dataVec.size(); i += 3) {
                         if (dataVec[i].find("Res: TRUE") != std::string::npos) {
                             if (!startCountingAdPow) startCountingAdPow = true;
@@ -123,6 +125,28 @@ public:
                             if (startCountingAdPow) break;
                         }
                     }
+
+                    // 累计有效包数统计（不要求连续，遍历所有分组）
+                    for (size_t i = 0; i + 1 < dataVec.size(); i += 3) {
+                        bool bothTrue = true;
+                        for (int j = 0; j < 2; ++j) {
+                            if (dataVec[i + j].find("Res: TRUE") == std::string::npos) {
+                                bothTrue = false;
+                                break;
+                            }
+                        }
+                        if (bothTrue) {
+                            ++validCountCodecTotal;
+                        }
+                    }
+                    for (size_t i = 2; i < dataVec.size(); i += 3) {
+                        if (dataVec[i].find("Res: TRUE") != std::string::npos) {
+                            ++validCountAdPowTotal;
+                        }
+                    }
+
+                    pair.second.validCountCodecTotal += validCountCodecTotal;
+                    pair.second.validCountAdPowTotal += validCountAdPowTotal;
 
                     int validCount = std::min(validCountCodec, validCountAdPow);
                     pair.second.validCount = validCount;
@@ -135,7 +159,9 @@ public:
                     }
                     outFile << pair.first << ", ";
                     outFile << "Res:" << pair.second.Res << "，";
-                    outFile << " 连续有效包：" << pair.second.validCount << "\n";
+                    outFile << " 连续有效包：" << pair.second.validCount ;
+                    outFile << "，Codec累计有效包：" << pair.second.validCountCodecTotal;
+                    outFile << "，AdPow累计有效包：" << pair.second.validCountAdPowTotal << "\n";
                     for (const auto& data : pair.second.chipData) {
                         outFile << data << "\n";
                     }

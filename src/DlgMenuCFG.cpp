@@ -1,4 +1,7 @@
 ﻿#include "DlgMenuCFG.hpp"
+#include <WinSock2.h>
+#include <QMessageBox>
+#include <QString>
 
 namespace MenuSocketCFG{
     ModelItem::ModelItem()
@@ -640,6 +643,62 @@ namespace MenuSocketCFG{
         });
     }
 
+    QString GetSocketErrorMessage(int err)
+    {
+        switch (err)
+        {
+        case WSAEINTR:              return "调用被中断";
+        case WSAEBADF:              return "无效的文件描述符";
+        case WSAEACCES:             return "权限不足，无法执行操作";
+        case WSAEFAULT:             return "无效的地址";
+        case WSAEINVAL:             return "无效参数";
+        case WSAEMFILE:             return "打开的socket数量过多";
+        case WSAEWOULDBLOCK:        return "操作会阻塞";
+        case WSAEINPROGRESS:        return "操作正在进行中";
+        case WSAEALREADY:           return "操作已在进行中";
+        case WSAENOTSOCK:           return "不是一个socket";
+        case WSAEDESTADDRREQ:       return "需要目标地址";
+        case WSAEMSGSIZE:           return "消息太长";
+        case WSAEPROTOTYPE:         return "协议类型错误";
+        case WSAENOPROTOOPT:        return "协议不可用";
+        case WSAEPROTONOSUPPORT:    return "协议不被支持";
+        case WSAESOCKTNOSUPPORT:    return "socket类型不被支持";
+        case WSAEOPNOTSUPP:         return "操作不被支持";
+        case WSAEPFNOSUPPORT:       return "协议族不被支持";
+        case WSAEAFNOSUPPORT:       return "地址族不被支持";
+        case WSAEADDRINUSE:         return "端口已被占用";
+        case WSAEADDRNOTAVAIL:      return "本地地址不可用";
+        case WSAENETDOWN:           return "网络不可用";
+        case WSAENETUNREACH:        return "网络不可达";
+        case WSAENETRESET:          return "网络连接被重置";
+        case WSAECONNABORTED:       return "连接被中止";
+        case WSAECONNRESET:         return "连接被重置";
+        case WSAENOBUFS:            return "系统缓冲区不足";
+        case WSAEISCONN:            return "socket已连接";
+        case WSAENOTCONN:           return "socket未连接";
+        case WSAESHUTDOWN:          return "socket已关闭";
+        case WSAETOOMANYREFS:       return "引用过多";
+        case WSAETIMEDOUT:          return "连接超时";
+        case WSAECONNREFUSED:       return "连接被拒绝";
+        case WSAELOOP:              return "存在符号链接循环";
+        case WSAENAMETOOLONG:       return "名称太长";
+        case WSAEHOSTDOWN:          return "主机已关闭";
+        case WSAEHOSTUNREACH:       return "主机不可达";
+        case WSAENOTEMPTY:          return "目录非空";
+        case WSAEPROCLIM:           return "进程数已达上限";
+        case WSASYSNOTREADY:        return "网络子系统不可用";
+        case WSAVERNOTSUPPORTED:    return "不支持的Winsock版本";
+        case WSANOTINITIALISED:     return "未初始化Winsock";
+        case WSAEDISCON:            return "正在断开连接";
+        case WSATYPE_NOT_FOUND:     return "类型未找到";
+        case WSAHOST_NOT_FOUND:     return "主机未找到";
+        case WSATRY_AGAIN:          return "临时错误，请重试";
+        case WSANO_RECOVERY:        return "不可恢复的错误";
+        case WSANO_DATA:            return "没有相关数据";
+        default:                    return "未知错误";
+        }
+    }
+
     void DialogSockCFG::OKSlot()
     {
         CfgInfo info(model->Items[0].Addr, model->Items[1].Addr, model->Items[2].Addr, model->Items[3].Addr, Option);
@@ -648,24 +707,29 @@ namespace MenuSocketCFG{
         // CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_NET_CFG, "NETADDR/LocalPort", info.LocalPort);
         // CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_NET_CFG, "NETADDR/DeviceIP", info.DeviceIP);
         // CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_NET_CFG, "NETADDR/DevicePort", info.DevicePort);
-
         CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalIP", info.LocalIP);
         CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalPort", info.LocalPort);
         CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_CENTRALIZE, "NETADDR/DeviceIP", info.DeviceIP);
         CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_CENTRALIZE, "NETADDR/DevicePort", info.DevicePort);
-
+        int err = 0;
         switch (Option)
         {
         case SockOPT::CONNECT:
+            SOCKWZ::SockGlob::DisConnect(); // 无条件先断开
             switch (Record.Option)
             {
             case SockOPT::CONNECT:
+                SOCKWZ::SockGlob::DisConnect(); // 无条件先断开
                 if(!(Record == info))
                 {
                     SOCKWZ::SockGlob::DisConnect();
-                    if(SOCKWZ::SockGlob::Connect(info.LocalIP, info.LocalPort, info.DeviceIP, info.DevicePort))
+                    err = SOCKWZ::SockGlob::Connect(info.LocalIP, info.LocalPort, info.DeviceIP, info.DevicePort);
+                    qDebug() << "Connect返回err1:" << err << ", " << GetSocketErrorMessage(err);
+                    //if(SOCKWZ::SockGlob::Connect(info.LocalIP, info.LocalPort, info.DeviceIP, info.DevicePort))
+                    if (err == 0)
                     {
                         Record = info;
+                        Record.SetOption(SockOPT::CONNECT);
                         BtnConnect->setText("断开");
                         emit SockConfigComplete();//to MNIC
                         emit ConnectStatusChanged(true);//to MNIC
@@ -674,21 +738,24 @@ namespace MenuSocketCFG{
                     else
                     {
                         Record.SetOption(SockOPT::DISCONNECT);
-                        // Option = SockOPT::DISCONNECT;
-                        // BtnConnect->setText("连接");
+                         Option = SockOPT::DISCONNECT;
+                         BtnConnect->setText("连接");
                         emit ConnectStatusChanged(false);//to MNIC
-                        QMessageBox::critical(this, "网口状态", "创建socket失败", QMessageBox::Ok);
+                        //QMessageBox::critical(this, "网口状态", "创建socket失败", QMessageBox::Ok);
+                        QString errMsg = GetSocketErrorMessage(err);
+                        QMessageBox::critical(this, "网口状态", errMsg, QMessageBox::Ok);
+                    
                     }
-                }
-                else
-                {
-                    accept();
                 }
                 break;
             case SockOPT::DISCONNECT:
-                if(SOCKWZ::SockGlob::Connect(info.LocalIP, info.LocalPort, info.DeviceIP, info.DevicePort))
+				err = SOCKWZ::SockGlob::Connect(info.LocalIP, info.LocalPort, info.DeviceIP, info.DevicePort);
+                qDebug() << "Connect返回err2:" << err << ", " << GetSocketErrorMessage(err);
+                //if(SOCKWZ::SockGlob::Connect(info.LocalIP, info.LocalPort, info.DeviceIP, info.DevicePort))
+                if (err == 0)
                 {
                     Record = info;
+                    Record.SetOption(SockOPT::CONNECT);
                     BtnConnect->setText("断开");
                     emit SockConfigComplete();
                     emit ConnectStatusChanged(true);
@@ -697,9 +764,13 @@ namespace MenuSocketCFG{
                 else
                 {
                     Record.SetOption(SockOPT::DISCONNECT);
+                    Option = SockOPT::DISCONNECT;
+                    BtnConnect->setText("连接");
                     // BtnConnect->setText("连接");
                     emit ConnectStatusChanged(false);
-                    QMessageBox::critical(this, "网口状态", "创建socket失败", QMessageBox::Ok);
+                    //QMessageBox::critical(this, "网口状态", "创建socket失败", QMessageBox::Ok);
+                    QString errMsg = GetSocketErrorMessage(err);
+                    QMessageBox::critical(this, "网口状态", errMsg, QMessageBox::Ok);
                 }
                 break;
             default:
@@ -720,7 +791,8 @@ namespace MenuSocketCFG{
                 else
                 {
                     SOCKWZ::SockGlob::DisConnect();
-                    Record.SetOption(SockOPT::DISCONNECT);
+                    Record.SetOption(SockOPT::DISCONNECT); 
+                    Option = SockOPT::DISCONNECT;
                     BtnConnect->setText("连接");
                     emit ConnectStatusChanged(false);
                 }

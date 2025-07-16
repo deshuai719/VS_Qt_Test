@@ -1,4 +1,4 @@
-#include "ConfigInit.hpp"
+﻿#include "ConfigInit.hpp"
 
 namespace CFGI{
     IniFileCFG::IniFileCFG(){
@@ -32,7 +32,8 @@ namespace CFGI{
         }
     }
 
-    void IniFileCFG::WriteINI(INI_TYPE type, QString key, QString value){
+    void IniFileCFG::WriteINI(INI_TYPE type, QString key, QString value)
+    {
         if(type < INI_FILE_NUM && IniFile[type] != nullptr)
             IniFile[type]->setValue(key, value);
     }

@@ -7,6 +7,7 @@
 #include <thread>
 #include <vector>
 #include <string>
+#include <windows.h>
 
 
 
@@ -465,23 +466,23 @@ void task_rcv::run()
 			WRITE_TASK_RCV_DBG("Data recived, Len = %d\n", res);     // 14. 记录接收到的数据长度
 		}
 		Data.SetLen(res);                                            // 15. 设置Data对象的实际数据长度
-		/*static std::chrono::steady_clock::time_point lastEnqueueTime;
-		static bool firstEnqueue = true;*/
+		static std::chrono::steady_clock::time_point lastEnqueueTime;
+		static bool firstEnqueue = true;
 		QueueRcv.front(Data);                                        // 16. 将Data对象放入接收队列的队首，供后续任务处理
 
-		//auto now = std::chrono::steady_clock::now();
-		//if (!firstEnqueue) {
-		//	auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastEnqueueTime).count();
-		//	qDebug() << "[QueueRcv.front] 两次入队间隔(ms):" << interval;
-		//}
-		//else {
-		//	firstEnqueue = false;
-		//}
-		//lastEnqueueTime = now;
+		auto now = std::chrono::steady_clock::now();
+		if (!firstEnqueue) {
+			auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastEnqueueTime).count();
+			WRITE_TASK_DATA_SEND_DBG("[QueueRcv.front] 两次入队间隔(ms): %lld\n", interval);
+		}
+		else {
+			firstEnqueue = false;
+		}
+		lastEnqueueTime = now;
 		Data.Clear();                                                // 17. 清理Data对象，释放内存
 	}
                                                                      // 18. 循环结束后，日志关闭在函数结尾
-	WRITE_TASK_RCV_DBG("Cycle Over Loop = %d", Loop);
+	WRITE_TASK_DATA_SEND_DBG("Cycle Over Loop = %d", Loop);
 #else
 	int sec(0);                                                      // 1. 定义一个整型变量 sec，初始为0，用于模拟时间戳
 	while (Loop)                                                     // 2. 只要 Loop 为 true，就持续循环（模拟数据接收）
@@ -568,9 +569,25 @@ void task_dispatch::run()
 			switch (FRAME_HEAD_STAR(Data.GetData().get())->msgID)     // 读取数据包头部的 msgID 字段，判断数据类型
 			{
 			case 0x28:
+			{
+				static std::chrono::steady_clock::time_point lastStoreTime;
+				static bool firstStore = true;
+
+				auto now = std::chrono::steady_clock::now();
+				if (!firstStore) {
+					auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastStoreTime).count();
+					WRITE_TASK_DATA_SEND_DBG("分发线程间隔: %lld ms\n", interval);
+				}
+				else {
+					firstStore = false;
+				}
+				lastStoreTime = now;
+
+				FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac);            // 更新流控缓存
 				TaskChipStatParsing::QueueChipStatParsing.front(Data);// 如果是 0x28 类型的数据包，放入芯片状态解析队列
 				break;
 				/*新增：分发过程中进行ram_id的判断*/
+			}
 			case  0xa0:
 			{
 				auto ram_id = PTR_ARG_UP_A0(Data.GetData().get() + HEAD_DATA_LEN)->ram_id;//在分发过程添加ram_id的判断
@@ -639,7 +656,7 @@ void TaskChipStatParsing::run()
 		{
 			if(FRAME_HEAD_STAR(Data.GetData().get())->msgID == 0x28)                                                                 // 判断数据包类型是否为0x28（芯片状态包）
 			{
-				FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac);            // 更新流控缓存
+				//FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac);            // 更新流控缓存
 				//ReadyForSend38.store(true, std::memory_order_release);
 				/*******************收到0x28包时，记录时间戳并通知条件变量：************************************/
 				last28Time = std::chrono::steady_clock::now();
@@ -715,7 +732,8 @@ void TaskChipStatParsing::run()
 								if (!Res[0]) 
 								{
 									TaskChipStatParsing::ChipFailInfo[i][j].push_back(
-										QString("Codec fail: SINAD=%1, Vpp=%2, Rms=%3")
+										QString("Codec Left : TimeStamp=%1 ,SINAD=%2, Vpp=%3, Rms=%4")
+										.arg(DCR::DeviceCheckResultGlobal->GetUpPackCount(), 5, 10, QChar('0'))
 										.arg(TCOND::TestCondition::SinadTransfer(Sinad[0]), 3, 10, QChar(' ')) // 宽度3，右对齐
 										.arg(Vpp[0], 5, 10, QChar(' ')) // 宽度5，右对齐
 										.arg(Rms[0], 5, 10, QChar(' ')) // 宽度5，右对齐
@@ -725,7 +743,8 @@ void TaskChipStatParsing::run()
 								if (!Res[1]) 
 								{
 									TaskChipStatParsing::ChipFailInfo[i][j].push_back(
-										QString("Codec fail: SINAD=%1, Vpp=%2, Rms=%3")
+										QString("Codec Right: TimeStamp=%1 ,SINAD=%2, Vpp=%3, Rms=%4")
+										.arg(DCR::DeviceCheckResultGlobal->GetUpPackCount(), 5, 10, QChar('0'))
 										.arg(TCOND::TestCondition::SinadTransfer(Sinad[1]), 3, 10, QChar(' ')) // 宽度3，右对齐
 										.arg(Vpp[1], 5, 10, QChar(' ')) // 宽度5，右对齐
 										.arg(Rms[1], 5, 10, QChar(' ')) // 宽度5，右对齐
@@ -735,7 +754,8 @@ void TaskChipStatParsing::run()
 								if (!Res[2]) 
 								{
 									TaskChipStatParsing::ChipFailInfo[i][j].push_back(
-										QString("Adpow fail: SINAD=%1, Vpp=%2, Rms=%3")
+										QString("Adpow      : TimeStamp=%1 ,SINAD=%2, Vpp=%3, Rms=%4")
+										.arg(DCR::DeviceCheckResultGlobal->GetUpPackCount(), 5, 10, QChar('0'))
 										.arg(TCOND::TestCondition::SinadTransfer(Sinad[2]), 3, 10, QChar(' ')) // 宽度3，右对齐
 										.arg(Vpp[2], 5, 10, QChar(' ')) // 宽度5，右对齐
 										.arg(Rms[2], 5, 10, QChar(' ')) // 宽度5，右对齐
@@ -1027,12 +1047,13 @@ void TaskDataSend::run()
 	while (Loop && TestCount--)                                                                                 // 10. 主循环，Loop为true且TestCount大于0时循环
 	{
 		WRITE_TASK_DATA_SEND_DBG("TestCount = %lld\n", TestCount);                                              // 11. 记录当前测试次数
-		WRITE_LOG_UP_RECORD("\n[第%04d次参数下发开始]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1); // 12. 记录本次参数下发开始
-		WRITE_LOG_SE_RECORD("\n[第%04d次参数下发开始]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1);
+		WRITE_LOG_UP_RECORD("\n[第%03d次参数下发开始]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1); // 12. 记录本次参数下发开始
+		WRITE_LOG_SE_RECORD("\n[第%03d次参数下发开始]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1);
 		std::shared_ptr<DCWZ::DataNode> Node = DCWZ::DataMana::DataListGlobal.GetHead();                        // 13. 获取数据链表头节点
+		DCR::DeviceCheckResultGlobal->SetCheckedGroupCount(0);//新增：清空已测组数组数数据
 		for (int i = 0; Node != nullptr && Loop; Node = Node->GetNext(), i++)                                   // 14. 遍历所有数据节点
 		{
-			WRITE_TASK_DATA_SEND_DBG("Send Node\n");  
+			DCR::DeviceCheckResultGlobal->CheckedGroupCountInc();//新增：每循环一次增加测试组数
 			if (i < g_ConditionList.size()) //从文件中读取对应序号的条件设置为全局条件
 			{
 		
@@ -1043,8 +1064,7 @@ void TaskDataSend::run()
 			DCR::DeviceCheckResultGlobal->GetCondition()[1] = g_ConditionList[i].second;
 
 
-			WRITE_LOG_UP_RECORD("[第%04d本组参数下发开始]\n", i + 1);                                              //  记录本组参数下发开始
-			WRITE_LOG_SE_RECORD("[第%04d本组参数下发开始]\n", i + 1);
+			WRITE_LOG_UP_RECORD("[第%03d组参数下发开始]\n", i + 1);                                              //  记录本组参数下发开始
 
 		
 			WRITE_LOG_UP_RECORD("第%d组参数与条件：\n", i + 1);                                                      //记录本组下发第几组条件和具体条件内容
@@ -1175,34 +1195,43 @@ void TaskDataSend::run()
 		}
 			TaskChipStatParsing::bPackLogRecord = true;                                                         // 19. 启用芯片包日志记录
 
-			//std::chrono::steady_clock::time_point lastSendTime = std::chrono::steady_clock::now();//新增：发包时间差
 			for (int i = 0; i < Node->GetData()->GetSendNum(); )                                                // 20. 发送每个数据包
 			{
-					DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(i);                                         // 21. 获取第i个包的信息
-					
-					/*if (TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire)) 
-					{*/
-						if (FCT::FluidCtrlGlob->FluidCheckUpdate(0, 512, FLUID_SIZE_INDEX0 / 4) == FCT::FluidCheckRes::FLUID_SATISFY)	  //512个采样点
+					auto waitStart = std::chrono::steady_clock::now();
+					FCT::FluidCtrlGlob->WaitForFluid(0, 512, 0);
+					auto waitEnd = std::chrono::steady_clock::now();
+					WRITE_TASK_DATA_SEND_DBG("等待流控间隔: %lld us\n", std::chrono::duration_cast<std::chrono::microseconds>(waitEnd - waitStart).count());
+
+					// 1. 在循环外定义静态时间点变量
+					static std::chrono::steady_clock::time_point lastSendTime;
+					static bool firstSend = true;
+
+					// 只要流控满足，可以连续多次发送
+					while (FCT::FluidCtrlGlob->FluidCheckUpdate(0, 512, FLUID_SIZE_INDEX0 / 4) == FCT::FluidCheckRes::FLUID_SATISFY)
 						{
+						DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(i);
+
+						// 2. 记录当前时间
+						auto now = std::chrono::steady_clock::now();
+
+						// 3. 计算并输出间隔
+						if (!firstSend) {
+							auto interval = std::chrono::duration_cast<std::chrono::microseconds>(now - lastSendTime).count();
+							WRITE_TASK_DATA_SEND_DBG("数据发送间隔: %lld us\n\n", interval);
+						}
+						else {
+							firstSend = false;
+						}
+						lastSendTime = now;
 #ifndef TEST_WITHOUT_BOARD
 							SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());                      // 22. 发送数据包
 #else
 							std::this_thread::sleep_for(std::chrono::milliseconds(10));                                 // 23. 模拟发送延时
 #endif
-							//int after = FCT::FluidCtrlGlob->FluidLoad(0); // 发送后剩余空间
 							i++;
+							if (i >= Node->GetData()->GetSendNum()) break;
 						}                                                                                    // 24. 发送下一个包
-						else
-						{
-							std::this_thread::yield();
-						}
-					//}
-					//else
-					//{
-					//	// 让出CPU，等待0x28包到来，避免空转
-					//	std::this_thread::yield();
-					//}
-
+						
 				if (!Loop)                                                                                      // 25. 如果Loop为false，提前退出
 				{
 					WRITE_TASK_DATA_SEND_DBG("break\n");
@@ -1253,7 +1282,6 @@ void TaskDataSend::run()
 			}
 
 			WRITE_LOG_UP_RECORD("\n[第%03d组参数下发结束]\n", i + 1);                                          // 27. 记录本组参数下发结束
-			WRITE_LOG_SE_RECORD("\n[第%03d组参数下发结束]\n", i + 1);
 			TaskChipStatParsing::bPackLogRecord = false;                                                        // 28. 关闭芯片包日志记录
 
 			WRITE_TASK_DATA_SEND_DBG("Fluid Buffer Empty\n");

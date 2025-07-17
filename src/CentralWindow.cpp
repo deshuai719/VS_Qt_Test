@@ -741,6 +741,7 @@ namespace CWD{
         
         Clock = new QTimer(this);
         TimingDetection = new QTimer(this);
+        TotalGroupCount = CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, "NUMBER/rowCount").toInt();
     }
 
     void CentralWidget::InitThread()
@@ -944,30 +945,30 @@ namespace CWD{
         arg(TASKWZ::TaskVersionParsing::Version.VER, 5, 10, QChar(u'0')));
     }
 
-    void CentralWidget::ClockEvent()
-    {
-        //PTestTime.setText(QString("%1:%2:%3").arg(ClockVal / 3600, 2, 10).arg(ClockVal / 60, 2, 10).arg(ClockVal, 2, 10));
-        PTestTime.setText(QString("%1:%2:%3")
-            .arg(ClockVal / 3600, 2, 10, QChar('0'))
-            .arg((ClockVal / 60) % 60, 2, 10, QChar('0'))
-            .arg(ClockVal % 60, 2, 10, QChar('0')));
-        ClockVal++;
+	void CentralWidget::ClockEvent()
+	{
+                                                                            //PTestTime.setText(QString("%1:%2:%3").arg(ClockVal / 3600, 2, 10).arg(ClockVal / 60, 2, 10).arg(ClockVal, 2, 10));
+		PTestTime.setText(QString("%1:%2:%3")
+			.arg(ClockVal / 3600, 2, 10, QChar('0'))
+			.arg((ClockVal / 60) % 60, 2, 10, QChar('0'))
+			.arg(ClockVal % 60, 2, 10, QChar('0')));
+		ClockVal++;
 
-        // 新增：每秒刷新已测试次数/组数
-        PTestedNum.setText(QString("%1(%2/%3)")
-            .arg(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()+1)//传输已测试的次数
-            .arg(DCR::DeviceCheckResultGlobal->GetCheckedGroupCount())//传输已测试的组值
-            .arg(CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, "NUMBER/rowCount").toInt()));//从文件中读取总的测试组数
-    }
+                                                                            // 新增：每秒刷新已测试次数/组数
+		PTestedNum.setText(QString("%1(%2/%3)")
+			.arg(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1)//传输已测试的次数
+			.arg(DCR::DeviceCheckResultGlobal->GetCheckedGroupCount())      //传输已测试的组值
+			.arg(TotalGroupCount));                                         //从文件中读取总的测试组数，只读取一次缓存值，不会每秒重复读取文件
+	}
 
-    void CentralWidget::NetConnected()
-    {
-        TimingDetection->start(1000);
-        IfNoticeMNICWhenDisconnect = true;
-        UpdateChipOnlineStatus();// 新增：网口连接时刷新芯片在线状态
-   
+	void CentralWidget::NetConnected()
+	{
+		TimingDetection->start(1000);
+		IfNoticeMNICWhenDisconnect = true;
+		UpdateChipOnlineStatus();// 新增：网口连接时刷新芯片在线状态
 
-    }
+
+	}
 
     void CentralWidget::NetDisconnected()
     {
@@ -979,7 +980,7 @@ namespace CWD{
     void CentralWidget::TimingDetectionEvent()
     {
         WRITE_CENTRAL_WIDGET_DBG("CentralWidget::TimingDetectionEvent(), Enter\n");
-        UpdateChipOnlineStatus(); // 每秒刷新一次在线状态和颜色
+        UpdateChipOnlineStatus(); // 新增：每秒刷新一次在线状态和颜色
         TemperatureInner.setText(QString("%1℃").arg(DCR::DeviceCheckResultGlobal->GetTemperatureInner(), 4, 'f', 1, '0'));
         TemperatureEnv.setText(QString("%1℃").arg(DCR::DeviceCheckResultGlobal->GetTempeartureEnv(), 4, 'f', 1, '0'));
         if(DCR::DeviceCheckResultGlobal->GetUpPackCount() == UpPackCount)

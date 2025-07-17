@@ -28,15 +28,15 @@ LWZ::Log::~Log()
 
 void LWZ::Log::Init(int LogIndex, const char* path)
 {
-    if(LogIndex < 0 || LogIndex >= LOG_NUM)
-    {
-        return;
-    }
-    if(LogFile[LogIndex] != nullptr)
-    {
-        return;
-    }
-    LogFile[LogIndex] = fopen(path, "w");
+	if (LogIndex < 0 || LogIndex >= LOG_NUM)
+	{
+		return;
+	}
+	if (LogFile[LogIndex] != nullptr)
+	{
+		return;
+	}
+	LogFile[LogIndex] = fopen(path, "w");
 }
 
 void LWZ::Log::Write(int LogIndex, const char* format, ...)

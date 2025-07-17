@@ -182,6 +182,7 @@ namespace CWD{
         long long ClockVal;
         QTimer* TimingDetection;
         int UpPackCount{ -1 };
+        int TotalGroupCount = 0;
         RetEventFilter* Filter;
 
         bool StatOfBtnStart{ true };

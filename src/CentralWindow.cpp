@@ -956,7 +956,7 @@ namespace CWD{
 
                                                                             // 新增：每秒刷新已测试次数/组数
 		PTestedNum.setText(QString("%1(%2/%3)")
-			.arg(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1)//传输已测试的次数
+			.arg(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()+1)    //传输已测试的次数
 			.arg(DCR::DeviceCheckResultGlobal->GetCheckedGroupCount())      //传输已测试的组值
 			.arg(TotalGroupCount));                                         //从文件中读取总的测试组数，只读取一次缓存值，不会每秒重复读取文件
 	}

@@ -79,7 +79,7 @@ public:
             if (line.find("组参数下发结束") != std::string::npos) {
                 inParameterBlock = false;
                 // 新增：统计每个芯片编号的有效包数
-                outFile << line << "\n\n";
+                //outFile << line << "\n\n";
                 int currentDur = 1; // 默认值
                 for (const auto& paramLine : paramBlockLines) {
                     size_t pos = paramLine.find("Dur=");

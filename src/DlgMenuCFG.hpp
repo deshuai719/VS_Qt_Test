@@ -1,4 +1,4 @@
-#ifndef _DLGMENUCFG_HPP_
+﻿#ifndef _DLGMENUCFG_HPP_
 #define _DLGMENUCFG_HPP_
 
 #include <QDialog>
@@ -25,15 +25,15 @@
 #include <QMessageBox>
 #include "TaskWZ.hpp"
 
-namespace MenuSocketCFG{
-    enum AddrType{
+namespace MenuSocketCFG {
+    enum AddrType {
         LOCAL_IP,
         LOCAL_PORT,
         DEVICE_IP,
         DEVICE_PORT,
     };
 
-    class ModelItem{
+    class ModelItem {
     public:
         AddrType Type;
         QString Addr;
@@ -49,29 +49,29 @@ namespace MenuSocketCFG{
 
     Q_DECLARE_METATYPE(ModelItem)
 
-    class Model:public QAbstractListModel{
+        class Model :public QAbstractListModel {
         Q_OBJECT
-    public:
-        enum UsrRole{
-            ITEM = Qt::UserRole + 1,
-            FIRST_COL,
-            SECOND_COL,
-        };
+        public:
+            enum UsrRole {
+                ITEM = Qt::UserRole + 1,
+                FIRST_COL,
+                SECOND_COL,
+            };
 
-        Model(QObject* parent = nullptr);
+            Model(QObject* parent = nullptr);
 
-        bool AddItem(ModelItem);
-        void UpdateItem(int row, ModelItem);
+            bool AddItem(ModelItem);
+            void UpdateItem(int row, ModelItem);
 
-        virtual int rowCount(const QModelIndex& parent = QModelIndex()) const override;
-        virtual QVariant data(const QModelIndex& Index, int role = Qt::DisplayRole) const override;
-        bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) override;
-        Qt::ItemFlags flags(const QModelIndex& Index) const override;
+            virtual int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+            virtual QVariant data(const QModelIndex& Index, int role = Qt::DisplayRole) const override;
+            bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) override;
+            Qt::ItemFlags flags(const QModelIndex& Index) const override;
 
-        std::vector<ModelItem> Items;
+            std::vector<ModelItem> Items;
     };
 
-    class Delegate:public QStyledItemDelegate{
+    class Delegate :public QStyledItemDelegate {
         Q_OBJECT
     public:
         using QStyledItemDelegate::QStyledItemDelegate;
@@ -84,7 +84,7 @@ namespace MenuSocketCFG{
         void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override;
     };
 
-    class ReturnEventFilter: public QObject{
+    class ReturnEventFilter : public QObject {
         Q_OBJECT
     public:
         using QObject::QObject;
@@ -92,7 +92,7 @@ namespace MenuSocketCFG{
         bool eventFilter(QObject* obj, QEvent* event) override;
     };
 
-    class ListView: public QListView{
+    class ListView : public QListView {
         Q_OBJECT
     public:
         ListView(QWidget* parent = nullptr);
@@ -110,12 +110,12 @@ namespace MenuSocketCFG{
         ReturnEventFilter* Filter;
     };
 
-    enum SockOPT{
+    enum SockOPT {
         CONNECT,
         DISCONNECT,
     };
 
-    class CfgInfo{
+    class CfgInfo {
     public:
         QString LocalIP;
         QString LocalPort;
@@ -126,13 +126,13 @@ namespace MenuSocketCFG{
         CfgInfo();
         CfgInfo(QString localIP, QString localPort, QString deviceIP, QString devicePort, SockOPT option);
         CfgInfo(const CfgInfo& cp);
-        
+
         void operator=(const CfgInfo& as);
         bool operator==(const CfgInfo& cmp);
         void SetOption(SockOPT opt);
     };
 
-    class DialogSockCFG:public QDialog{
+    class DialogSockCFG :public QDialog {
         Q_OBJECT
     private:
         Model* model;
@@ -171,8 +171,8 @@ namespace MenuSocketCFG{
     };
 };
 
-namespace MenuSINADCFG{
-    class TabFocusEventFilter: public QObject
+namespace MenuSINADCFG {
+    class TabFocusEventFilter : public QObject
     {
         Q_OBJECT
     public:
@@ -184,15 +184,15 @@ namespace MenuSINADCFG{
         QWidget* FindNextFocusableWidget(QWidget* current);
     };
 
-    #define SPINBOX_PROPERTY_KEY "spin_box_key"
-    #define TIP_CODEC_SINAD   "输入数字表示Sinad判断范围, 最大值128"
-    #define TIP_CODEC_VPP   "输入数字表示峰峰值数字量，16bit"
-    #define TIP_CODEC_RMS   "输入数字表示均方根数字量，16bit"
-    #define TIP_ADPOW_SINAD "输入数字表示Sinad判断范围， 最大值128"
-    #define TIP_ADPOW_VPP   "输入数字表示峰峰值数字量，16bit"
-    #define TIP_ADPOW_RMS   "输入数字表示均方根数字量，16bit"
+#define SPINBOX_PROPERTY_KEY "spin_box_key"
+#define TIP_CODEC_SINAD   "输入数字表示Sinad判断范围, 最大值128"
+#define TIP_CODEC_VPP   "输入数字表示峰峰值数字量，16bit"
+#define TIP_CODEC_RMS   "输入数字表示均方根数字量，16bit"
+#define TIP_ADPOW_SINAD "输入数字表示Sinad判断范围， 最大值128"
+#define TIP_ADPOW_VPP   "输入数字表示峰峰值数字量，16bit"
+#define TIP_ADPOW_RMS   "输入数字表示均方根数字量，16bit"
 
-    enum SpinBoxType{
+    enum SpinBoxType {
         CODEC_SINAD_L,
         CODEC_SINAD_R,
         CODEC_VPP_L,
@@ -207,10 +207,10 @@ namespace MenuSINADCFG{
         ADPOW_RMS_R,
     };
 
-    class DialogSinadCFG:public QDialog{
+    class DialogSinadCFG :public QDialog {
         Q_OBJECT
 
-        QLabel* LabelSinadCodec;
+            QLabel* LabelSinadCodec;
         QSpinBox* SpinSinadCodecLeft;
         QSpinBox* SpinSinadCodecRight;
         QPushButton* BtnCFGSinadCodec;
@@ -272,8 +272,8 @@ namespace MenuSINADCFG{
         TCOND::TestCondition GetCodecTestCondition() const;
         TCOND::TestCondition GetAdpowTestCondition() const;//新增：获取测试条件
         void SetTestCondition(const TCOND::TestCondition& codecCond, const TCOND::TestCondition& adpowCond); // 新增:设置判定条件的接口，双参数
-    }; 
-   
+    };
+
 };
 
 #endif // _DLGMENUCFG_HPP_

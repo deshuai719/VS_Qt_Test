@@ -1,23 +1,24 @@
 ﻿#include "DlgMenuCFG.hpp"
-#include <WinSock2.h>
-#include <QMessageBox>
-#include <QString>
 
-namespace MenuSocketCFG{
+namespace MenuSocketCFG {
     ModelItem::ModelItem()
         :Type(AddrType::LOCAL_IP), Addr("")
-    {}
+    {
+    }
 
     ModelItem::ModelItem(AddrType type, QString addr)
         :Type(type), Addr(addr)
-    {}
+    {
+    }
 
     ModelItem::ModelItem(const ModelItem& cp)
         :Type(cp.Type), Addr(cp.Addr)
-    {}
+    {
+    }
 
     ModelItem::~ModelItem()
-    {}
+    {
+    }
 
     void ModelItem::operator=(const ModelItem& as)
     {
@@ -43,7 +44,7 @@ namespace MenuSocketCFG{
         QFont font("Microsoft YaHei");
         font.setWeight(QFont::Black);
         painter->setFont(font);
-        if(row > 0)
+        if (row > 0)
         {
             switch (Type)
             {
@@ -81,7 +82,8 @@ namespace MenuSocketCFG{
 
     Model::Model(QObject* parent)
         :QAbstractListModel(parent)
-    {}
+    {
+    }
 
     bool Model::AddItem(ModelItem item)
     {
@@ -105,7 +107,7 @@ namespace MenuSocketCFG{
 
     QVariant Model::data(const QModelIndex& Index, int role) const
     {
-        if(Index.row() > 0 && Index.row() < rowCount())
+        if (Index.row() > 0 && Index.row() < rowCount())
         {
             switch (role)
             {
@@ -124,7 +126,7 @@ namespace MenuSocketCFG{
 
     bool Model::setData(const QModelIndex& index, const QVariant& value, int role)
     {
-        if(index.row() > 0 && index.row() < rowCount())
+        if (index.row() > 0 && index.row() < rowCount())
         {
             switch (role)
             {
@@ -146,7 +148,7 @@ namespace MenuSocketCFG{
 
     Qt::ItemFlags Model::flags(const QModelIndex& Index) const
     {
-        if(Index.row() > 0 && Index.row() < rowCount())
+        if (Index.row() > 0 && Index.row() < rowCount())
         {
             return Qt::ItemIsEditable | Qt::ItemIsEnabled | Qt::ItemIsSelectable;
         }
@@ -155,7 +157,7 @@ namespace MenuSocketCFG{
 
     void Delegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
     {
-        if(index.row() > 0)
+        if (index.row() > 0)
         {
             ModelItem item = index.data(Model::UsrRole::ITEM).value<ModelItem>();
             item.Paint(painter, option, index.row());
@@ -166,17 +168,17 @@ namespace MenuSocketCFG{
             painter->save();
             painter->fillRect(QRect(option.rect.left(), option.rect.top(), option.rect.width() - 2, option.rect.height() - 2), QColor(233, 233, 233));
             painter->drawText(option.rect, Qt::AlignCenter, "Socket配置");
-            painter->restore();            
+            painter->restore();
         }
     }
 
     QSize Delegate::sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const
     {
-        if(index.row() > 0)
+        if (index.row() > 0)
         {
             return QSize(option.rect.width(), 24);
         }
-        else if(index.row() == 0)
+        else if (index.row() == 0)
         {
             return QSize(option.rect.width(), 24);
         }
@@ -185,7 +187,7 @@ namespace MenuSocketCFG{
 
     QWidget* Delegate::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
     {
-        if(index.row() > 0)
+        if (index.row() > 0)
         {
             int Width = option.rect.width();
             int CellWidth = Width / 3;
@@ -203,8 +205,8 @@ namespace MenuSocketCFG{
                 editor->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
                 return editor;
             }
-                /* code */
-                break;
+            /* code */
+            break;
             default:
                 break;
             }
@@ -214,7 +216,7 @@ namespace MenuSocketCFG{
 
     void Delegate::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const
     {
-        if(index.row() > 0)
+        if (index.row() > 0)
         {
             int Left = option.rect.left();
             int Top = option.rect.top();
@@ -239,10 +241,10 @@ namespace MenuSocketCFG{
 
     void Delegate::setEditorData(QWidget* editor, const QModelIndex& index) const
     {
-        if(index.row() > 0)
+        if (index.row() > 0)
         {
             QPlainTextEdit* edit = qobject_cast<QPlainTextEdit*>(editor);
-            if(edit)
+            if (edit)
             {
                 edit->setPlainText(index.data(Model::UsrRole::SECOND_COL).toString());
             }
@@ -251,10 +253,10 @@ namespace MenuSocketCFG{
 
     void Delegate::setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const
     {
-        if(index.row() > 0)
+        if (index.row() > 0)
         {
             QPlainTextEdit* edit = qobject_cast<QPlainTextEdit*>(editor);
-            if(edit)
+            if (edit)
             {
                 model->setData(index, edit->toPlainText(), Model::UsrRole::SECOND_COL);
             }
@@ -276,19 +278,19 @@ namespace MenuSocketCFG{
             case Qt::Key_Enter:
             {
                 QPlainTextEdit* TextEdit = qobject_cast<QPlainTextEdit*>(obj);
-                if(TextEdit)
+                if (TextEdit)
                 {
                     TextEdit->clearFocus();
                     return true;
                 }
             }
             break;
-            
+
             default:
                 break;
             }
         }
-            break;        
+        break;
         default:
             break;
         }
@@ -316,7 +318,7 @@ namespace MenuSocketCFG{
 
     ListView::~ListView()
     {
-        if(TextEdit)
+        if (TextEdit)
         {
             TextEdit->deleteLater();
             TextEdit = nullptr;
@@ -325,24 +327,24 @@ namespace MenuSocketCFG{
 
     bool ListView::eventFilter(QObject* obj, QEvent* event)
     {
-        if(obj == viewport())//只处理视口区域的事件
+        if (obj == viewport())//只处理视口区域的事件
         {
-            switch(event->type())
+            switch (event->type())
             {
             case QEvent::MouseButtonPress:
             {
                 QMouseEvent* mouseEvent = static_cast<QMouseEvent*>(event);
                 QModelIndex index = indexAt(mouseEvent->pos());
-                if(index != HoveredIndex)
+                if (index != HoveredIndex)
                 {
                     HoveredIndex = index;
                     update(index);
-                    if(LineEditIP != nullptr)
+                    if (LineEditIP != nullptr)
                     {
                         LineEditIP->deleteLater();
                         LineEditIP = nullptr;
                     }
-                    if(TextEdit != nullptr)
+                    if (TextEdit != nullptr)
                     {
                         TextEdit->deleteLater();
                         TextEdit = nullptr;
@@ -353,79 +355,79 @@ namespace MenuSocketCFG{
                         clearSelection();
                         break;
                     case 1://local ip
+                    {
+                        if (index.isValid())
                         {
-                            if(index.isValid())
-                            {
-                                QRect Rc = visualRect(index);
-                                LineEditIP = new QLineEdit(this);
-                                LineEditIP->setValidator(ValidatorIP);
-                                LineEditIP->setFocus();
-                                LineEditIP->setGeometry(Rc.left() + Rc.width() / 3, Rc.top(), Rc.width() * 2 / 3, Rc.height());
-                                LineEditIP->setText(index.data(Model::UsrRole::SECOND_COL).value<QString>());
-                                connect(LineEditIP, &QLineEdit::textChanged, this, [this](){
-                                    emit ItemChanged(HoveredIndex.row(), LineEditIP->text());
+                            QRect Rc = visualRect(index);
+                            LineEditIP = new QLineEdit(this);
+                            LineEditIP->setValidator(ValidatorIP);
+                            LineEditIP->setFocus();
+                            LineEditIP->setGeometry(Rc.left() + Rc.width() / 3, Rc.top(), Rc.width() * 2 / 3, Rc.height());
+                            LineEditIP->setText(index.data(Model::UsrRole::SECOND_COL).value<QString>());
+                            connect(LineEditIP, &QLineEdit::textChanged, this, [this]() {
+                                emit ItemChanged(HoveredIndex.row(), LineEditIP->text());
                                 });
-                                LineEditIP->show();
-                            }
+                            LineEditIP->show();
                         }
-                        break;
+                    }
+                    break;
                     case 2://local port
+                    {
+                        if (index.isValid())
                         {
-                            if(index.isValid())
-                            {
-                                QRect Rc = visualRect(index);
-                                TextEdit = new QPlainTextEdit(this);
-                                TextEdit->installEventFilter(Filter);
-                                TextEdit->setFocus();
-                                TextEdit->setGeometry(Rc.left() + Rc.width() / 3, Rc.top(), Rc.width() * 2 / 3, Rc.height());
-                                TextEdit->setPlainText(index.data(Model::UsrRole::SECOND_COL).value<QString>());
-                                connect(TextEdit, &QPlainTextEdit::textChanged, this, [this](){
-                                    emit ItemChanged(HoveredIndex.row(), TextEdit->toPlainText());
+                            QRect Rc = visualRect(index);
+                            TextEdit = new QPlainTextEdit(this);
+                            TextEdit->installEventFilter(Filter);
+                            TextEdit->setFocus();
+                            TextEdit->setGeometry(Rc.left() + Rc.width() / 3, Rc.top(), Rc.width() * 2 / 3, Rc.height());
+                            TextEdit->setPlainText(index.data(Model::UsrRole::SECOND_COL).value<QString>());
+                            connect(TextEdit, &QPlainTextEdit::textChanged, this, [this]() {
+                                emit ItemChanged(HoveredIndex.row(), TextEdit->toPlainText());
                                 });
-                                TextEdit->show();
-                            }
+                            TextEdit->show();
                         }
-                        break;
+                    }
+                    break;
                     case 3://chip ip
+                    {
+                        if (index.isValid())
                         {
-                            if(index.isValid())
-                            {
-                                QRect Rc = visualRect(index);
-                                LineEditIP = new QLineEdit(this);
-                                LineEditIP->setValidator(ValidatorIP);
-                                LineEditIP->setFocus();
-                                LineEditIP->setGeometry(Rc.left() + Rc.width() / 3, Rc.top(), Rc.width() * 2 / 3, Rc.height());
-                                LineEditIP->setText(index.data(Model::UsrRole::SECOND_COL).value<QString>());
-                                connect(LineEditIP, &QLineEdit::textChanged, this, [this](){
-                                    emit ItemChanged(HoveredIndex.row(), LineEditIP->text());
+                            QRect Rc = visualRect(index);
+                            LineEditIP = new QLineEdit(this);
+                            LineEditIP->setValidator(ValidatorIP);
+                            LineEditIP->setFocus();
+                            LineEditIP->setGeometry(Rc.left() + Rc.width() / 3, Rc.top(), Rc.width() * 2 / 3, Rc.height());
+                            LineEditIP->setText(index.data(Model::UsrRole::SECOND_COL).value<QString>());
+                            connect(LineEditIP, &QLineEdit::textChanged, this, [this]() {
+                                emit ItemChanged(HoveredIndex.row(), LineEditIP->text());
                                 });
-                                LineEditIP->show();
-                            }
+                            LineEditIP->show();
                         }
-                        break;
+                    }
+                    break;
                     case 4://chip port
+                    {
+                        if (index.isValid())
                         {
-                            if(index.isValid())
-                            {
-                                QRect Rc = visualRect(index);
-                                TextEdit = new QPlainTextEdit(this);
-                                TextEdit->installEventFilter(Filter);
-                                TextEdit->setFocus();
-                                TextEdit->setGeometry(Rc.left() + Rc.width() / 3, Rc.top(), Rc.width() * 2 / 3, Rc.height());
-                                TextEdit->setPlainText(index.data(Model::UsrRole::SECOND_COL).value<QString>());
-                                connect(TextEdit, &QPlainTextEdit::textChanged, this, [this](){
-                                    emit ItemChanged(HoveredIndex.row(), TextEdit->toPlainText());
+                            QRect Rc = visualRect(index);
+                            TextEdit = new QPlainTextEdit(this);
+                            TextEdit->installEventFilter(Filter);
+                            TextEdit->setFocus();
+                            TextEdit->setGeometry(Rc.left() + Rc.width() / 3, Rc.top(), Rc.width() * 2 / 3, Rc.height());
+                            TextEdit->setPlainText(index.data(Model::UsrRole::SECOND_COL).value<QString>());
+                            connect(TextEdit, &QPlainTextEdit::textChanged, this, [this]() {
+                                emit ItemChanged(HoveredIndex.row(), TextEdit->toPlainText());
                                 });
-                                TextEdit->show();
-                            }
+                            TextEdit->show();
                         }
-                        break;
+                    }
+                    break;
                     default:
                         break;
                     }
                 }
             }
-                break;            
+            break;
             default:
                 break;
             }
@@ -437,15 +439,18 @@ namespace MenuSocketCFG{
 
     CfgInfo::CfgInfo()
         :LocalIP(""), LocalPort(""), DeviceIP(""), DevicePort(""), Option(SockOPT::DISCONNECT)
-    {}
+    {
+    }
 
     CfgInfo::CfgInfo(QString localIP, QString localPort, QString deviceIP, QString devicePort, SockOPT option)
         :LocalIP(localIP), LocalPort(localPort), DeviceIP(deviceIP), DevicePort(devicePort), Option(option)
-    {}
+    {
+    }
 
     CfgInfo::CfgInfo(const CfgInfo& cp)
         :LocalIP(cp.LocalIP), LocalPort(cp.LocalPort), DeviceIP(cp.DeviceIP), DevicePort(cp.DevicePort), Option(cp.Option)
-    {}
+    {
+    }
 
     void CfgInfo::operator=(const CfgInfo& as)
     {
@@ -477,67 +482,67 @@ namespace MenuSocketCFG{
 
     DialogSockCFG::~DialogSockCFG()
     {
-        if(model)
+        if (model)
         {
             model->deleteLater();
             model = nullptr;
         }
 
-        if(delegate)
+        if (delegate)
         {
             delegate->deleteLater();
             delegate = nullptr;
         }
 
-        if(view)
+        if (view)
         {
             view->deleteLater();
             view = nullptr;
         }
 
-        if(BtnConnect)
+        if (BtnConnect)
         {
             BtnConnect->deleteLater();
             BtnConnect = nullptr;
         }
 
-        if(BtnOK)
+        if (BtnOK)
         {
             BtnOK->deleteLater();
             BtnOK = nullptr;
         }
 
-        if(BtnCancel)
+        if (BtnCancel)
         {
             BtnCancel->deleteLater();
             BtnCancel = nullptr;
         }
 
-        if(VlayoutView)
+        if (VlayoutView)
         {
             VlayoutView->deleteLater();
             VlayoutView = nullptr;
         }
 
-        if(HLayoutView)
+        if (HLayoutView)
         {
             HLayoutView->deleteLater();
             HLayoutView = nullptr;
         }
 
-        if(GboxView)
+        if (GboxView)
         {
             GboxView->deleteLater();
             GboxView = nullptr;
         }
 
-        if(HlayoutOK)
+        if (HlayoutOK)
         {
             HlayoutOK->deleteLater();
             HlayoutOK = nullptr;
         }
 
-        if(VlayoutAll)
+        if (VlayoutAll)
         {
             VlayoutAll->deleteLater();//deleteLater()会在事件循环中删除对象
             VlayoutAll = nullptr;
@@ -547,18 +552,18 @@ namespace MenuSocketCFG{
     void DialogSockCFG::InitUI()
     {
         model = new Model;
-      /*   model->AddItem(ModelItem(AddrType::LOCAL_IP, "192.167.2.140"));
-         model->AddItem(ModelItem(AddrType::LOCAL_PORT, "8254"));
-         model->AddItem(ModelItem(AddrType::DEVICE_IP, "192.167.2.240"));
-         model->AddItem(ModelItem(AddrType::DEVICE_PORT, "8204"));*//*
-         model->AddItem(ModelItem(AddrType::LOCAL_IP, CFGI::IniFileCFGGlobal->   ReadINI(CFGI::INI_NET_CFG, "NETADDR/LocalIP").toString()));
-         model->AddItem(ModelItem(AddrType::LOCAL_PORT, CFGI::IniFileCFGGlobal-> ReadINI(CFGI::INI_NET_CFG, "NETADDR/LocalPort").toString()));
-         model->AddItem(ModelItem(AddrType::DEVICE_IP, CFGI::IniFileCFGGlobal->  ReadINI(CFGI::INI_NET_CFG, "NETADDR/DeviceIP").toString()));
-         model->AddItem(ModelItem(AddrType::DEVICE_PORT, CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_NET_CFG, "NETADDR/DevicePort").toString()));*/
-        //qDebug() << "LocalIP:" << CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalIP").toString();
-        model->AddItem(ModelItem(AddrType::LOCAL_IP, CFGI::IniFileCFGGlobal->   ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalIP").toString()));
-        model->AddItem(ModelItem(AddrType::LOCAL_PORT, CFGI::IniFileCFGGlobal-> ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalPort").toString()));
-        model->AddItem(ModelItem(AddrType::DEVICE_IP, CFGI::IniFileCFGGlobal->  ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/DeviceIP").toString()));
+        /*   model->AddItem(ModelItem(AddrType::LOCAL_IP, "192.167.2.140"));
+           model->AddItem(ModelItem(AddrType::LOCAL_PORT, "8254"));
+           model->AddItem(ModelItem(AddrType::DEVICE_IP, "192.167.2.240"));
+           model->AddItem(ModelItem(AddrType::DEVICE_PORT, "8204"));*//*
+           model->AddItem(ModelItem(AddrType::LOCAL_IP, CFGI::IniFileCFGGlobal->   ReadINI(CFGI::INI_NET_CFG, "NETADDR/LocalIP").toString()));
+           model->AddItem(ModelItem(AddrType::LOCAL_PORT, CFGI::IniFileCFGGlobal-> ReadINI(CFGI::INI_NET_CFG, "NETADDR/LocalPort").toString()));
+           model->AddItem(ModelItem(AddrType::DEVICE_IP, CFGI::IniFileCFGGlobal->  ReadINI(CFGI::INI_NET_CFG, "NETADDR/DeviceIP").toString()));
+           model->AddItem(ModelItem(AddrType::DEVICE_PORT, CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_NET_CFG, "NETADDR/DevicePort").toString()));*/
+           //qDebug() << "LocalIP:" << CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalIP").toString();
+        model->AddItem(ModelItem(AddrType::LOCAL_IP, CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalIP").toString()));
+        model->AddItem(ModelItem(AddrType::LOCAL_PORT, CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalPort").toString()));
+        model->AddItem(ModelItem(AddrType::DEVICE_IP, CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/DeviceIP").toString()));
         model->AddItem(ModelItem(AddrType::DEVICE_PORT, CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/DevicePort").toString()));
 
         delegate = new Delegate;
@@ -611,8 +616,8 @@ namespace MenuSocketCFG{
 
     void DialogSockCFG::Connect()
     {
-        connect(BtnConnect, &QPushButton::clicked, this, [this](){
-            if(Option == SockOPT::CONNECT)
+        connect(BtnConnect, &QPushButton::clicked, this, [this]() {
+            if (Option == SockOPT::CONNECT)
             {
                 Option = SockOPT::DISCONNECT;
                 BtnConnect->setText("连接");
@@ -622,11 +627,11 @@ namespace MenuSocketCFG{
                 Option = SockOPT::CONNECT;
                 BtnConnect->setText("断开");
             }
-        });
+            });
 
         // connect(BtnOK, &QPushButton::clicked, this, &QDialog::accept);
 
-        connect(BtnOK, &QPushButton::clicked, this, [this](){ this->OKSlot(); });
+        connect(BtnOK, &QPushButton::clicked, this, [this]() { this->OKSlot(); });
 
         connect(BtnCancel, &QPushButton::clicked, this, &QDialog::reject);
 
@@ -634,69 +639,13 @@ namespace MenuSocketCFG{
         //     this->OKSlot();
         // });
 
-        connect(this, &QDialog::rejected, this, [this](){
+        connect(this, &QDialog::rejected, this, [this]() {
             this->CancelSlot();
-        });
+            });
 
-        connect(view, &ListView::ItemChanged, this, [this](int row, QString text){
+        connect(view, &ListView::ItemChanged, this, [this](int row, QString text) {
             this->ListItemChanged(row, text);
-        });
-    }
-
-    QString GetSocketErrorMessage(int err)
-    {
-        switch (err)
-        {
-        case WSAEINTR:              return "调用被中断";
-        case WSAEBADF:              return "无效的文件描述符";
-        case WSAEACCES:             return "权限不足，无法执行操作";
-        case WSAEFAULT:             return "无效的地址";
-        case WSAEINVAL:             return "无效参数";
-        case WSAEMFILE:             return "打开的socket数量过多";
-        case WSAEWOULDBLOCK:        return "操作会阻塞";
-        case WSAEINPROGRESS:        return "操作正在进行中";
-        case WSAEALREADY:           return "操作已在进行中";
-        case WSAENOTSOCK:           return "不是一个socket";
-        case WSAEDESTADDRREQ:       return "需要目标地址";
-        case WSAEMSGSIZE:           return "消息太长";
-        case WSAEPROTOTYPE:         return "协议类型错误";
-        case WSAENOPROTOOPT:        return "协议不可用";
-        case WSAEPROTONOSUPPORT:    return "协议不被支持";
-        case WSAESOCKTNOSUPPORT:    return "socket类型不被支持";
-        case WSAEOPNOTSUPP:         return "操作不被支持";
-        case WSAEPFNOSUPPORT:       return "协议族不被支持";
-        case WSAEAFNOSUPPORT:       return "地址族不被支持";
-        case WSAEADDRINUSE:         return "端口已被占用";
-        case WSAEADDRNOTAVAIL:      return "本地地址不可用";
-        case WSAENETDOWN:           return "网络不可用";
-        case WSAENETUNREACH:        return "网络不可达";
-        case WSAENETRESET:          return "网络连接被重置";
-        case WSAECONNABORTED:       return "连接被中止";
-        case WSAECONNRESET:         return "连接被重置";
-        case WSAENOBUFS:            return "系统缓冲区不足";
-        case WSAEISCONN:            return "socket已连接";
-        case WSAENOTCONN:           return "socket未连接";
-        case WSAESHUTDOWN:          return "socket已关闭";
-        case WSAETOOMANYREFS:       return "引用过多";
-        case WSAETIMEDOUT:          return "连接超时";
-        case WSAECONNREFUSED:       return "连接被拒绝";
-        case WSAELOOP:              return "存在符号链接循环";
-        case WSAENAMETOOLONG:       return "名称太长";
-        case WSAEHOSTDOWN:          return "主机已关闭";
-        case WSAEHOSTUNREACH:       return "主机不可达";
-        case WSAENOTEMPTY:          return "目录非空";
-        case WSAEPROCLIM:           return "进程数已达上限";
-        case WSASYSNOTREADY:        return "网络子系统不可用";
-        case WSAVERNOTSUPPORTED:    return "不支持的Winsock版本";
-        case WSANOTINITIALISED:     return "未初始化Winsock";
-        case WSAEDISCON:            return "正在断开连接";
-        case WSATYPE_NOT_FOUND:     return "类型未找到";
-        case WSAHOST_NOT_FOUND:     return "主机未找到";
-        case WSATRY_AGAIN:          return "临时错误，请重试";
-        case WSANO_RECOVERY:        return "不可恢复的错误";
-        case WSANO_DATA:            return "没有相关数据";
-        default:                    return "未知错误";
-        }
+            });
     }
 
     void DialogSockCFG::OKSlot()
@@ -707,29 +656,24 @@ namespace MenuSocketCFG{
         // CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_NET_CFG, "NETADDR/LocalPort", info.LocalPort);
         // CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_NET_CFG, "NETADDR/DeviceIP", info.DeviceIP);
         // CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_NET_CFG, "NETADDR/DevicePort", info.DevicePort);
+
         CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalIP", info.LocalIP);
         CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalPort", info.LocalPort);
         CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_CENTRALIZE, "NETADDR/DeviceIP", info.DeviceIP);
         CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_CENTRALIZE, "NETADDR/DevicePort", info.DevicePort);
-        int err = 0;
+
         switch (Option)
         {
         case SockOPT::CONNECT:
-            SOCKWZ::SockGlob::DisConnect(); // 无条件先断开
             switch (Record.Option)
             {
             case SockOPT::CONNECT:
-                SOCKWZ::SockGlob::DisConnect(); // 无条件先断开
-                if(!(Record == info))
+                if (!(Record == info))
                 {
                     SOCKWZ::SockGlob::DisConnect();
-                    err = SOCKWZ::SockGlob::Connect(info.LocalIP, info.LocalPort, info.DeviceIP, info.DevicePort);
-                    qDebug() << "Connect返回err1:" << err << ", " << GetSocketErrorMessage(err);
-                    //if(SOCKWZ::SockGlob::Connect(info.LocalIP, info.LocalPort, info.DeviceIP, info.DevicePort))
-                    if (err == 0)
+                    if (SOCKWZ::SockGlob::Connect(info.LocalIP, info.LocalPort, info.DeviceIP, info.DevicePort))
                     {
                         Record = info;
-                        Record.SetOption(SockOPT::CONNECT);
                         BtnConnect->setText("断开");
                         emit SockConfigComplete();//to MNIC
                         emit ConnectStatusChanged(true);//to MNIC
@@ -738,24 +682,21 @@ namespace MenuSocketCFG{
                     else
                     {
                         Record.SetOption(SockOPT::DISCONNECT);
-                         Option = SockOPT::DISCONNECT;
-                         BtnConnect->setText("连接");
+                        // Option = SockOPT::DISCONNECT;
+                        // BtnConnect->setText("连接");
                         emit ConnectStatusChanged(false);//to MNIC
-                        //QMessageBox::critical(this, "网口状态", "创建socket失败", QMessageBox::Ok);
-                        QString errMsg = GetSocketErrorMessage(err);
-                        QMessageBox::critical(this, "网口状态", errMsg, QMessageBox::Ok);
-                    
+                        QMessageBox::critical(this, "网口状态", "创建socket失败", QMessageBox::Ok);
                     }
+                }
+                else
+                {
+                    accept();
                 }
                 break;
             case SockOPT::DISCONNECT:
-				err = SOCKWZ::SockGlob::Connect(info.LocalIP, info.LocalPort, info.DeviceIP, info.DevicePort);
-                qDebug() << "Connect返回err2:" << err << ", " << GetSocketErrorMessage(err);
-                //if(SOCKWZ::SockGlob::Connect(info.LocalIP, info.LocalPort, info.DeviceIP, info.DevicePort))
-                if (err == 0)
+                if (SOCKWZ::SockGlob::Connect(info.LocalIP, info.LocalPort, info.DeviceIP, info.DevicePort))
                 {
                     Record = info;
-                    Record.SetOption(SockOPT::CONNECT);
                     BtnConnect->setText("断开");
                     emit SockConfigComplete();
                     emit ConnectStatusChanged(true);
@@ -764,13 +705,9 @@ namespace MenuSocketCFG{
                 else
                 {
                     Record.SetOption(SockOPT::DISCONNECT);
-                    Option = SockOPT::DISCONNECT;
-                    BtnConnect->setText("连接");
                     // BtnConnect->setText("连接");
                     emit ConnectStatusChanged(false);
-                    //QMessageBox::critical(this, "网口状态", "创建socket失败", QMessageBox::Ok);
-                    QString errMsg = GetSocketErrorMessage(err);
-                    QMessageBox::critical(this, "网口状态", errMsg, QMessageBox::Ok);
+                    QMessageBox::critical(this, "网口状态", "创建socket失败", QMessageBox::Ok);
                 }
                 break;
             default:
@@ -779,9 +716,9 @@ namespace MenuSocketCFG{
             break;
         case SockOPT::DISCONNECT:
             switch (Record.Option)
-            {   
+            {
             case SockOPT::CONNECT:
-                if(Record == info)
+                if (Record == info)
                 {
                     SOCKWZ::SockGlob::DisConnect();
                     Record = info;
@@ -791,8 +728,7 @@ namespace MenuSocketCFG{
                 else
                 {
                     SOCKWZ::SockGlob::DisConnect();
-                    Record.SetOption(SockOPT::DISCONNECT); 
-                    Option = SockOPT::DISCONNECT;
+                    Record.SetOption(SockOPT::DISCONNECT);
                     BtnConnect->setText("连接");
                     emit ConnectStatusChanged(false);
                 }
@@ -803,7 +739,7 @@ namespace MenuSocketCFG{
                 accept();
                 break;
             default:
-                break;                
+                break;
             }
             break;
         default:
@@ -817,28 +753,28 @@ namespace MenuSocketCFG{
         model->UpdateItem(2, ModelItem(AddrType::LOCAL_PORT, Record.LocalPort));
         model->UpdateItem(3, ModelItem(AddrType::DEVICE_IP, Record.DeviceIP));
         model->UpdateItem(4, ModelItem(AddrType::DEVICE_PORT, Record.DevicePort));
-        if(Option != SockOPT::DISCONNECT)
+        if (Option != SockOPT::DISCONNECT)
         {
             BtnConnect->setText("连接");
         }
         else
         {
             BtnConnect->setText("断开");
-            
+
         }
     }
 
     void DialogSockCFG::ListItemChanged(int row, QString Text)
     {
-        switch(row)
+        switch (row)
         {
-            case 0:
+        case 0:
             break;
-            case 1: model->UpdateItem(row, ModelItem(AddrType::LOCAL_IP, Text));    break;
-            case 2: model->UpdateItem(row, ModelItem(AddrType::LOCAL_PORT, Text));  break;
-            case 3: model->UpdateItem(row, ModelItem(AddrType::DEVICE_IP, Text));   break;
-            case 4: model->UpdateItem(row, ModelItem(AddrType::DEVICE_PORT, Text)); break;
-            default: break;
+        case 1: model->UpdateItem(row, ModelItem(AddrType::LOCAL_IP, Text));    break;
+        case 2: model->UpdateItem(row, ModelItem(AddrType::LOCAL_PORT, Text));  break;
+        case 3: model->UpdateItem(row, ModelItem(AddrType::DEVICE_IP, Text));   break;
+        case 4: model->UpdateItem(row, ModelItem(AddrType::DEVICE_PORT, Text)); break;
+        default: break;
         }
     }
 
@@ -849,29 +785,29 @@ namespace MenuSocketCFG{
 
 }; // namespace MenuSocketCFG
 
-namespace MenuSINADCFG{
+namespace MenuSINADCFG {
 
     //Tab filter
 
     bool TabFocusEventFilter::eventFilter(QObject* obj, QEvent* event)
     {
         // WRITE_DLG_SINADCFG_MENU_DBG("TabFocusEventFilter::eventFilter() Enter\n");
-        switch(event->type())
+        switch (event->type())
         {
         case QEvent::KeyPress:
         {
             QKeyEvent* KeyEvent = static_cast<QKeyEvent*>(event);
-            switch(KeyEvent->key())
+            switch (KeyEvent->key())
             {
             case Qt::Key_Tab:
             case Qt::Key_Return:
-            {   
+            {
                 WRITE_DLG_SINADCFG_MENU_DBG("Key Tab pressed\n");
                 QWidget* Wt = static_cast<QWidget*>(obj);
-                if(Wt)
+                if (Wt)
                 {
                     QWidget* NextWt = FindNextFocusableWidget<QSpinBox>(Wt);//手动找到下一个可聚焦的SpinBox控件,
-                    if(NextWt)                                              
+                    if (NextWt)
                     {
                         NextWt->setFocus();
                         WRITE_DLG_SINADCFG_MENU_DBG("After NextWt->setFocus()\n");
@@ -879,32 +815,32 @@ namespace MenuSINADCFG{
                 }
                 return true;//拦截事件, 阻止插入制表符
             }
-                break;
+            break;
             default:
                 break;
             }
         }
-            break;
+        break;
         case QEvent::ToolTip:
         {
             QHelpEvent* HelpEvent = static_cast<QHelpEvent*>(event);
             QSpinBox* SpinBox = qobject_cast<QSpinBox*>(obj);
-            if(SpinBox)
+            if (SpinBox)
             {
                 switch (SpinBox->property(SPINBOX_PROPERTY_KEY).toInt())
                 {
                 case CODEC_SINAD_L: QToolTip::showText(HelpEvent->globalPos(), TIP_CODEC_SINAD, SpinBox); break;
                 case CODEC_SINAD_R: QToolTip::showText(HelpEvent->globalPos(), TIP_CODEC_SINAD, SpinBox); break;
-                case CODEC_VPP_L:   QToolTip::showText(HelpEvent->globalPos(), TIP_CODEC_VPP,   SpinBox); break;
-                case CODEC_VPP_R:   QToolTip::showText(HelpEvent->globalPos(), TIP_CODEC_VPP,   SpinBox); break;
-                case CODEC_RMS_L:   QToolTip::showText(HelpEvent->globalPos(), TIP_CODEC_RMS,   SpinBox); break;
-                case CODEC_RMS_R:   QToolTip::showText(HelpEvent->globalPos(), TIP_CODEC_RMS,   SpinBox); break;
+                case CODEC_VPP_L:   QToolTip::showText(HelpEvent->globalPos(), TIP_CODEC_VPP, SpinBox); break;
+                case CODEC_VPP_R:   QToolTip::showText(HelpEvent->globalPos(), TIP_CODEC_VPP, SpinBox); break;
+                case CODEC_RMS_L:   QToolTip::showText(HelpEvent->globalPos(), TIP_CODEC_RMS, SpinBox); break;
+                case CODEC_RMS_R:   QToolTip::showText(HelpEvent->globalPos(), TIP_CODEC_RMS, SpinBox); break;
                 case ADPOW_SINAD_L: QToolTip::showText(HelpEvent->globalPos(), TIP_ADPOW_SINAD, SpinBox); break;
                 case ADPOW_SINAD_R: QToolTip::showText(HelpEvent->globalPos(), TIP_ADPOW_SINAD, SpinBox); break;
-                case ADPOW_VPP_L:   QToolTip::showText(HelpEvent->globalPos(), TIP_ADPOW_VPP,   SpinBox); break;
-                case ADPOW_VPP_R:   QToolTip::showText(HelpEvent->globalPos(), TIP_ADPOW_VPP,   SpinBox); break;
-                case ADPOW_RMS_L:   QToolTip::showText(HelpEvent->globalPos(), TIP_ADPOW_RMS,   SpinBox); break;
-                case ADPOW_RMS_R:   QToolTip::showText(HelpEvent->globalPos(), TIP_ADPOW_RMS,   SpinBox); break;
+                case ADPOW_VPP_L:   QToolTip::showText(HelpEvent->globalPos(), TIP_ADPOW_VPP, SpinBox); break;
+                case ADPOW_VPP_R:   QToolTip::showText(HelpEvent->globalPos(), TIP_ADPOW_VPP, SpinBox); break;
+                case ADPOW_RMS_L:   QToolTip::showText(HelpEvent->globalPos(), TIP_ADPOW_RMS, SpinBox); break;
+                case ADPOW_RMS_R:   QToolTip::showText(HelpEvent->globalPos(), TIP_ADPOW_RMS, SpinBox); break;
                     break;
                 default:
                     break;
@@ -924,10 +860,10 @@ namespace MenuSINADCFG{
     {
         WRITE_DLG_SINADCFG_MENU_DBG("TabFocusEventFilter::FindNextFocusableWidget()\n");
         QWidget* Next = current->nextInFocusChain();
-        for(; Next && Next != current; Next = Next->nextInFocusChain())
+        for (; Next && Next != current; Next = Next->nextInFocusChain())
         {
             WRITE_DLG_SINADCFG_MENU_DBG("Finding Next\n");
-            if(qobject_cast<QWidgetDerive*>(Next) && Next->isEnabled() && Next->focusPolicy() != Qt::NoFocus)
+            if (qobject_cast<QWidgetDerive*>(Next) && Next->isEnabled() && Next->focusPolicy() != Qt::NoFocus)
             {//找到下一个可聚焦的控件
                 WRITE_DLG_SINADCFG_MENU_DBG("Find Next\n");
                 return Next;
@@ -960,197 +896,197 @@ namespace MenuSINADCFG{
 
     DialogSinadCFG::~DialogSinadCFG()
     {
-        if(LabelSinadCodec)
+        if (LabelSinadCodec)
         {
             LabelSinadCodec->deleteLater();
             LabelSinadCodec = nullptr;
         }
-        if(SpinSinadCodecLeft)
+        if (SpinSinadCodecLeft)
         {
             SpinSinadCodecLeft->deleteLater();
             SpinSinadCodecLeft = nullptr;
         }
-        if(SpinSinadCodecRight)
+        if (SpinSinadCodecRight)
         {
             SpinSinadCodecRight->deleteLater();
             SpinSinadCodecRight = nullptr;
         }
-        if(BtnCFGSinadCodec)
+        if (BtnCFGSinadCodec)
         {
             BtnCFGSinadCodec->deleteLater();
             BtnCFGSinadCodec = nullptr;
         }
-        if(LabelVppPTPCodec)
+        if (LabelVppPTPCodec)
         {
             LabelVppPTPCodec->deleteLater();
             LabelVppPTPCodec = nullptr;
         }
-        if(SpinVppPTPCodecLeft)
+        if (SpinVppPTPCodecLeft)
         {
             SpinVppPTPCodecLeft->deleteLater();
             SpinVppPTPCodecLeft = nullptr;
         }
-        if(SpinVppPTPCodecRight)
+        if (SpinVppPTPCodecRight)
         {
             SpinVppPTPCodecRight->deleteLater();
             SpinVppPTPCodecRight = nullptr;
         }
-        if(BtnCFGVppPTPCodec)
+        if (BtnCFGVppPTPCodec)
         {
             BtnCFGVppPTPCodec->deleteLater();
             BtnCFGVppPTPCodec = nullptr;
         }
-        if(LabelVppRMSCodec)
+        if (LabelVppRMSCodec)
         {
             LabelVppRMSCodec->deleteLater();
             LabelVppRMSCodec = nullptr;
         }
-        if(SpinVppRMSCodecLeft)
+        if (SpinVppRMSCodecLeft)
         {
             SpinVppRMSCodecLeft->deleteLater();
             SpinVppRMSCodecLeft = nullptr;
         }
-        if(SpinVppRMSCodecRight)
+        if (SpinVppRMSCodecRight)
         {
             SpinVppRMSCodecRight->deleteLater();
             SpinVppRMSCodecRight = nullptr;
         }
-        if(BtnCFGVppRMSCodec)
+        if (BtnCFGVppRMSCodec)
         {
             BtnCFGVppRMSCodec->deleteLater();
             BtnCFGVppRMSCodec = nullptr;
         }
-        if(LabelSinadADPOW)
+        if (LabelSinadADPOW)
         {
             LabelSinadADPOW->deleteLater();
             LabelSinadADPOW = nullptr;
         }
-        if(SpinSinadADPOWLeft)
+        if (SpinSinadADPOWLeft)
         {
             SpinSinadADPOWLeft->deleteLater();
             SpinSinadADPOWLeft = nullptr;
         }
-        if(SpinSinadADPOWRight)
+        if (SpinSinadADPOWRight)
         {
             SpinSinadADPOWRight->deleteLater();
             SpinSinadADPOWRight = nullptr;
         }
-        if(BtnCFGSinadADPOW)
+        if (BtnCFGSinadADPOW)
         {
             BtnCFGSinadADPOW->deleteLater();
             BtnCFGSinadADPOW = nullptr;
         }
-        if(LabelVppPTPADPOW)
+        if (LabelVppPTPADPOW)
         {
             LabelVppPTPADPOW->deleteLater();
             LabelVppPTPADPOW = nullptr;
         }
-        if(SpinVppPTPADPOWLeft)
+        if (SpinVppPTPADPOWLeft)
         {
             SpinVppPTPADPOWLeft->deleteLater();
             SpinVppPTPADPOWLeft = nullptr;
         }
-        if(SpinVppPTPADPOWRight)
+        if (SpinVppPTPADPOWRight)
         {
             SpinVppPTPADPOWRight->deleteLater();
             SpinVppPTPADPOWRight = nullptr;
         }
-        if(BtnCFGVppPTPADPOW)
+        if (BtnCFGVppPTPADPOW)
         {
             BtnCFGVppPTPADPOW->deleteLater();
             BtnCFGVppPTPADPOW = nullptr;
         }
-        if(LabelVppRMSADPOW)
+        if (LabelVppRMSADPOW)
         {
             LabelVppRMSADPOW->deleteLater();
             LabelVppRMSADPOW = nullptr;
         }
-        if(SpinVppRMSADPOWLeft)
+        if (SpinVppRMSADPOWLeft)
         {
             SpinVppRMSADPOWLeft->deleteLater();
             SpinVppRMSADPOWLeft = nullptr;
         }
-        if(SpinVppRMSADPOWRight)
+        if (SpinVppRMSADPOWRight)
         {
             SpinVppRMSADPOWRight->deleteLater();
             SpinVppRMSADPOWRight = nullptr;
         }
-        if(BtnCFGVppRMSADPOW)
+        if (BtnCFGVppRMSADPOW)
         {
             BtnCFGVppRMSADPOW->deleteLater();
             BtnCFGVppRMSADPOW = nullptr;
         }
-        if(BtnOK)
+        if (BtnOK)
         {
             BtnOK->deleteLater();
             BtnOK = nullptr;
         }
-        if(BtnCancel)
+        if (BtnCancel)
         {
             BtnCancel->deleteLater();
             BtnCancel = nullptr;
         }
-        if(HlayoutSinadCodec)
+        if (HlayoutSinadCodec)
         {
             HlayoutSinadCodec->deleteLater();
             HlayoutSinadCodec = nullptr;
         }
-        if(HlayoutVppPTPCodec)
+        if (HlayoutVppPTPCodec)
         {
             HlayoutVppPTPCodec->deleteLater();
             HlayoutVppPTPCodec = nullptr;
         }
-        if(HlayoutVppRMSCodec)
+        if (HlayoutVppRMSCodec)
         {
             HlayoutVppRMSCodec->deleteLater();
             HlayoutVppRMSCodec = nullptr;
         }
-        if(VlayoutCodec)
+        if (VlayoutCodec)
         {
             VlayoutCodec->deleteLater();
             VlayoutCodec = nullptr;
         }
-        if(GboxCodec)
+        if (GboxCodec)
         {
             GboxCodec->deleteLater();
             GboxCodec = nullptr;
         }
-        if(HlayoutSinadADPOW)
+        if (HlayoutSinadADPOW)
         {
             HlayoutSinadADPOW->deleteLater();
             HlayoutSinadADPOW = nullptr;
         }
-        if(HlayoutVppPTPADPOW)
+        if (HlayoutVppPTPADPOW)
         {
             HlayoutVppPTPADPOW->deleteLater();
             HlayoutVppPTPADPOW = nullptr;
         }
-        if(HlayoutVppRMSADPOW)
+        if (HlayoutVppRMSADPOW)
         {
             HlayoutVppRMSADPOW->deleteLater();
             HlayoutVppRMSADPOW = nullptr;
         }
-        if(VlayoutADPOW)
+        if (VlayoutADPOW)
         {
             VlayoutADPOW->deleteLater();
             VlayoutADPOW = nullptr;
         }
-        if(GboxADPOW)
+        if (GboxADPOW)
         {
             GboxADPOW->deleteLater();
             GboxADPOW = nullptr;
         }
-        if(HlayoutOK)
+        if (HlayoutOK)
         {
             HlayoutOK->deleteLater();
             HlayoutOK = nullptr;
         }
-        if(VlayoutAll)
+        if (VlayoutAll)
         {
             VlayoutAll->deleteLater();
             VlayoutAll = nullptr;
         }
-        if(Cond != nullptr)
+        if (Cond != nullptr)
         {
             Cond.reset();
             Cond = nullptr;
@@ -1162,7 +1098,7 @@ namespace MenuSINADCFG{
     }
 
     /*****************Sinad的界面配置****************************/
-    void DialogSinadCFG::InitUI()  
+    void DialogSinadCFG::InitUI()
     {
         LabelSinadCodec = new QLabel;
         LabelSinadCodec->setText("SINAD阈值/dB");
@@ -1354,18 +1290,18 @@ namespace MenuSINADCFG{
     void DialogSinadCFG::SetFocus()
     {
         Filter = new TabFocusEventFilter(this);
-        SpinSinadCodecLeft->setFocusPolicy(     Qt::FocusPolicy::StrongFocus);
-        SpinSinadCodecRight->setFocusPolicy(    Qt::StrongFocus);
-        SpinVppPTPCodecLeft->setFocusPolicy(    Qt::StrongFocus);
-        SpinVppPTPCodecRight->setFocusPolicy(   Qt::StrongFocus);
-        SpinVppRMSCodecLeft->setFocusPolicy(    Qt::StrongFocus);
-        SpinVppRMSCodecRight->setFocusPolicy(   Qt::StrongFocus);
-        SpinSinadADPOWLeft->setFocusPolicy(     Qt::StrongFocus);
-        SpinSinadADPOWRight->setFocusPolicy(    Qt::StrongFocus);
-        SpinVppPTPADPOWLeft->setFocusPolicy(    Qt::StrongFocus);
-        SpinVppPTPADPOWRight->setFocusPolicy(   Qt::StrongFocus);
-        SpinVppRMSADPOWLeft->setFocusPolicy(    Qt::StrongFocus);
-        SpinVppRMSADPOWRight->setFocusPolicy(   Qt::StrongFocus);
+        SpinSinadCodecLeft->setFocusPolicy(Qt::FocusPolicy::StrongFocus);
+        SpinSinadCodecRight->setFocusPolicy(Qt::StrongFocus);
+        SpinVppPTPCodecLeft->setFocusPolicy(Qt::StrongFocus);
+        SpinVppPTPCodecRight->setFocusPolicy(Qt::StrongFocus);
+        SpinVppRMSCodecLeft->setFocusPolicy(Qt::StrongFocus);
+        SpinVppRMSCodecRight->setFocusPolicy(Qt::StrongFocus);
+        SpinSinadADPOWLeft->setFocusPolicy(Qt::StrongFocus);
+        SpinSinadADPOWRight->setFocusPolicy(Qt::StrongFocus);
+        SpinVppPTPADPOWLeft->setFocusPolicy(Qt::StrongFocus);
+        SpinVppPTPADPOWRight->setFocusPolicy(Qt::StrongFocus);
+        SpinVppRMSADPOWLeft->setFocusPolicy(Qt::StrongFocus);
+        SpinVppRMSADPOWRight->setFocusPolicy(Qt::StrongFocus);
 
         setTabOrder(SpinSinadCodecLeft, SpinSinadCodecRight);
         setTabOrder(SpinSinadCodecRight, SpinVppPTPCodecLeft);
@@ -1379,19 +1315,19 @@ namespace MenuSINADCFG{
         setTabOrder(SpinVppPTPADPOWRight, SpinVppRMSADPOWLeft);
         setTabOrder(SpinVppRMSADPOWLeft, SpinVppRMSADPOWRight);
         setTabOrder(SpinVppRMSADPOWRight, 0);
-        
-        SpinSinadCodecLeft->    setProperty(SPINBOX_PROPERTY_KEY, CODEC_SINAD_L);
-        SpinSinadCodecRight->   setProperty(SPINBOX_PROPERTY_KEY, CODEC_SINAD_R);
-        SpinVppPTPCodecLeft->   setProperty(SPINBOX_PROPERTY_KEY, CODEC_VPP_L);
-        SpinVppPTPCodecRight->  setProperty(SPINBOX_PROPERTY_KEY, CODEC_VPP_R);
-        SpinVppRMSCodecLeft->   setProperty(SPINBOX_PROPERTY_KEY, CODEC_RMS_L);
-        SpinVppRMSCodecRight->  setProperty(SPINBOX_PROPERTY_KEY, CODEC_RMS_R);
-        SpinSinadADPOWLeft->    setProperty(SPINBOX_PROPERTY_KEY, ADPOW_SINAD_L);
-        SpinSinadADPOWRight->   setProperty(SPINBOX_PROPERTY_KEY, ADPOW_SINAD_R);
-        SpinVppPTPADPOWLeft->   setProperty(SPINBOX_PROPERTY_KEY, ADPOW_VPP_L);
-        SpinVppPTPADPOWRight->  setProperty(SPINBOX_PROPERTY_KEY, ADPOW_VPP_R);
-        SpinVppRMSADPOWLeft->   setProperty(SPINBOX_PROPERTY_KEY, ADPOW_RMS_L);
-        SpinVppRMSADPOWRight->  setProperty(SPINBOX_PROPERTY_KEY, ADPOW_RMS_R);
+
+        SpinSinadCodecLeft->setProperty(SPINBOX_PROPERTY_KEY, CODEC_SINAD_L);
+        SpinSinadCodecRight->setProperty(SPINBOX_PROPERTY_KEY, CODEC_SINAD_R);
+        SpinVppPTPCodecLeft->setProperty(SPINBOX_PROPERTY_KEY, CODEC_VPP_L);
+        SpinVppPTPCodecRight->setProperty(SPINBOX_PROPERTY_KEY, CODEC_VPP_R);
+        SpinVppRMSCodecLeft->setProperty(SPINBOX_PROPERTY_KEY, CODEC_RMS_L);
+        SpinVppRMSCodecRight->setProperty(SPINBOX_PROPERTY_KEY, CODEC_RMS_R);
+        SpinSinadADPOWLeft->setProperty(SPINBOX_PROPERTY_KEY, ADPOW_SINAD_L);
+        SpinSinadADPOWRight->setProperty(SPINBOX_PROPERTY_KEY, ADPOW_SINAD_R);
+        SpinVppPTPADPOWLeft->setProperty(SPINBOX_PROPERTY_KEY, ADPOW_VPP_L);
+        SpinVppPTPADPOWRight->setProperty(SPINBOX_PROPERTY_KEY, ADPOW_VPP_R);
+        SpinVppRMSADPOWLeft->setProperty(SPINBOX_PROPERTY_KEY, ADPOW_RMS_L);
+        SpinVppRMSADPOWRight->setProperty(SPINBOX_PROPERTY_KEY, ADPOW_RMS_R);
 
         SpinSinadCodecLeft->installEventFilter(Filter);
         SpinSinadCodecRight->installEventFilter(Filter);
@@ -1409,46 +1345,46 @@ namespace MenuSINADCFG{
 
     void DialogSinadCFG::Connect()
     {
-        connect(BtnCFGSinadCodec, &QPushButton::clicked, this, [this](){
+        connect(BtnCFGSinadCodec, &QPushButton::clicked, this, [this]() {
             CFGSinadCodecSlot();
-        });
+            });
 
-        connect(BtnCFGVppPTPCodec, &QPushButton::clicked, this, [this](){
+        connect(BtnCFGVppPTPCodec, &QPushButton::clicked, this, [this]() {
             CFGVppPTPCodecSlot();
-        });
+            });
 
-        connect(BtnCFGVppRMSCodec, &QPushButton::clicked, this, [this](){
+        connect(BtnCFGVppRMSCodec, &QPushButton::clicked, this, [this]() {
             CFGVppRMSCodecSlot();
-        });
+            });
 
-        connect(BtnCFGSinadADPOW, &QPushButton::clicked, this, [this](){
+        connect(BtnCFGSinadADPOW, &QPushButton::clicked, this, [this]() {
             CFGSinadADPOWSlot();
-        });
+            });
 
-        connect(BtnCFGVppPTPADPOW, &QPushButton::clicked, this, [this](){
+        connect(BtnCFGVppPTPADPOW, &QPushButton::clicked, this, [this]() {
             CFGVppPTPADPOWSlot();
-        });
+            });
 
-        connect(BtnCFGVppRMSADPOW, &QPushButton::clicked, this, [this](){
+        connect(BtnCFGVppRMSADPOW, &QPushButton::clicked, this, [this]() {
             CFGVppRMSADPOWSlot();
-        });
+            });
 
         connect(BtnOK, &QPushButton::clicked, this, &QDialog::accept);
 
         connect(BtnCancel, &QPushButton::clicked, this, &QDialog::reject);
 
-        connect(this, &QDialog::accepted, this, [this](){
+        connect(this, &QDialog::accepted, this, [this]() {
             this->OKSlot();
-        });
+            });
 
-        connect(this, &QDialog::rejected, this, [this](){
+        connect(this, &QDialog::rejected, this, [this]() {
             this->CancelSlot();
-        });
+            });
     }
 
     void DialogSinadCFG::CFGSinadCodecSlot()
     {
-        Cond.get()[0].SetRangeSINAD(TCOND::Range(SpinSinadCodecLeft->value(), SpinSinadCodecRight->value()));        
+        Cond.get()[0].SetRangeSINAD(TCOND::Range(SpinSinadCodecLeft->value(), SpinSinadCodecRight->value()));
     }
 
     void DialogSinadCFG::CFGVppPTPCodecSlot()
@@ -1463,7 +1399,7 @@ namespace MenuSINADCFG{
 
     void DialogSinadCFG::CFGSinadADPOWSlot()
     {
-        Cond.get()[1].SetRangeSINAD(TCOND::Range(SpinSinadADPOWLeft->value(), SpinSinadADPOWRight->value()));        
+        Cond.get()[1].SetRangeSINAD(TCOND::Range(SpinSinadADPOWLeft->value(), SpinSinadADPOWRight->value()));
     }
 
     void DialogSinadCFG::CFGVppPTPADPOWSlot()
@@ -1510,18 +1446,18 @@ namespace MenuSINADCFG{
     //当用户点击“取消”时，把所有SpinBox控件的值恢复为全局配置（DeviceCheckResultGlobal）中保存的原始值
     void DialogSinadCFG::CancelSlot()
     {
-        SpinSinadCodecLeft      ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeSINAD().GetLeft());
-        SpinSinadCodecRight     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeSINAD().GetRight());
-        SpinVppPTPCodecLeft     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeVppPTP().GetLeft());
-        SpinVppPTPCodecRight    ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeVppPTP().GetRight());
-        SpinVppRMSCodecLeft     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeVppRMS().GetLeft());
-        SpinVppRMSCodecRight    ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeVppRMS().GetRight());
-        SpinSinadADPOWLeft      ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeSINAD().GetLeft());
-        SpinSinadADPOWRight     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeSINAD().GetRight());
-        SpinVppPTPADPOWLeft     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppPTP().GetLeft());
-        SpinVppPTPADPOWRight    ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppPTP().GetRight());
-        SpinVppRMSADPOWLeft     ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppRMS().GetLeft());
-        SpinVppRMSADPOWRight    ->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppRMS().GetRight());
+        SpinSinadCodecLeft->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeSINAD().GetLeft());
+        SpinSinadCodecRight->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeSINAD().GetRight());
+        SpinVppPTPCodecLeft->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeVppPTP().GetLeft());
+        SpinVppPTPCodecRight->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeVppPTP().GetRight());
+        SpinVppRMSCodecLeft->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeVppRMS().GetLeft());
+        SpinVppRMSCodecRight->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[0].GetRangeVppRMS().GetRight());
+        SpinSinadADPOWLeft->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeSINAD().GetLeft());
+        SpinSinadADPOWRight->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeSINAD().GetRight());
+        SpinVppPTPADPOWLeft->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppPTP().GetLeft());
+        SpinVppPTPADPOWRight->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppPTP().GetRight());
+        SpinVppRMSADPOWLeft->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppRMS().GetLeft());
+        SpinVppRMSADPOWRight->setValue(DCR::DeviceCheckResultGlobal->GetCondition()[1].GetRangeVppRMS().GetRight());
     }
 
     /***********新增：读取条件的实现****************/

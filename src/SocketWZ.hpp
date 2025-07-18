@@ -12,23 +12,19 @@
 
 #pragma comment(lib,"Ws2_32.lib")
 
-namespace SOCKWZ{
-    class Socket{
+namespace SOCKWZ {
+    class Socket {
         WSADATA wsa;
         sockaddr_in localAddr, chipAddr;
         uint16_t localPort, chipPort;
-        SOCKET sock{INVALID_SOCKET};
+        SOCKET sock{ INVALID_SOCKET };
         QString SockAddr[4];
         std::atomic_bool LOCK;
         std::mutex mtx;
     public:
         Socket();
         ~Socket();
-    /*    bool Connect(QString localip, 
-        QString localport, 
-        QString chipip, 
-        QString chipport);*/
-        int Connect(QString localip,
+        bool Connect(QString localip,
             QString localport,
             QString chipip,
             QString chipport);
@@ -41,16 +37,12 @@ namespace SOCKWZ{
         const QString const* GetAddr() const;
     };
 
-    class SockGlob{
+    class SockGlob {
     public:
         static std::shared_ptr<Socket> Sock;
         static std::mutex mtx;
 
-     /*   static bool Connect(QString localip, 
-            QString localport, 
-            QString chipip, 
-            QString chipport);*/
-        static int Connect(QString localip,
+        static bool Connect(QString localip,
             QString localport,
             QString chipip,
             QString chipport);

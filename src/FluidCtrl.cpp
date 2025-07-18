@@ -18,25 +18,38 @@ namespace FCT{
     }
 
     /*************************新增等待函数的实现*******************************************/
-    void FluidCtrl::WaitForFluid(int index, FLUID_TYPE len, FLUID_TYPE remain) {
-        std::unique_lock<std::mutex> lock(mtx);
-        cv.wait(lock, [&] {
-            return FluidCheck(index, len, remain) == FLUID_SATISFY;
-            });
-        // 满足条件后返回，发送线程继续
-    }
-
-    void FluidCtrl::NotifyFluid() {
-        cv.notify_all();
-    }
-
-    //void FluidCtrl::FluidStore(int Index, FLUID_TYPE v)                                      //设置指定通道（Index）的流控缓冲区的值为 v。
-    //{
-    //    FluidCtrlBuffer[Index].store(v);
-    //    NotifyFluid();
+    //void FluidCtrl::WaitForFluid(int index, FLUID_TYPE len, FLUID_TYPE remain) {
+    //    std::unique_lock<std::mutex> lock(mtx);
+    //    cv.wait(lock, [&] {
+    //        return FluidCheck(index, len, remain) == FLUID_SATISFY;
+    //        });
+    //    // 满足条件后返回，发送线程继续
     //}
 
-    void FluidCtrl::FluidStore(int Index, FLUID_TYPE v)
+    //void FluidCtrl::NotifyFluid() {
+    //    cv.notify_all();
+    //}
+
+    void FluidCtrl::FluidStore(int Index, FLUID_TYPE v)                                      //设置指定通道（Index）的流控缓冲区的值为 v。
+    {
+        static std::chrono::steady_clock::time_point lastUpdate;
+        static bool firstUpdate = true;
+
+        auto now = std::chrono::steady_clock::now();
+        if (!firstUpdate) {
+            auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdate).count();
+            WRITE_TASK_DATA_SEND_DBG("流控更新间隔: %lld ms\n", interval);
+        }
+        else {
+            firstUpdate = false;
+        }
+        lastUpdate = now;
+
+        FluidCtrlBuffer[Index].store(v);
+       
+    }
+
+   /* void FluidCtrl::FluidStore(int Index, FLUID_TYPE v)
     {
         static std::chrono::steady_clock::time_point lastUpdate;
         static bool firstUpdate = true;
@@ -53,7 +66,7 @@ namespace FCT{
 
         FluidCtrlBuffer[Index].store(v);
         NotifyFluid();
-    }
+    }*/
 
     void FluidCtrl::FluidStore(FLUID_TYPE v)                                                 //将所有通道的流控缓冲区的值都设置为 v。
     {
@@ -61,7 +74,7 @@ namespace FCT{
         {
             FluidCtrlBuffer[i].store(v);
         }
-        NotifyFluid();
+        
     }
     
     FLUID_TYPE FluidCtrl::FluidFetchSub(int Index, FLUID_TYPE sub)                           //对指定通道的流控缓冲区做原子减法（减去 sub），并返回减法前的旧值。

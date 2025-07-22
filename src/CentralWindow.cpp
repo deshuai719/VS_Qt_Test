@@ -783,7 +783,13 @@ namespace CWD{
 
         if (StatOfBtnStart)                                                                                                         // 如果当前是“开始测试”状态（按钮未被按下，准备开始测试）
         {
-            PTestedNum.setText("0(0/0)");                                                                                                // 已测试次数清零，界面显示为0
+            QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+            currentLogSePath = QCoreApplication::applicationDirPath() + "/LOG/LogSeRecord_" + datetime + ".log";
+            // 用 currentLogSePath 初始化日志
+            LWZ::Log::LogInstance->Init(LOG_SE_RECORD_INDEX, currentLogSePath.toStdString().c_str());//新增：生成并记录日志文件名
+
+            DCR::DeviceCheckResultGlobal->SetCheckedGroupCount(0);
+            PTestedNum.setText("0(0/0)");                                                                                            // 已测试次数清零，界面显示为0
             TOOLWZ::stack_wz<TASKWZ::task_type> stack_join;                                                                         // 创建一个任务类型栈，用于后续批量join任务
             stack_join.push(TASKWZ::task_type::TASK_END);                                                                           // 压入“结束任务”类型
             stack_join.push(TASKWZ::task_type::TASK_JOIN);                                                                          // 压入“join任务”类型
@@ -807,6 +813,7 @@ namespace CWD{
             {
                 disconnect(TaskSend, &TASKWZ::TaskDataSend::MsgOfStartEnd, this, &CentralWidget::UpdateCheckResult);
                 TaskSend->close();
+                //delete TaskSend;   // 新增：释放内存
                 TaskSend = nullptr;
             }
 
@@ -817,7 +824,7 @@ namespace CWD{
             CREATE_TASK_END(stack_end);                                                                 // 创建一个end任务，批量关闭上述类型的任务
 
             StatOfBtnStart = true;                                                                      // 状态切换为“未测试”
-            BtnStartTest.setText("开始测试");                                                               // 按钮文本切换为“开始测试”
+            BtnStartTest.setText("开始测试");                                                            // 按钮文本切换为“开始测试”
             LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", "./LOG/LogUpRecordProcessed.log"); // 处理日志文件（原始日志转为处理后日志）
             lock.unlock();                                                                              // 解锁
         }
@@ -827,15 +834,17 @@ namespace CWD{
     /***********************打开简要日志LogSeRecord.log*********************************/
     void CentralWidget::OpenLog()
     {
-        QString logPath = QCoreApplication::applicationDirPath() + "/LOG/LogSeRecord.log";
-        QFileInfo fi(logPath);
-        if (fi.exists()) {
-            QDesktopServices::openUrl(QUrl::fromLocalFile(logPath));
+        if (currentLogSePath.isEmpty()) {
+            QMessageBox::warning(this, "提示", "本次测试日志路径未知！");
+            return;
         }
-      /*  else {
-             可选：弹窗提示文件不存在
-            QMessageBox::warning(nullptr, "提示", "日志文件不存在！");
-        }*/
+        QFileInfo fi(currentLogSePath);
+        if (fi.exists()) {
+            QDesktopServices::openUrl(QUrl::fromLocalFile(currentLogSePath));
+        }
+        else {
+            QMessageBox::warning(this, "提示", "日志文件不存在！");
+        }
     }
 
     void CentralWidget::UpdateCheckResult(TASKWZ::MsgToCentralWt msg)

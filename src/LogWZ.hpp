@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <memory>
 #include <QDir>
+#include <QDateTime>
 
 #define DEFAULT_LOG_PATH "./LOG/"
 #define PRE_FILE_DBG QString(DEFAULT_LOG_PATH)
@@ -66,7 +67,7 @@ extern bool g_logOn;//定义全局日志开关变量
 //#define TASK_0X28_PARSING_DBG
 //#define TASK_DISPATCH_DBG
 //#define TASK_STATISTICS_DBG
-//#define TASK_DATA_SEND_DBG
+#define TASK_DATA_SEND_DBG
 //#define DLG_SIANDCFG_MENU_DBG
 //#define TASK_DATA_CONSTRUCT_ARG_DBG
 //#define TASK_DATA_SEND_INFO_VERIFY
@@ -384,7 +385,13 @@ extern bool g_logOn;//定义全局日志开关变量
 
 #if defined LOG_SE_RECORD
 
-#define OPEN_LOG_SE_RECORD(path)   LWZ::Log::LogInstance->Init(LOG_SE_RECORD_INDEX, QString(PRE_FILE_DBG + #path).toStdString().c_str()); 
+//#define OPEN_LOG_SE_RECORD(path)   LWZ::Log::LogInstance->Init(LOG_SE_RECORD_INDEX, QString(PRE_FILE_DBG + #path).toStdString().c_str()); 
+#define OPEN_LOG_SE_RECORD(path) \
+    do { \
+        QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss"); \
+        QString logPath = QString("%1LogSeRecord_%2.log").arg(PRE_FILE_DBG).arg(datetime); \
+        LWZ::Log::LogInstance->Init(LOG_SE_RECORD_INDEX, logPath.toStdString().c_str()); \
+    } while(0)//新增：简要日志不覆盖
 #define WRITE_LOG_SE_RECORD(fmt, ...)   LWZ::Log::LogInstance->Write(LOG_SE_RECORD_INDEX, fmt, __VA_ARGS__); 
 #define WRITE_LOG_SE_PARAM_RECORD(...) LWZ::Log::LogInstance->Write(LOG_SE_RECORD_INDEX, "  参数: dB=%.2f, Freq=%llu, Dur=%u, Digital=%d, PGA=%d, Playback=%d, Headset=%d\n", __VA_ARGS__);//新增：日志写参数
 #define WRITE_LOG_SE_CODEC_COND_RECORD(...)  LWZ::Log::LogInstance->Write(LOG_SE_RECORD_INDEX, "  Codec SINAD[%d,%d], VppPTP[%d,%d], VppRMS[%d,%d]\n", __VA_ARGS__); //新增：日志写判定条件

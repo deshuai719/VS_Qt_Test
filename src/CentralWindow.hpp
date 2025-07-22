@@ -20,6 +20,7 @@
 #include <QApplication>
 #include <QRandomGenerator>
 #include <QTimer>
+#include <memory>
 #include "TestCondition.hpp"
 #include "TaskWZ.hpp"
 
@@ -130,6 +131,7 @@ namespace CWD{
         QLabel ChipType;
         QLabel TemperatureInner;
         QLabel TemperatureEnv;
+        QString currentLogSePath;
         
         Model Models[8];//8个
         Delegate Delegates[8];//8个

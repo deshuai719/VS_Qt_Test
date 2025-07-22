@@ -77,7 +77,7 @@ namespace FCT{
         
     }
     
-    FLUID_TYPE FluidCtrl::FluidFetchSub(int Index, FLUID_TYPE sub)                           //对指定通道的流控缓冲区做原子减法（减去 sub），并返回减法前的旧值。
+    FLUID_TYPE FluidCtrl::FluidFetchSub(int Index, FLUID_TYPE sub)                           //对指定通道的流控缓冲区做原子减法（减去 sub）
     {
         return FluidCtrlBuffer[Index].fetch_sub(sub);
     }

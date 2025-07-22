@@ -226,7 +226,12 @@ public:
 	static std::mutex mtxReadyForSend38;
 	static std::chrono::steady_clock::time_point last28Time;//新增：记录发送28包时间
 	static std::atomic<bool> first38Sent;//新增：记录发送28包时间
-	static std::vector<std::string> ChipFailInfo[8][4]; //新增：记录8板4芯片中的统计信息
+	static std::vector<QString> chipSeLogStat[8][4]; //新增：记录8板4芯片中的统计信息
+	static std::vector<QString> chipSeLogError[8][4];//新增：记录8板4芯片中的错误值信息
+	static std::vector<QString> ChipLogBuffer;//新增：静态队列临时存储日志内容
+	static std::mutex ChipLogBufferMutex;
+	//static std::vector<QString> ChipSeLogBuffer;//新增：静态队列临时存储简要日志信息
+	static std::mutex ChipSeLogBufferMutex;
 };
 
 #define CREATE_TASK_MNIC_PARSING	TASKWZ::worker_manager::create(new TASKWZ::TaskChipStatParsing(), TASKWZ::worker_type::EXECUTE_THREAD);
@@ -356,4 +361,4 @@ public:
 
 };
 
-#endif //_TASKWZ_HPP_
+#endif //_TASKWZ_HPP_;

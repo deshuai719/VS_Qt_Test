@@ -66,7 +66,7 @@ extern bool g_logOn;//定义全局日志开关变量
 //#define TASK_0X28_PARSING_DBG
 //#define TASK_DISPATCH_DBG
 //#define TASK_STATISTICS_DBG
-#define TASK_DATA_SEND_DBG
+//#define TASK_DATA_SEND_DBG
 //#define DLG_SIANDCFG_MENU_DBG
 //#define TASK_DATA_CONSTRUCT_ARG_DBG
 //#define TASK_DATA_SEND_INFO_VERIFY
@@ -361,7 +361,24 @@ extern bool g_logOn;//定义全局日志开关变量
 
 #else
 #endif
-
+/***************************异步写入解析数据*******************************************/
+#define ASYNC_WRITE_LOG_UP_PACK_RECORD(...) \
+    do { \
+        if (g_logOn) { \
+            QString logLine = QString::asprintf("\n测试次数：%4d, 时标:%5d\n", __VA_ARGS__); \
+            std::lock_guard<std::mutex> lock(TaskChipStatParsing::ChipLogBufferMutex); \
+            TaskChipStatParsing::ChipLogBuffer.push_back(logLine); \
+        } \
+    } while(0)
+// src/LogWZ.hpp
+#define ASYNC_WRITE_LOG_UP_CHIP_RECORD(...) \
+    do { \
+        if (g_logOn) { \
+            QString logLine = QString::asprintf("  芯片编号：J[%d]S[%d]\n    Codec Left [Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s],\n    Codec Right[Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s],\n    AdPow      [Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s]\n", __VA_ARGS__); \
+            std::lock_guard<std::mutex> lock(TaskChipStatParsing::ChipLogBufferMutex); \
+            TaskChipStatParsing::ChipLogBuffer.push_back(logLine); \
+        } \
+    } while(0)
 
 //简化版本日志
 
@@ -376,6 +393,11 @@ extern bool g_logOn;//定义全局日志开关变量
 
 #else
 #endif
-
+//#define ASYNC_WRITE_LOG_SE_RECORD(i, j, fmt, ...) \
+//    if (g_logOn) { \
+//        QString logLine = QString::asprintf(fmt, ##__VA_ARGS__); \
+//        std::lock_guard<std::mutex> lock(TaskChipStatParsing::ChipSeLogBufferMutex); \
+//        chipSeLogLines[i][j].push_back(logLine); \
+//    }
 
 #endif // LOG_UP_RECORD

@@ -1,4 +1,4 @@
-#ifndef _DATAFRAMEWZ_HPP_
+﻿#ifndef _DATAFRAMEWZ_HPP_
 #define _DATAFRAMEWZ_HPP_
 
 #define NUM_MNICx4_BOARD 8
@@ -67,7 +67,9 @@ namespace DF{
         unsigned int  mnic_online     ;   // 1, online, 0, offline, [3:0], board 0 mnic 0~3, [7:4], board 1 mnic 0~3, ..., [31:28], board 7 mnic 0~3
         unsigned short  ds18b20_16b     ;   // temperature sensor
         unsigned short  fpga_heat       ;   // fpga inner temperature sensor
-        unsigned short  dbg_dn_aic      ;   // debug counter of dn_ch0_aic packet if packet counter is not continuous
+        //unsigned short  dbg_dn_aic      ;   // debug counter of dn_ch0_aic packet if packet counter is not continuous
+        unsigned char cnt_dn_empty;
+        unsigned char cnt_dn_full;
         unsigned short  cnt_dn_aic      ;   // counter of dn_ch0_aic packet
         MNICx4_ADC_INFO MNICx4_ADC_INFO_ARR[NUM_MNICx4_BOARD]; // multi 
     }UP_MNIC_STA;   // 上报小芯片状态，定时8ms一包

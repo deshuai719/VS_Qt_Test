@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <QMainWindow>
 #include <QMenuBar>
 #include <QMenu>
@@ -19,18 +19,18 @@ private:
     QMenuBar* MenuBar;
 
     QMenu* FileMenu;
-    QAction* AddFileAction;
+    //QAction* AddFileAction;
     QAction* AddArgAction;
 
     QMenu* ConfigMenu;
     QAction* NetConfigAction;
-    QAction* SinadConfigAction;
+    //QAction* SinadConfigAction;
 
     QMenu* LogMenu;
     QAction* LogONAction;
     QAction* LogOFFAction;
 
-    QMenu* HelpMenu;
+    //QMenu* HelpMenu;
 
     QStatusBar* StatusBar;
     QLabel* LabelStat;
@@ -38,22 +38,22 @@ private:
     DlgMenu::DlgMu* DlgMenuFileSelect;
     DlgMenuARG::DlgARG* DlgMenuArgAdd;
     MenuSocketCFG::DialogSockCFG* DlgMenuSocketCFG;
-    MenuSINADCFG::DialogSinadCFG* DlgMenuSinadCFG;
+    //MenuSINADCFG::DialogSinadCFG* DlgMenuSinadCFG;
     CWD::CentralWidget* CentralWt;
 
     void InitMenuBar();
     void InitFileMenu();
     void InitConfigMenu();
     void InitLogMenu();
-    void InitHelpMenu();
+    //void InitHelpMenu();
     void InitStatusBar();
     void InitCentralWt();
     void InitUI();
 
-    void AddFile();
+    //void AddFile();
     void AddArg();
     void NetConfig();
-    void SinadConfig();
+    //void SinadConfig();
     void LogON();
     void LogOFF();
 

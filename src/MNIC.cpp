@@ -28,35 +28,35 @@ void MNIC::InitMenuBar()
 
 void MNIC::InitFileMenu()
 {
-    FileMenu = new QMenu("文件", this);
+    FileMenu = new QMenu("参数", this);
     MenuBar->addMenu(FileMenu);
 
-    AddFileAction = new QAction("添加文件", this);
-    FileMenu->addAction(AddFileAction);
-    connect(AddFileAction, &QAction::triggered, this, &MNIC::AddFile);
+    //AddFileAction = new QAction("添加文件", this);
+    //FileMenu->addAction(AddFileAction);
+    //connect(AddFileAction, &QAction::triggered, this, &MNIC::AddFile);
 
-    DlgMenuFileSelect = new DlgMenu::DlgMu(this);
+    //DlgMenuFileSelect = new DlgMenu::DlgMu(this);
 
-    QDir Dir(DEFAULT_FILE_PATH);
+    //QDir Dir(DEFAULT_FILE_PATH);
 
-    if(Dir.exists())
-    {
-        //设置过滤器
-        QStringList filters;
-        filters.append("*.mif*");//匹配.mif文件
-        Dir.setNameFilters(filters);
-        Dir.setFilter(QDir::Files | QDir::NoDotAndDotDot);//只获取文件，排除.和..
+    //if(Dir.exists())
+    //{
+    //    //设置过滤器
+    //    QStringList filters;
+    //    filters.append("*.mif*");//匹配.mif文件
+    //    Dir.setNameFilters(filters);
+    //    Dir.setFilter(QDir::Files | QDir::NoDotAndDotDot);//只获取文件，排除.和..
 
-        //获取文件列表
-        QStringList fileList = Dir.entryList();
+    //    //获取文件列表
+    //    QStringList fileList = Dir.entryList();
 
-        //遍历文件列表
-        for(const QString &file : fileList)
-        {
-            DlgMenuFileSelect->AddFile(Dir.filePath(file));
-        }
-        DlgMenuFileSelect->DataConstruct();
-    }
+    //    //遍历文件列表
+    //    for(const QString &file : fileList)
+    //    {
+    //        DlgMenuFileSelect->AddFile(Dir.filePath(file));
+    //    }
+    //    DlgMenuFileSelect->DataConstruct();
+    //}
 
     AddArgAction = new QAction("添加参数", this);
     FileMenu->addAction(AddArgAction);
@@ -74,14 +74,14 @@ void MNIC::InitConfigMenu()
     ConfigMenu->addAction(NetConfigAction);
     connect(NetConfigAction, &QAction::triggered, this, &MNIC::NetConfig);
 
-    SinadConfigAction = new QAction("Sinad配置", this);
-    ConfigMenu->addAction(SinadConfigAction);
-    connect(SinadConfigAction, &QAction::triggered, this, &MNIC::SinadConfig);
+    //SinadConfigAction = new QAction("Sinad配置", this);
+    //ConfigMenu->addAction(SinadConfigAction);
+    //connect(SinadConfigAction, &QAction::triggered, this, &MNIC::SinadConfig);
 
 
     DlgMenuSocketCFG = new MenuSocketCFG::DialogSockCFG(this);
 
-    DlgMenuSinadCFG = new MenuSINADCFG::DialogSinadCFG(this);
+    //DlgMenuSinadCFG = new MenuSINADCFG::DialogSinadCFG(this);
 }
 
 void MNIC::InitLogMenu()
@@ -98,11 +98,11 @@ void MNIC::InitLogMenu()
     connect(LogOFFAction, &QAction::triggered, this, &MNIC::LogOFF);
 }
 
-void MNIC::InitHelpMenu()
-{
-    HelpMenu = new QMenu("Help", this);
-    MenuBar->addMenu(HelpMenu);
-}
+//void MNIC::InitHelpMenu()
+//{
+//    HelpMenu = new QMenu("Help", this);
+//    MenuBar->addMenu(HelpMenu);
+//}
 
 void MNIC::InitCentralWt()
 {
@@ -127,7 +127,7 @@ void MNIC::InitUI()
     InitFileMenu();
     InitConfigMenu();
     InitLogMenu();
-    InitHelpMenu();
+    //InitHelpMenu();
     InitStatusBar();
     InitCentralWt();
 
@@ -142,10 +142,10 @@ void MNIC::InitUI()
     connect(this, &MNIC::NetDisconnected, CentralWt, &CWD::CentralWidget::NetDisconnected);
 }
 
-void MNIC::AddFile()
-{
-    DlgMenuFileSelect->exec();//模态对话框
-}
+//void MNIC::AddFile()
+//{
+//    DlgMenuFileSelect->exec();//模态对话框
+//}
 
 void MNIC::AddArg()
 {
@@ -157,10 +157,10 @@ void MNIC::NetConfig()
     DlgMenuSocketCFG->exec();
 }
 
-void MNIC::SinadConfig()
-{
-    DlgMenuSinadCFG->exec();
-}
+//void MNIC::SinadConfig()
+//{
+//    DlgMenuSinadCFG->exec();
+//}
 
 void MNIC::LogON()
 {

@@ -755,9 +755,10 @@ void TaskChipStatParsing::run()
 							// 如果启用芯片日志记录，写入详细记录
 							if(bPackLogRecord)
 							{
+								qDebug() << "记录0x28包, 时标:" << DCR::DeviceCheckResultGlobal->GetUpPackCount();
 								auto up_mnic_sta = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN);
-								qDebug() << "cnt_dn_empty:" << up_mnic_sta->cnt_dn_empty
-									<< "cnt_dn_full:" << up_mnic_sta->cnt_dn_full;
+								/*qDebug() << "cnt_dn_empty:" << up_mnic_sta->cnt_dn_empty
+									<< "cnt_dn_full:" << up_mnic_sta->cnt_dn_full;*/
 
 								/*WRITE_LOG_UP_CHIP_RECORD(i + 1, j + 1,
 									TCOND::TestCondition::SinadTransfer(Sinad[0]), Vpp[0], Rms[0], Res[0] ? " TRUE" : "FALSE",
@@ -1072,7 +1073,8 @@ void TaskDataSend::run()
 	BindThreadToCPU(2); // 绑定到CPU 2
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 	// 设置当前进程为高优先级
-	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+	//SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+	SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
 
 
 	OPEN_TASK_DATA_SEND_DBG(LogTaskDataSend.log);                                                               // 1. 打开数据发送任务的调试日志文件
@@ -1188,7 +1190,15 @@ void TaskDataSend::run()
 
 			qDebug() << "配置参数Digital:" << 30-DL*1.5 << "PGA:" << DR*1.0-18 << "Playback:" << AL*1.5-126 << "Headset:" << AR*1.0-40 ;
 
-
+			/*****************************在每组参数下发前重置所有芯片的检查结果***********************************************/
+			for (int board = 0; board < 8; ++board) {
+				for (int chip = 0; chip < 4; ++chip) {
+					DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetCheckPacksOfMif(0, 0);
+					DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetTotalValid(0, 0);
+					DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetChipTestStat(DCR::WAITING_FOR_TESTING);
+					//TaskChipStatParsing::chipSeLogError[i][j].clear();
+				}
+			}
 			/**********************新增：在发送0x38数据包前执行检测收0xAO回包代码************************/
 			bool ackReceived = false;
 			for (int tryCount = 0; tryCount < 200 && Loop; ++tryCount)                  // 最多等2秒
@@ -1223,7 +1233,7 @@ void TaskDataSend::run()
 				TaskChipStatParsing::ReadyForSend38.store(false, std::memory_order_release);
 				// 阻塞等待0x28包到来，超时时间略大于8ms，防止丢包
 				bool got28 = TaskChipStatParsing::cvReadyForSend38.wait_for(
-					lk, std::chrono::milliseconds(16), [] {
+					lk, std::chrono::milliseconds(20), [] {
 						return TaskChipStatParsing::ReadyForSend38.load(std::memory_order_acquire);
 					});
 				if (!got28) {
@@ -1231,15 +1241,7 @@ void TaskDataSend::run()
 				}
 				// 收到0x28包后立即发0x38包
 			}
-			/*****************************在每组参数下发前重置所有芯片的检查结果***********************************************/
-		for (int board = 0; board < 8; ++board) {
-			for (int chip = 0; chip < 4; ++chip) {
-				DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetCheckPacksOfMif(0, 0);
-				DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetTotalValid(0, 0);
-				DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetChipTestStat(DCR::WAITING_FOR_TESTING);
-				//TaskChipStatParsing::chipSeLogError[i][j].clear();
-			}
-		}
+
 			TaskChipStatParsing::bPackLogRecord = true;                                                         // 19. 启用芯片包日志记录
 			/*************************************for轮询流控反馈发送方式******************************************************************/
 //			for (int i = 0; i < Node->GetData()->GetSendNum(); )                                                // 20. 发送每个数据包
@@ -1304,7 +1306,7 @@ void TaskDataSend::run()
 			int sendIdx = 0;
 			const int totalNum = Node->GetData()->GetSendNum();
 
-			// 先连续发2个包（不等待）
+			// 先连续发3个包（不等待）
 			for (; sendIdx < 3 && sendIdx < totalNum; ++sendIdx) {
 				FCT::FluidCtrlGlob->FluidFetchSub(0, 512);
 				DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(sendIdx);
@@ -1337,7 +1339,7 @@ void TaskDataSend::run()
 							WRITE_TASK_DATA_SEND_DBG("break\n");
 							break;
 						}
-						continue; // 跳过后续等待
+						//continue; // 跳过后续等待
 					}
 				}
 

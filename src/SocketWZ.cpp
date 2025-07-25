@@ -106,22 +106,19 @@ int SOCKWZ::Socket::Send(char* buf, int len)
     {
         return SOCKET_ERROR;
     }
-    //// 记录开始时间
-    //auto start = std::chrono::high_resolution_clock::now();
+   
+    //int ret = sendto(sock, buf, len, 0, (sockaddr*)&chipAddr, sizeof(sockaddr));
 
-    //// 记录结束时间
-    //auto end = std::chrono::high_resolution_clock::now();
-    //auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-
+    auto t_send_start = std::chrono::steady_clock::now();
     int ret = sendto(sock, buf, len, 0, (sockaddr*)&chipAddr, sizeof(sockaddr));
+    auto t_send_end = std::chrono::steady_clock::now();
+    auto sendto_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_send_end - t_send_start).count();
+    WRITE_TASK_DATA_SEND_DBG("sendto 实际耗时: %lld us\n", sendto_ms);
 
     if (ret == SOCKET_ERROR) {
         int err = WSAGetLastError();
         qDebug() << "[Socket::Send] sendto failed, WSAGetLastError=" << err;
     }
-
-    //// 打印耗时（微秒）
-    //qDebug() << "[Socket::Send] sendto耗时:" << duration << "微秒";
     return ret;
 }
 
@@ -150,6 +147,8 @@ int SOCKWZ::Socket::Recv(char* buf, int len)
         return SOCKET_ERROR;
     }
 
+    auto t_recv_start = std::chrono::steady_clock::now(); // 记录开始时间
+
     // 设置8ms超时
     fd_set readfds;
     FD_ZERO(&readfds);
@@ -163,12 +162,16 @@ int SOCKWZ::Socket::Recv(char* buf, int len)
     int ret = SOCKET_ERROR;
     if (sel > 0 && FD_ISSET(sock, &readfds)) {
         ret = recvfrom(sock, buf, len, 0, (sockaddr*)&chipAddr, &socklen);
+        WRITE_TASK_DATA_SEND_DBG("select=%d, recvfrom ret=%d\n", sel, ret);
         /*qDebug() << "recvfrom ret:" << ret;*/
     }
-    /* else {
-         qDebug() << "no data, timeout or error";
-     }*/
+     else {
+        WRITE_TASK_DATA_SEND_DBG("select=%d, recvfrom ret=%d\n", sel, ret);
+     }
      //UnLock();
+    auto t_recv_end = std::chrono::steady_clock::now(); // 记录结束时间
+    WRITE_TASK_DATA_SEND_DBG("Socket Recv整体耗时: %lld us\n",
+        std::chrono::duration_cast<std::chrono::microseconds>(t_recv_end - t_recv_start).count());
     return ret;
 }
 

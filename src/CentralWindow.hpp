@@ -85,6 +85,7 @@ namespace CWD{
 
         void AddItem(Item);
         void UpdateItem(int, Item);
+        void UpdateItemOnlineStatus(int row, bool online); // 新增：仅更新状态声明
         void SetBoardNum(int n);
 
         virtual int rowCount(const QModelIndex& parent = QModelIndex()) const override;

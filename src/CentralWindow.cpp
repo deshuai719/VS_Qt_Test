@@ -340,6 +340,15 @@ namespace CWD{
         dataChanged(index, index);
     }
 
+    void Model::UpdateItemOnlineStatus(int row, bool online)
+    {
+        if (row > 0 && row <= Items.size()) {
+            Items[row - 1].IfValid = online;
+            QModelIndex index = createIndex(row, 0);
+            dataChanged(index, index);
+        }
+    }
+
     void Model::SetBoardNum(int n)
     {
         BoardNum = n;
@@ -494,7 +503,7 @@ namespace CWD{
     }
 
     /**********************新增：刷新芯片在线状态**************************************/
-    void CentralWidget::UpdateChipOnlineStatus()
+   /* void CentralWidget::UpdateChipOnlineStatus()
     {
         for (int i = 0; i < 8; i++)
         {
@@ -508,6 +517,19 @@ namespace CWD{
                     ),
                     Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetRangeSINAD())
                 ));
+            }
+        }
+        POnlineChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipOnLineNum()));
+    }*/
+
+    void CentralWidget::UpdateChipOnlineStatus()
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                Models[i].UpdateItemOnlineStatus(j + 1,
+                    DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline());
             }
         }
         POnlineChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipOnLineNum()));
@@ -954,35 +976,49 @@ namespace CWD{
         arg(TASKWZ::TaskVersionParsing::Version.VER, 5, 10, QChar(u'0')));
     }
 
-	void CentralWidget::ClockEvent()
-	{
-                                                                            //PTestTime.setText(QString("%1:%2:%3").arg(ClockVal / 3600, 2, 10).arg(ClockVal / 60, 2, 10).arg(ClockVal, 2, 10));
-		PTestTime.setText(QString("%1:%2:%3")
-			.arg(ClockVal / 3600, 2, 10, QChar('0'))
-			.arg((ClockVal / 60) % 60, 2, 10, QChar('0'))
-			.arg(ClockVal % 60, 2, 10, QChar('0')));
-		ClockVal++;
+	//void CentralWidget::ClockEvent()
+	//{
+ //                                                                           //PTestTime.setText(QString("%1:%2:%3").arg(ClockVal / 3600, 2, 10).arg(ClockVal / 60, 2, 10).arg(ClockVal, 2, 10));
+	//	PTestTime.setText(QString("%1:%2:%3")
+	//		.arg(ClockVal / 3600, 2, 10, QChar('0'))
+	//		.arg((ClockVal / 60) % 60, 2, 10, QChar('0'))
+	//		.arg(ClockVal % 60, 2, 10, QChar('0')));
+	//	ClockVal++;
 
-                                                                            // 新增：每秒刷新已测试次数/组数
-		PTestedNum.setText(QString("%1(%2/%3)")
-			.arg(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()+1)    //传输已测试的次数
-			.arg(DCR::DeviceCheckResultGlobal->GetCheckedGroupCount())      //传输已测试的组值
-			.arg(TotalGroupCount));                                         //从文件中读取总的测试组数，只读取一次缓存值，不会每秒重复读取文件
-	}
+ //                                                                           // 新增：每秒刷新已测试次数/组数
+	//	PTestedNum.setText(QString("%1(%2/%3)")
+	//		.arg(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()+1)    //传输已测试的次数
+	//		.arg(DCR::DeviceCheckResultGlobal->GetCheckedGroupCount())      //传输已测试的组值
+	//		.arg(TotalGroupCount));                                         //从文件中读取总的测试组数，只读取一次缓存值，不会每秒重复读取文件
+	//}
+
+    void CentralWidget::ClockEvent()
+    {
+        // 原有计时器逻辑
+        PTestTime.setText(QString("%1:%2:%3")
+            .arg(ClockVal / 3600, 2, 10, QChar('0'))
+            .arg((ClockVal / 60) % 60, 2, 10, QChar('0'))
+            .arg(ClockVal % 60, 2, 10, QChar('0')));
+        ClockVal++;
+
+                                                                                  
+   	PTestedNum.setText(QString("%1(%2/%3)")                               // 新增：每秒刷新已测试次数/组数
+   		.arg(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()+1)    //传输已测试的次数
+   		.arg(DCR::DeviceCheckResultGlobal->GetCheckedGroupCount())        //传输已测试的组值
+   		.arg(TotalGroupCount));                                           //从文件中读取总的测试组数，只读取一次缓存值，不会每秒重复读取文件
+    }
 
 	void CentralWidget::NetConnected()
 	{
 		TimingDetection->start(1000);
 		IfNoticeMNICWhenDisconnect = true;
-		UpdateChipOnlineStatus();// 新增：网口连接时刷新芯片在线状态
-
-
+		//UpdateChipOnlineStatus();// 新增：网口连接时刷新芯片在线状态
 	}
 
     void CentralWidget::NetDisconnected()
     {
         TimingDetection->stop();
-        UpdateChipOnlineStatus(); // 新增：定时刷新芯片在线状态
+        //UpdateChipOnlineStatus(); // 新增：定时刷新芯片在线状态
         ResetModelItemStat();
     }
 

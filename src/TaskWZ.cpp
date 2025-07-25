@@ -464,7 +464,8 @@ void task_rcv::init()
 
 void task_rcv::run()
 {
-	BindThreadToCPU(0); // 绑定到CPU 0
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+	//BindThreadToCPU(0); // 绑定到CPU 0
 
 	OPEN_TASK_RCV_DBG(LogTaskRcv.txt);                               // 1. 打开接收任务的调试日志文件
 
@@ -473,7 +474,11 @@ void task_rcv::run()
 	while (Loop)                                                     // 3. 只要 Loop 为 true，就持续循环接收数据
 	{
 		RcvData Data(800);                                           // 4. 创建一个长度为800字节的接收数据对象 Data
-		int res = SOCKWZ::SockGlob::Recv(Data.GetData().get(), 800); // 5. 从全局Socket接收数据，最多接收800字节，返回实际接收长度res
+		//int res = SOCKWZ::SockGlob::Recv(Data.GetData().get(), 800); // 5. 从全局Socket接收数据，最多接收800字节，返回实际接收长度res
+		auto t0 = std::chrono::steady_clock::now();
+		int res = SOCKWZ::SockGlob::Recv(Data.GetData().get(), 800);
+		auto t1 = std::chrono::steady_clock::now();
+		WRITE_TASK_DATA_SEND_DBG("Recv耗时: %lld us\n", std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
 
 		if (res == SOCKET_ERROR)                                     // 6. 如果接收出错
 		{
@@ -495,11 +500,11 @@ void task_rcv::run()
 			WRITE_TASK_RCV_DBG("Data recived, Len = %d\n", res);     // 14. 记录接收到的数据长度
 		}
 		Data.SetLen(res);                                            // 15. 设置Data对象的实际数据长度
-		static std::chrono::steady_clock::time_point lastEnqueueTime;
-		static bool firstEnqueue = true;
+		/*static std::chrono::steady_clock::time_point lastEnqueueTime;
+		static bool firstEnqueue = true;*/
 		QueueRcv.front(Data);                                        // 16. 将Data对象放入接收队列的队首，供后续任务处理
 
-		auto now = std::chrono::steady_clock::now();
+		/*auto now = std::chrono::steady_clock::now();
 		if (!firstEnqueue) {
 			auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastEnqueueTime).count();
 			WRITE_TASK_DATA_SEND_DBG("[QueueRcv.front] 两次入队间隔(ms): %lld\n", interval);
@@ -507,7 +512,7 @@ void task_rcv::run()
 		else {
 			firstEnqueue = false;
 		}
-		lastEnqueueTime = now;
+		lastEnqueueTime = now;*/
 		Data.Clear();    
 		// 17. 清理Data对象，释放内存
 	}
@@ -589,19 +594,25 @@ void task_dispatch::init()
 
 void task_dispatch::run()
 {
-	BindThreadToCPU(0); // 绑定到CPU 0
+	//BindThreadToCPU(0); // 绑定到CPU 0
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 	OPEN_TASK_DISPATCH_DBG(LogTaskDispatch.txt);                      // 打开调试日志
 	while(Loop)                                                       // 只要 Loop 为 true，就一直循环
 	{
 		RcvData Data;
-		task_rcv::QueueRcv.rear(Data);                                // 从接收队列取出一个数据包（尾部出队）
+		//task_rcv::QueueRcv.rear(Data);                                // 从接收队列取出一个数据包（尾部出队）
+		auto t_rear_start = std::chrono::steady_clock::now();
+		task_rcv::QueueRcv.rear(Data);
+		auto t_rear_end = std::chrono::steady_clock::now();
+		WRITE_TASK_DATA_SEND_DBG("QueueRcv.rear耗时: %lld us\n", std::chrono::duration_cast<std::chrono::microseconds>(t_rear_end - t_rear_start).count());
+
 		if(Data.GetData().get())                                      // 如果数据有效
 		{
 			switch (FRAME_HEAD_STAR(Data.GetData().get())->msgID)     // 读取数据包头部的 msgID 字段，判断数据类型
 			{
 			case 0x28:
 			{
-				static std::chrono::steady_clock::time_point lastStoreTime;
+				/*static std::chrono::steady_clock::time_point lastStoreTime;
 				static bool firstStore = true;
 
 				auto now = std::chrono::steady_clock::now();
@@ -612,10 +623,20 @@ void task_dispatch::run()
 				else {
 					firstStore = false;
 				}
-				lastStoreTime = now;
+				lastStoreTime = now;*/
 
-				FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac);            // 更新流控缓存
-				TaskChipStatParsing::QueueChipStatParsing.front(Data);// 如果是 0x28 类型的数据包，放入芯片状态解析队列
+				//FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac);            // 更新流控缓存
+				//TaskChipStatParsing::QueueChipStatParsing.front(Data);// 如果是 0x28 类型的数据包，放入芯片状态解析队列
+
+				auto t_store_start = std::chrono::steady_clock::now();
+				FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac); // 更新流控缓存
+				auto t_store_end = std::chrono::steady_clock::now();
+				WRITE_TASK_DATA_SEND_DBG("FluidStore耗时: %lld us\n", std::chrono::duration_cast<std::chrono::microseconds>(t_store_end - t_store_start).count());
+
+				auto t_queue_start = std::chrono::steady_clock::now();
+				TaskChipStatParsing::QueueChipStatParsing.front(Data); // 放入芯片状态解析队列
+				auto t_queue_end = std::chrono::steady_clock::now();
+				WRITE_TASK_DATA_SEND_DBG("QueueChipStatParsing.front耗时: %lld us\n", std::chrono::duration_cast<std::chrono::microseconds>(t_queue_end - t_queue_start).count());
 				break;
 				/*新增：分发过程中进行ram_id的判断*/
 			}
@@ -667,10 +688,11 @@ void TaskChipStatParsing::init()
 std::condition_variable TaskChipStatParsing::cvReadyForSend38;
 std::mutex TaskChipStatParsing::mtxReadyForSend38; 
 std::chrono::steady_clock::time_point TaskChipStatParsing::last28Time;
+std::atomic<int> resendCounter{ 0 };
 
 void TaskChipStatParsing::run()
 {
-	BindThreadToCPU(0); // 绑定到CPU 0
+	//BindThreadToCPU(0); // 绑定到CPU 0
 	OPEN_TASK_0X28_PARSING(LogTask0X28Parsing.txt);
 	while(Loop)
 	{
@@ -704,10 +726,44 @@ void TaskChipStatParsing::run()
 				DCR::DeviceCheckResultGlobal->SetTemperatureEnv(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->ds18b20_16b); // 更新环境温度
 				DCR::DeviceCheckResultGlobal->SetUpPackCount(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->timeStamp_8ms);  // 更新上行包计数
 				// 如果启用包日志记录，写入一条记录
+				/**********************************启用包日志记录的情况下获取记录时标，设置重发信号标志*****************************************************/
+				//auto up_mnic_sta = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN);
+				
+				static int cnt_dn_empty_start = -1;
+				static int cnt_dn_full_start = -1;
+				static bool lastPackLogRecord = false;
+				// 建议将重发计数器声明为静态全局或类静态成员
+				static std::atomic<int> resendCounter{ 0 };
 				if(bPackLogRecord)
 				{
-					ASYNC_WRITE_LOG_UP_PACK_RECORD(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount(), DCR::DeviceCheckResultGlobal->GetUpPackCount());
+					ASYNC_WRITE_LOG_UP_PACK_RECORD(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()+1, DCR::DeviceCheckResultGlobal->GetUpPackCount());
+					WRITE_TASK_DATA_SEND_DBG("记录0x28包, 时标: %d\n", DCR::DeviceCheckResultGlobal->GetUpPackCount());
+					auto up_mnic_sta = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN);
+					qDebug() << "cnt_dn_empty:" << up_mnic_sta->cnt_dn_empty
+									<< "cnt_dn_full:" << up_mnic_sta->cnt_dn_full;
+
+					// 新增：计数器变化时递增重发计数器
+					int cnt_dn_empty_now = up_mnic_sta->cnt_dn_empty;
+					int cnt_dn_full_now = up_mnic_sta->cnt_dn_full;
+
+					// 检测bPackLogRecord从false变为true
+					if (!lastPackLogRecord) {
+						// 刚开启时同步计数器，避免误判
+						cnt_dn_empty_start = cnt_dn_empty_now;
+						cnt_dn_full_start = cnt_dn_full_now;
+					}
+					else {
+						// 正常比较
+						if (cnt_dn_empty_now != cnt_dn_empty_start ||
+							cnt_dn_full_now != cnt_dn_full_start) {
+							resendCounter.fetch_add(1, std::memory_order_release);
+							WRITE_TASK_DATA_SEND_DBG("计数器变化，重发计数器+1\n");
+							cnt_dn_empty_start = cnt_dn_empty_now;
+							cnt_dn_full_start = cnt_dn_full_now;
+						}
+					}
 				}
+				lastPackLogRecord = bPackLogRecord;
 				// 遍历所有板卡和芯片
 				for(int i = 0; i < 8; i++)
 				{
@@ -755,10 +811,9 @@ void TaskChipStatParsing::run()
 							// 如果启用芯片日志记录，写入详细记录
 							if(bPackLogRecord)
 							{
-								qDebug() << "记录0x28包, 时标:" << DCR::DeviceCheckResultGlobal->GetUpPackCount();
-								auto up_mnic_sta = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN);
-								/*qDebug() << "cnt_dn_empty:" << up_mnic_sta->cnt_dn_empty
-									<< "cnt_dn_full:" << up_mnic_sta->cnt_dn_full;*/
+								//qDebug() << "记录0x28包, 时标:" << DCR::DeviceCheckResultGlobal->GetUpPackCount();
+								
+								
 
 								/*WRITE_LOG_UP_CHIP_RECORD(i + 1, j + 1,
 									TCOND::TestCondition::SinadTransfer(Sinad[0]), Vpp[0], Rms[0], Res[0] ? " TRUE" : "FALSE",
@@ -874,10 +929,22 @@ void TaskTestStatistics::init()
 {
 	Loop = true;
 }
+/******************************高精度时钟定义*****************************************************/
+void HighPrecisionWait(double waitMs)
+{
+	LARGE_INTEGER freq, start, now;
+	QueryPerformanceFrequency(&freq);
+	QueryPerformanceCounter(&start);
+
+	double waitCounts = waitMs * freq.QuadPart / 1000.0;
+	do {
+		QueryPerformanceCounter(&now);
+	} while ((now.QuadPart - start.QuadPart) < waitCounts);
+}
 
 void TaskTestStatistics::run()
 {
-	BindThreadToCPU(0); // 绑定到CPU 0
+	//BindThreadToCPU(0); // 绑定到CPU 0
 	OPEN_TASK_STATISTICS_DBG(LogTaskStatistics.txt);                                                                   // 打开调试日志
 	WRITE_TASK_STATISTICS_DBG("TaskTestStatistics::run()\n");                                                          // 写入调试日志
 	while (Loop)
@@ -968,7 +1035,7 @@ void TaskDataConstruct::init()
 
 void TaskDataConstruct::run()                                                                               // 任务主循环，处理文件链表中的每个节点
 {
-	BindThreadToCPU(0); // 绑定到CPU 0
+	//BindThreadToCPU(0); // 绑定到CPU 0
 	OPEN_TASK_CONSTRUCT_DBG(LogTaskConstruct.txt);
 	for(auto it = FileList.GetHead(); it != nullptr; it = it->GetNext())                                    // 遍历文件链表的每个节点
 	{
@@ -1014,7 +1081,7 @@ void TaskDataConstructARG::init(){}
 
 void TaskDataConstructARG::run()
 {
-	BindThreadToCPU(0); // 绑定到CPU 0
+	//BindThreadToCPU(0); // 绑定到CPU 0
 
 	OPEN_TASK_CONSTRUCT_ARG_DBG(LogTaskConstructArg.txt);
 	// 遍历参数链表 ArgList 的每个节点
@@ -1070,11 +1137,11 @@ void TaskDataSend::init()
 
 void TaskDataSend::run()
 {
-	BindThreadToCPU(2); // 绑定到CPU 2
-	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
-	// 设置当前进程为高优先级
-	//SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
-	SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
+	//BindThreadToCPU(2); // 绑定到CPU 2
+	//SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+	//// 设置当前进程为高优先级
+	////SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+	//SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
 
 
 	OPEN_TASK_DATA_SEND_DBG(LogTaskDataSend.log);                                                               // 1. 打开数据发送任务的调试日志文件
@@ -1115,7 +1182,8 @@ void TaskDataSend::run()
 
 			WRITE_LOG_UP_RECORD("[第%03d组参数下发开始]\n", i + 1);                                              //  记录本组参数下发开始
 			WRITE_LOG_SE_RECORD("\n[第%03d次参数下发开始]\n", i + 1);
-		
+
+		/**********************************************记录配置参数与条件******************************************************************************/
 			WRITE_LOG_UP_RECORD("第%d组参数与条件：\n", i + 1);                                                      //记录本组下发第几组条件和具体条件内容
 			WRITE_LOG_SE_RECORD("第%d组参数与条件：\n", i + 1);
 			WRITE_TASK_DATA_SEND_DBG("第%d组参数与条件：\n", i + 1);
@@ -1196,9 +1264,12 @@ void TaskDataSend::run()
 					DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetCheckPacksOfMif(0, 0);
 					DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetTotalValid(0, 0);
 					DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetChipTestStat(DCR::WAITING_FOR_TESTING);
+					TaskChipStatParsing::chipSeLogStat[board][chip].clear();
+					TaskChipStatParsing::chipSeLogError[board][chip].clear();
 					//TaskChipStatParsing::chipSeLogError[i][j].clear();
 				}
 			}
+			TaskChipStatParsing::ChipLogBuffer.clear();
 			/**********************新增：在发送0x38数据包前执行检测收0xAO回包代码************************/
 			bool ackReceived = false;
 			for (int tryCount = 0; tryCount < 200 && Loop; ++tryCount)                  // 最多等2秒
@@ -1243,7 +1314,7 @@ void TaskDataSend::run()
 			}
 
 			TaskChipStatParsing::bPackLogRecord = true;                                                         // 19. 启用芯片包日志记录
-			/*************************************for轮询流控反馈发送方式******************************************************************/
+			/*************************************for轮询流控反馈直接发送方式******************************************************************/
 //			for (int i = 0; i < Node->GetData()->GetSendNum(); )                                                // 20. 发送每个数据包
 //			{
 //					/*auto waitStart = std::chrono::steady_clock::now();
@@ -1302,6 +1373,7 @@ void TaskDataSend::run()
 
 
 			/*************************备用方案：使用流控与8ms定时结合的方式进行发包***************************************/
+			
 			timeBeginPeriod(1);
 			int sendIdx = 0;
 			const int totalNum = Node->GetData()->GetSendNum();
@@ -1314,19 +1386,43 @@ void TaskDataSend::run()
 			}
 
 			// 后续每发1包，按流控空间决定等待时间
+			int lastFluidVal = -1;
+			int fluidValStableCount = 0;
+			bool force8ms = false;
 			while (sendIdx < totalNum)
 			{
+				int curPriority = GetThreadPriority(GetCurrentThread());
+				WRITE_TASK_DATA_SEND_DBG("当前线程优先级: %d\n", curPriority);
+
+
 				int fluidVal = FCT::FluidCtrlGlob->FluidLoad(0);
+
+				if (fluidVal == lastFluidVal) {
+					fluidValStableCount++;
+					if (fluidValStableCount >= 10 && !force8ms) {
+						force8ms = true;
+						WRITE_TASK_DATA_SEND_DBG("流控空间连续10次未变，强制8ms发包\n");
+					}
+				}
+				else {
+					fluidValStableCount = 1;
+					lastFluidVal = fluidVal;
+					if (force8ms) {
+						force8ms = false;
+						WRITE_TASK_DATA_SEND_DBG("流控空间已更新，恢复原有发包逻辑\n");
+					}
+				}
 
 				// 新增：如果流控空间大于等于1536，直接发包，跳过等待
 				if (fluidVal >= 1536)
 				{  // 精准等待2ms
-					auto t_start = std::chrono::steady_clock::now();
-					while (std::chrono::duration_cast<std::chrono::milliseconds>(
-						std::chrono::steady_clock::now() - t_start).count() < 2)
-					{
-						// busy wait
-					}
+					//auto t_start = std::chrono::steady_clock::now();
+					//while (std::chrono::duration_cast<std::chrono::milliseconds>(
+					//	std::chrono::steady_clock::now() - t_start).count() < 2)
+					//{
+					//	// busy wait
+					//}
+					HighPrecisionWait(2);
 
 					int oldVal = FCT::FluidCtrlGlob->FluidFetchSub(0, 512);
 					if (oldVal >= 512)
@@ -1344,23 +1440,71 @@ void TaskDataSend::run()
 				}
 
 				int waitMs = 8;
-				if (fluidVal > 1024)
-					waitMs = 7;
-				else if (fluidVal < 768)
-					waitMs = 9;
+				if (!force8ms) {
+					if (fluidVal > 1024)
+						waitMs = 7;
+					else if (fluidVal < 768)
+						waitMs = 9;
+				}
 
 
 				auto t_start = std::chrono::steady_clock::now();
-				while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t_start).count() < waitMs) {
-					// busy wait
-				}
+				//while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t_start).count() < waitMs) {
+				//	// busy wait
+				//}
+				HighPrecisionWait(waitMs);
+				auto t_end = std::chrono::steady_clock::now();
+				auto busywait_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
+				WRITE_TASK_DATA_SEND_DBG("busy wait 期望:%d ms, 实际:%lld us\n", waitMs, busywait_ms);
 
+				/*DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(sendIdx);
+				SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());*/
+				auto t_get_start = std::chrono::steady_clock::now();
 				DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(sendIdx);
+				auto t_get_end = std::chrono::steady_clock::now();
+				WRITE_TASK_DATA_SEND_DBG("GetPackInfo耗时: %lld us\n", std::chrono::duration_cast<std::chrono::microseconds>(t_get_end - t_get_start).count());
+
 				SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());
+				auto t_send_end = std::chrono::steady_clock::now();
+				WRITE_TASK_DATA_SEND_DBG("Send耗时: %lld us\n\n", std::chrono::duration_cast<std::chrono::microseconds>(t_send_end - t_get_end).count());
 				++sendIdx;
 				if (!Loop) {
 					WRITE_TASK_DATA_SEND_DBG("break\n");
 					break;
+				}
+				/********************************检测数据：应用重发机制清空计数器******************************************************/
+				
+				// 检查计数器是否变化
+				if (resendCounter.load(std::memory_order_acquire) > 0)
+				{
+					int req = resendCounter.fetch_sub(1, std::memory_order_acq_rel);
+					if (req > 0)
+					{
+						WRITE_TASK_DATA_SEND_DBG("检测到重发请求，已处理\n");
+						TaskChipStatParsing::bPackLogRecord = false;
+						// 清空统计量和日志
+						for (int board = 0; board < 8; ++board) {
+							for (int chip = 0; chip < 4; ++chip) {
+								DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetCheckPacksOfMif(0, 0);
+								DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetTotalValid(0, 0);
+								DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetChipTestStat(DCR::WAITING_FOR_TESTING);
+								TaskChipStatParsing::chipSeLogStat[board][chip].clear();
+								TaskChipStatParsing::chipSeLogError[board][chip].clear();
+							}
+						}
+						TaskChipStatParsing::ChipLogBuffer.clear();
+						std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+						// 立即清零重发计数器，防止后续误触发
+						resendCounter.store(0, std::memory_order_release);
+						TaskChipStatParsing::bPackLogRecord = true;
+						// 清空sendIdx，重新发送3包
+						sendIdx = 0;
+						for (; sendIdx < 3 && sendIdx < totalNum; ++sendIdx) {
+							FCT::FluidCtrlGlob->FluidFetchSub(0, 512);
+							DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(sendIdx);
+							SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());
+						}
+					}
 				}
 			}
 			
@@ -1505,7 +1649,7 @@ void TaskVersionParsing::init()
 
 void TaskVersionParsing::run()
 {
-	BindThreadToCPU(0);// 绑定到CPU 0
+	//BindThreadToCPU(0);// 绑定到CPU 0
 
 	OPEN_TASK_VERSION_GET_DBG(LogTaskVersionGet.txt);                                                                                      // 1. 打开版本号获取任务的调试日志文件
 

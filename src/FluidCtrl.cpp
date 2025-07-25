@@ -32,7 +32,7 @@ namespace FCT{
 
     void FluidCtrl::FluidStore(int Index, FLUID_TYPE v)                                      //设置指定通道（Index）的流控缓冲区的值为 v。
     {
-        static std::chrono::steady_clock::time_point lastUpdate;
+       /* static std::chrono::steady_clock::time_point lastUpdate;
         static bool firstUpdate = true;
 
         auto now = std::chrono::steady_clock::now();
@@ -43,9 +43,15 @@ namespace FCT{
         else {
             firstUpdate = false;
         }
-        lastUpdate = now;
+        lastUpdate = now;*/
 
+        //FluidCtrlBuffer[Index].store(v);
+
+        auto t_store_start = std::chrono::steady_clock::now();
         FluidCtrlBuffer[Index].store(v);
+        auto t_store_end = std::chrono::steady_clock::now();
+        WRITE_TASK_DATA_SEND_DBG("FluidCtrlBuffer[%d].store耗时: %lld us\n", Index,
+            std::chrono::duration_cast<std::chrono::microseconds>(t_store_end - t_store_start).count());
        
     }
 

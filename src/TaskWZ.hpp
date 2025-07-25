@@ -190,7 +190,7 @@ public:
 #define CREATE_TASK_RCV		TASKWZ::worker_manager::create(new TASKWZ::task_rcv(), TASKWZ::worker_type::EXECUTE_THREAD);
 
 //
-
+extern std::atomic<int> resendCounter;
 class task_dispatch :public task_wz {
 public:
 	task_dispatch();

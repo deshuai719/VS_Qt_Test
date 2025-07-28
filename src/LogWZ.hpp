@@ -206,6 +206,12 @@ extern bool g_logOn;//定义全局日志开关变量
 #if defined TASK_DATA_SEND_DBG
 
 #define OPEN_TASK_DATA_SEND_DBG(path)   LWZ::Log::LogInstance->Init(LOG_TASK_DATA_SEND_INDEX, QString(PRE_FILE_DBG + #path).toStdString().c_str())
+//#define OPEN_TASK_DATA_SEND_DBG(path) \
+//    do { \
+//        QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss"); \
+//        QString logPath = QString("%1LogTaskDataSend_%2.log").arg(PRE_FILE_DBG).arg(datetime); \
+//        LWZ::Log::LogInstance->Init(LOG_TASK_DATA_SEND_INDEX, logPath.toStdString().c_str()); \
+//    } while(0)
 #define WRITE_TASK_DATA_SEND_DBG(fmt, ...)  LWZ::Log::LogInstance->Write(LOG_TASK_DATA_SEND_INDEX, fmt, __VA_ARGS__)
 #define CLOSE_TASK_DATA_SEND_DBG()  LWZ::Log::LogInstance->Close(LOG_TASK_DATA_SEND_INDEX)
 

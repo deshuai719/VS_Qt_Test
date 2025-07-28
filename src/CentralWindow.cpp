@@ -4,6 +4,8 @@
 #include <QUrl>
 #include <QFileInfo>
 #include <QMessageBox>
+#include <QDateTime>
+#include <QString>
 
 
 namespace CWD{
@@ -847,7 +849,15 @@ namespace CWD{
 
             StatOfBtnStart = true;                                                                      // 状态切换为“未测试”
             BtnStartTest.setText("开始测试");                                                            // 按钮文本切换为“开始测试”
-            LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", "./LOG/LogUpRecordProcessed.log"); // 处理日志文件（原始日志转为处理后日志）
+
+            // 生成带日期时间后缀的输出文件名
+            QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+            QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(datetime);
+
+            // 调用日志处理
+            LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", processedLogPath.toStdString());
+
+            //LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", "./LOG/LogUpRecordProcessed.log"); // 处理日志文件（原始日志转为处理后日志）
             lock.unlock();                                                                              // 解锁
         }
         WRITE_CENTRAL_WIDGET_DBG("StartTest(), End\n");                                                 // 写调试日志，记录离开StartTest函数
@@ -952,7 +962,15 @@ namespace CWD{
             CREATE_TASK_END(stack_end);                                                                                   // 批量关闭任务
             StatOfBtnStart = true;                                                                                        // 状态切换为“未测试”
             BtnStartTest.setText("开始测试");                                                                             // 按钮文本切换为“开始测试”
-            LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", "./LOG/LogUpRecordProcessed.log");                   // 处理日志文件
+
+            // 生成带日期时间后缀的输出文件名
+            QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+            QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(datetime);
+
+            // 调用日志处理
+            LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", processedLogPath.toStdString());
+
+            //LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", "./LOG/LogUpRecordProcessed.log");                   // 处理日志文件
             lock.unlock();                                                                                                // 解锁
         }
         break;

@@ -161,12 +161,16 @@ int SOCKWZ::Socket::Recv(char* buf, int len)
     //qDebug() << "select returned:" << sel;
     int ret = SOCKET_ERROR;
     if (sel > 0 && FD_ISSET(sock, &readfds)) {
+        auto t_recv_start = std::chrono::steady_clock::now(); // 记录开始时间
         ret = recvfrom(sock, buf, len, 0, (sockaddr*)&chipAddr, &socklen);
-        WRITE_TASK_DATA_SEND_DBG("select=%d, recvfrom ret=%d\n", sel, ret);
+        auto t_recv_end = std::chrono::steady_clock::now(); // 记录结束时间
+        WRITE_TASK_DATA_SEND_DBG("Socket Recv发送耗时: %lld us\n",
+            std::chrono::duration_cast<std::chrono::microseconds>(t_recv_end - t_recv_start).count());
+        WRITE_TASK_DATA_SEND_DBG("select1=%d, recvfrom ret=%d\n", sel, ret);
         /*qDebug() << "recvfrom ret:" << ret;*/
     }
      else {
-        WRITE_TASK_DATA_SEND_DBG("select=%d, recvfrom ret=%d\n", sel, ret);
+        WRITE_TASK_DATA_SEND_DBG("select0=%d, recvfrom ret=%d\n", sel, ret);
      }
      //UnLock();
     auto t_recv_end = std::chrono::steady_clock::now(); // 记录结束时间

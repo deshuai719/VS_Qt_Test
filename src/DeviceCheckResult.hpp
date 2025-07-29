@@ -6,7 +6,7 @@
 namespace DCR{
 
     #define GET_BIT_U32(v, bit) (((v) >> bit) & ((unsigned int)0x1))
-    #define SINAD_VALID_VALUE_MIN 50//sinad最小有效值
+    #define SINAD_VALID_VALUE_MIN 40//sinad最小有效值
 
     enum ChipTestStat{//在一次测试中芯片的检测状态
         WAITING_FOR_TESTING,//等待检测

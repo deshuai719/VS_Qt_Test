@@ -132,7 +132,8 @@ namespace CWD{
         QLabel ChipType;
         QLabel TemperatureInner;
         QLabel TemperatureEnv;
-        QString currentLogSePath;
+        QString currentLogSePath; 
+        QString testSessionTime; // 新增：测试会话时间戳
         
         Model Models[8];//8个
         Delegate Delegates[8];//8个

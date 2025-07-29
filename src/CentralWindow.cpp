@@ -807,8 +807,13 @@ namespace CWD{
 
         if (StatOfBtnStart)                                                                                                         // 如果当前是“开始测试”状态（按钮未被按下，准备开始测试）
         {
-            QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
-            currentLogSePath = QCoreApplication::applicationDirPath() + "/LOG/LogSeRecord_" + datetime + ".log";
+            // 只在测试开始时生成一次时间戳
+            testSessionTime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+            currentLogSePath = QCoreApplication::applicationDirPath() + "/LOG/LogSeRecord_" + testSessionTime + ".log";
+            LWZ::Log::LogInstance->Init(LOG_SE_RECORD_INDEX, currentLogSePath.toStdString().c_str());
+
+           /* QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+            currentLogSePath = QCoreApplication::applicationDirPath() + "/LOG/LogSeRecord_" + datetime + ".log";*/
             // 用 currentLogSePath 初始化日志
             LWZ::Log::LogInstance->Init(LOG_SE_RECORD_INDEX, currentLogSePath.toStdString().c_str());//新增：生成并记录日志文件名
 
@@ -850,12 +855,16 @@ namespace CWD{
             StatOfBtnStart = true;                                                                      // 状态切换为“未测试”
             BtnStartTest.setText("开始测试");                                                            // 按钮文本切换为“开始测试”
 
-            // 生成带日期时间后缀的输出文件名
-            QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
-            QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(datetime);
-
-            // 调用日志处理
+            // 结束时用同一个时间戳生成处理后日志名
+            QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(testSessionTime);
             LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", processedLogPath.toStdString());
+           
+            //// 生成带日期时间后缀的输出文件名
+            //QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+            //QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(datetime);
+
+            //// 调用日志处理
+            //LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", processedLogPath.toStdString());
 
             //LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", "./LOG/LogUpRecordProcessed.log"); // 处理日志文件（原始日志转为处理后日志）
             lock.unlock();                                                                              // 解锁
@@ -908,6 +917,7 @@ namespace CWD{
                                 DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()),                                  // 满足/总次数
                             Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetRangeSINAD())                 // SINAD范围
                         ));
+                        DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetRangeSINAD(TCOND::Range(0, 0));
                         //DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetCheckPacksOfMif(0,0);                     // MIF包计数清零
                         //DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetChipTestStat(DCR::WAITING_FOR_TESTING); // 状态设为等待测试
                     }
@@ -929,6 +939,7 @@ namespace CWD{
                                 DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1),                              // 满足/总次数+1
                             Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetRangeSINAD())                 // SINAD范围
                         ));
+						DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetRangeSINAD(TCOND::Range(0, 0));//新增：SINAD范围清零
                     }
                 }
                 //PTestedNum.setText(QString("%1(%2/%3)")
@@ -964,11 +975,14 @@ namespace CWD{
             BtnStartTest.setText("开始测试");                                                                             // 按钮文本切换为“开始测试”
 
             // 生成带日期时间后缀的输出文件名
-            QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
-            QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(datetime);
-
-            // 调用日志处理
+           /* QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+            QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(datetime);*/
+            // 结束时用同一个时间戳生成处理后日志名
+            QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(testSessionTime);
             LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", processedLogPath.toStdString());
+
+            //// 调用日志处理
+            //LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", processedLogPath.toStdString());
 
             //LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", "./LOG/LogUpRecordProcessed.log");                   // 处理日志文件
             lock.unlock();                                                                                                // 解锁

@@ -94,7 +94,7 @@ namespace DCR{
         void SetChipSatisfiedNum(int chipSatisfiedNum);
         void SetChipUnSatisfiedNum(int chipUnSatisfiedNum);
         void SetTemperatureInner(unsigned short t);
-        void SetTemperatureEnv(unsigned short t);
+        void SetTemperatureEnv( short t);
         void SetUpPackCount(unsigned short count);
         int GetCheckCount() const;
         int GetCheckCompletedCount() const;
@@ -113,7 +113,7 @@ namespace DCR{
         void ChipUnSatisfiedNumInc();
         void ChipUnSatisfiedNumDec();
         double TemperatureTransferInner(unsigned short data);
-        double TemperatureTransferEnv(unsigned short data);
+        double TemperatureTransferEnv( short data);
         int GetUpPackCount() const;
     };
 

@@ -339,7 +339,7 @@ namespace DCR{
         CheckedGroupCount = 0;
         ChipOnLineNum = 0;
         ChipSatisfiedNum = BoardNum * ChipNum;
-        // ChipSatisfiedNum = 0;
+        //ChipSatisfiedNum = 0;
         ChipUnSatisfiedNum = 0;
     }
 
@@ -354,7 +354,7 @@ namespace DCR{
         }
         ChipSatisfiedNum = BoardNum * ChipNum;
         CheckedGroupCount = 0;
-        // ChipSatisfiedNum = 0;
+        //ChipSatisfiedNum = 0;
         ChipUnSatisfiedNum = 0;
     }
 
@@ -413,7 +413,7 @@ namespace DCR{
         TemperatureInner = TemperatureTransferInner(Temp);
     }
 
-    void DeviceCheckResult::SetTemperatureEnv(unsigned short Temp)
+    void DeviceCheckResult::SetTemperatureEnv( short Temp)
     {
         TemperatureEnviroment = TemperatureTransferEnv(Temp);
     }
@@ -515,9 +515,11 @@ namespace DCR{
         return t;
     }
 
-    double DeviceCheckResult::TemperatureTransferEnv(unsigned short data)
+    //修改：DS18B20的数据处理，低4位为小数部分，中间7位为整数部分，高5位为符号位，00000为正，11111为负，正温度十六位乘以0.0625，负温度取反加一后乘以0.0625。
+    double DeviceCheckResult::TemperatureTransferEnv( short data)
     {
         return data / 16;
+
     }
 
     int DeviceCheckResult::GetUpPackCount() const

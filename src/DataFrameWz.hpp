@@ -65,7 +65,7 @@ namespace DF{
         unsigned short  timeStamp_8ms   ;   // counter of 8ms, 512 points sample    // 每次加1的递增数，用作时标
         unsigned short  free_codec_dac  ;   // freew of codec dac, 64KHz, unit is 16-bit    // 下发64K音频的流控反馈
         unsigned int  mnic_online     ;   // 1, online, 0, offline, [3:0], board 0 mnic 0~3, [7:4], board 1 mnic 0~3, ..., [31:28], board 7 mnic 0~3
-        unsigned short  ds18b20_16b     ;   // temperature sensor
+        short  ds18b20_16b     ;   // temperature sensor
         unsigned short  fpga_heat       ;   // fpga inner temperature sensor
         unsigned short  dbg_dn_aic      ;   // debug counter of dn_ch0_aic packet if packet counter is not continuous
         unsigned char cnt_dn_empty;

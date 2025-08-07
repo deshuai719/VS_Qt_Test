@@ -32,27 +32,24 @@ namespace FCT{
 
     void FluidCtrl::FluidStore(int Index, FLUID_TYPE v)                                      //设置指定通道（Index）的流控缓冲区的值为 v。
     {
-       /* static std::chrono::steady_clock::time_point lastUpdate;
-        static bool firstUpdate = true;
-
-        auto now = std::chrono::steady_clock::now();
-        if (!firstUpdate) {
-            auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdate).count();
-            WRITE_TASK_DATA_SEND_DBG("流控更新间隔: %lld ms\n", interval);
-        }
-        else {
-            firstUpdate = false;
-        }
-        lastUpdate = now;*/
-
-        //FluidCtrlBuffer[Index].store(v);
-
-        auto t_store_start = std::chrono::steady_clock::now();
+        // 优化：移除频繁的性能测量，减少开销
+        static int store_count = 0;
+        store_count++;
+        
+        // 只在每10000次操作时测量一次性能
+        bool should_measure = (store_count % 10000 == 0);
+        
+        auto t_store_start = should_measure ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
         FluidCtrlBuffer[Index].store(v);
-        auto t_store_end = std::chrono::steady_clock::now();
-        WRITE_TASK_DATA_SEND_DBG("FluidCtrlBuffer[%d].store耗时: %lld us\n", Index,
-            std::chrono::duration_cast<std::chrono::microseconds>(t_store_end - t_store_start).count());
-       
+        auto t_store_end = should_measure ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
+        
+        if (should_measure) {
+            auto store_duration = std::chrono::duration_cast<std::chrono::microseconds>(t_store_end - t_store_start).count();
+            // 只在耗时异常时记录日志（超过10us）
+            if (store_duration > 10) {
+                WRITE_TASK_DATA_SEND_DBG("FluidCtrlBuffer[%d].store异常耗时: %lld us (第%d次)\n", Index, store_duration, store_count);
+            }
+        }
     }
 
    /* void FluidCtrl::FluidStore(int Index, FLUID_TYPE v)

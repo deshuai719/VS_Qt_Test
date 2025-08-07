@@ -57,9 +57,16 @@ bool SOCKWZ::Socket::Connect(QString localip,
             UnLock();
             return false;
         }
-        //u_long iMode = 1;
+        u_long iMode = 1;
         //u_long iMode = 0;                                                        //直接设置为阻塞模式
-        //ioctlsocket(sock, FIONBIO, &iMode);                                      // 设置 socket 为非阻塞模式
+        ioctlsocket(sock, FIONBIO, &iMode);                                      // 设置 socket 为非阻塞模式
+
+        // 新增：设置socket缓冲区大小优化
+        int recvBufSize = 1024 * 1024; // 1MB接收缓冲区
+        setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&recvBufSize, sizeof(recvBufSize));
+        
+        int sendBufSize = 512 * 1024; // 512KB发送缓冲区  
+        setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&sendBufSize, sizeof(sendBufSize));
 
         localPort = localport.toUShort();                                        // 将本地端口字符串转为无符号短整型
         localAddr.sin_family = AF_INET;                                          // 地址族设为 IPv4
@@ -106,8 +113,18 @@ int SOCKWZ::Socket::Send(char* buf, int len)
     {
         return SOCKET_ERROR;
     }
-   
-    //int ret = sendto(sock, buf, len, 0, (sockaddr*)&chipAddr, sizeof(sockaddr));
+
+    // 统计两次sendto调用的间隔时间
+    static std::chrono::steady_clock::time_point last_send_time;
+    auto now = std::chrono::steady_clock::now();
+    if (last_send_time.time_since_epoch().count() != 0) {
+        auto interval = std::chrono::duration_cast<std::chrono::microseconds>(now - last_send_time).count();
+        WRITE_TASK_DATA_SEND_DBG("sendto 间隔时间: %lld us\n", interval);
+       /* if (interval > 20000) {
+            WRITE_TASK_DATA_SEND_DBG("!!!sendto 间隔时间超20ms: %lld us\n", interval);
+        }*/
+    }
+    last_send_time = now;
 
     auto t_send_start = std::chrono::steady_clock::now();
     int ret = sendto(sock, buf, len, 0, (sockaddr*)&chipAddr, sizeof(sockaddr));
@@ -157,25 +174,50 @@ int SOCKWZ::Socket::Recv(char* buf, int len)
     timeout.tv_sec = 0;
     timeout.tv_usec = 8000; // 8ms
 
+    auto t_select_start = std::chrono::steady_clock::now(); // select前时间
     int sel = select(0, &readfds, nullptr, nullptr, &timeout);
-    //qDebug() << "select returned:" << sel;
+    auto t_select_end = std::chrono::steady_clock::now();   // select后时间
+    auto select_cost = std::chrono::duration_cast<std::chrono::microseconds>(t_select_end - t_select_start).count();
+    //WRITE_TASK_DATA_SEND_DBG("select调用耗时: %lld us\n", select_cost);
+    if (select_cost > 20000) {
+        WRITE_TASK_DATA_SEND_DBG("!!!select调用耗时超20ms: %lld us\n", select_cost);
+    }
+
     int ret = SOCKET_ERROR;
+    auto t_if_check = std::chrono::steady_clock::now(); // select结束到if判断前时间
+    //auto select_to_if_cost = std::chrono::duration_cast<std::chrono::microseconds>(t_if_check - t_select_end).count();
+    ////WRITE_TASK_DATA_SEND_DBG("select到if判断间隔: %lld us\n", select_to_if_cost);
+    //if (select_to_if_cost > 20000) {
+    //    WRITE_TASK_DATA_SEND_DBG("!!!select到if判断间隔超20ms: %lld us\n", select_to_if_cost);
+    //}
+
     if (sel > 0 && FD_ISSET(sock, &readfds)) {
-        auto t_recv_start = std::chrono::steady_clock::now(); // 记录开始时间
+
+        auto t_recvfrom_start = std::chrono::steady_clock::now(); // 记录开始时间
+        auto select_to_if_cost = std::chrono::duration_cast<std::chrono::microseconds>(t_recvfrom_start - t_if_check).count();
+        if (select_to_if_cost > 20000) {
+            WRITE_TASK_DATA_SEND_DBG("!!!select结束到进入if判断间隔超20ms: %lld us\n", select_to_if_cost);
+        }
         ret = recvfrom(sock, buf, len, 0, (sockaddr*)&chipAddr, &socklen);
-        auto t_recv_end = std::chrono::steady_clock::now(); // 记录结束时间
-        WRITE_TASK_DATA_SEND_DBG("Socket Recv发送耗时: %lld us\n",
-            std::chrono::duration_cast<std::chrono::microseconds>(t_recv_end - t_recv_start).count());
+        auto t_recvfrom_end = std::chrono::steady_clock::now(); // 记录结束时间
+        auto recvfrom_cost = std::chrono::duration_cast<std::chrono::microseconds>(t_recvfrom_end - t_recvfrom_start).count();
+        //WRITE_TASK_DATA_SEND_DBG("Socket Recv发送耗时: %lld us\n", recvfrom_cost);
+        if (recvfrom_cost > 20000) {
+            WRITE_TASK_DATA_SEND_DBG("!!!Socket Recv发送耗时超20ms: %lld us\n", recvfrom_cost);
+        }
         WRITE_TASK_DATA_SEND_DBG("select1=%d, recvfrom ret=%d\n", sel, ret);
         /*qDebug() << "recvfrom ret:" << ret;*/
     }
-     else {
+    else {
         WRITE_TASK_DATA_SEND_DBG("select0=%d, recvfrom ret=%d\n", sel, ret);
-     }
-     //UnLock();
+    }
+    //UnLock();
     auto t_recv_end = std::chrono::steady_clock::now(); // 记录结束时间
-    WRITE_TASK_DATA_SEND_DBG("Socket Recv整体耗时: %lld us\n",
-        std::chrono::duration_cast<std::chrono::microseconds>(t_recv_end - t_recv_start).count());
+    auto recv_cost= std::chrono::duration_cast<std::chrono::microseconds>(t_recv_end - t_recv_start).count();
+    if (recv_cost > 20000) {
+        WRITE_TASK_DATA_SEND_DBG("!!!Socket Recv整体耗时超20ms: %lld us\n", recv_cost);
+    }
+
     return ret;
 }
 

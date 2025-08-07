@@ -8,6 +8,7 @@
 
 #define MAX_FLUID_NUM 37
 #define FLUID_SIZE_INDEX0 2048
+//#define FLUID_SIZE_INDEX0 16384
 #define FLUID_TYPE long long
 #define QFREE_SYM 0
 #define QFREE_SIG 8

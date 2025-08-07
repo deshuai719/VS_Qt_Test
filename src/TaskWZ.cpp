@@ -9,6 +9,9 @@
 #include <vector>
 #include <string>
 #include <windows.h>
+#include <threadpoolapiset.h>
+#include <condition_variable>
+#include <mutex>
 
 
 
@@ -465,60 +468,82 @@ void task_rcv::init()
 void task_rcv::run()
 {
 	qDebug() << "Rcv thread:" << QString::number(reinterpret_cast<quintptr>(QThread::currentThreadId()));
-	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
-	//BindThreadToCPU(0); // 绑定到CPU 0
+	
+	// 优化：设置最高线程优先级并绑定到专用CPU核心
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+	
+	// 新增：绑定到CPU核心0，避免线程切换开销
+	DWORD_PTR mask = 1ull << 0; // 绑定到CPU 0
+	HANDLE hThread = GetCurrentThread();
+	SetThreadAffinityMask(hThread, mask);
+	
+	// 新增：设置进程为实时优先级类
+	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
 	OPEN_TASK_RCV_DBG(LogTaskRcv.txt);                               // 1. 打开接收任务的调试日志文件
 
 #ifndef TEST_WITHOUT_BOARD                                           // 2. 如果没有定义 TEST_WITHOUT_BOARD（即实际硬件环境）
-	//RcvData Data(800);                                           // 4. 创建一个长度为800字节的接收数据对象 Data
+	
+	// 优化：预分配缓冲区，避免频繁分配内存
+	char recv_buffer[800];
+	static int recv_count = 0;
+	static auto last_perf_log = std::chrono::steady_clock::now();
+	
+	// 优化：增加接收性能监控
+	static long long total_recv_time = 0;
+	static int success_recv_count = 0;
+	
 	while (Loop)                                                     // 3. 只要 Loop 为 true，就持续循环接收数据
 	{
-		RcvData Data(800);                                           // 4. 创建一个长度为800字节的接收数据对象 Data
-		//int res = SOCKWZ::SockGlob::Recv(Data.GetData().get(), 800); // 5. 从全局Socket接收数据，最多接收800字节，返回实际接收长度res
 		auto t0 = std::chrono::steady_clock::now();
-		int res = SOCKWZ::SockGlob::Recv(Data.GetData().get(), 800);
+		int res = SOCKWZ::SockGlob::Recv(recv_buffer, 800);
 		auto t1 = std::chrono::steady_clock::now();
-		WRITE_TASK_DATA_SEND_DBG("Recv耗时: %lld us\n", std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
-
-		if (res == SOCKET_ERROR)                                     // 6. 如果接收出错
-		{
-			if (Loop == true)                                        // 7. 如果Loop仍为true（任务未被要求关闭）
-			{
-                                                                     // WRITE_TASK_RCV_DBG("Socket Error Continue\n");
-				continue;                                            // 8. 继续下一次循环，尝试重新接收
+		
+		recv_count++;
+		
+		// 优化：减少日志输出频率，避免I/O阻塞
+		bool should_log = false;
+		auto now = std::chrono::steady_clock::now();
+		
+		if (res != SOCKET_ERROR) {
+			success_recv_count++;
+			auto recv_duration = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+			total_recv_time += recv_duration;
+			
+			// 只在接收耗时异常时记录日志（超过10ms）
+			if (recv_duration > 20000) {
+				WRITE_TASK_DATA_SEND_DBG("!!!Recv异常耗超过20ms: %lld us\n", recv_duration);
 			}
-			else                                                     // 9. 如果Loop为false（任务被要求关闭）
-			{
-				WRITE_TASK_RCV_DBG("Socket Error Break\n");          // 10. 记录调试日志
-				Data.Clear();                                        // 11. 清理Data对象
-				break;                                               // 12. 跳出循环，结束任务
+			
+			// 每1万次成功接收输出一次统计信息
+			if (success_recv_count % 1000 == 0) {
+				long long avg_time = total_recv_time / success_recv_count;
+				WRITE_TASK_RCV_DBG("接收统计: 成功%d次, 平均耗时: %lld us\n", success_recv_count, avg_time);
 			}
-
-		}
-		else                                                         // 13. 如果接收成功
-		{
-			WRITE_TASK_RCV_DBG("Data recived, Len = %d\n", res);     // 14. 记录接收到的数据长度
-		}
-		Data.SetLen(res);                                            // 15. 设置Data对象的实际数据长度
-		/*static std::chrono::steady_clock::time_point lastEnqueueTime;
-		static bool firstEnqueue = true;*/
-		QueueRcv.front(Data);                                        // 16. 将Data对象放入接收队列的队首，供后续任务处理
-
-		/*auto now = std::chrono::steady_clock::now();
-		if (!firstEnqueue) {
-			auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastEnqueueTime).count();
-			WRITE_TASK_DATA_SEND_DBG("[QueueRcv.front] 两次入队间隔(ms): %lld\n", interval);
+			
+			// 优化：创建RcvData对象并快速复制数据
+			RcvData Data(res);
+			memcpy(Data.GetData().get(), recv_buffer, res);
+			Data.SetLen(res);                                            // 15. 设置Data对象的实际数据长度
+			
+			QueueRcv.front(Data);                                        // 16. 将Data对象放入接收队列的队首，供后续任务处理
+			Data.Clear();                                                // 17. 清理Data对象，释放内存
 		}
 		else {
-			firstEnqueue = false;
+			// 接收错误处理
+			if (Loop == true) {
+				// 优化：接收错误时不要立即继续，稍微延时避免CPU空转
+				//std::this_thread::sleep_for(std::chrono::microseconds(100));
+				continue;                                            // 8. 继续下一次循环，尝试重新接收
+			}
+			else {
+				WRITE_TASK_RCV_DBG("Socket Error Break\n");          // 10. 记录调试日志
+				break;                                               // 12. 跳出循环，结束任务
+			}
 		}
-		lastEnqueueTime = now;*/
-		Data.Clear();    
-		// 17. 清理Data对象，释放内存
 	}
                                                                      // 18. 循环结束后，日志关闭在函数结尾
-	WRITE_TASK_DATA_SEND_DBG("Cycle Over Loop = %d", Loop);
+	WRITE_TASK_DATA_SEND_DBG("Recv thread cycle over, Loop = %d", Loop);
 #else
 	int sec(0);                                                      // 1. 定义一个整型变量 sec，初始为0，用于模拟时间戳
 	while (Loop)                                                     // 2. 只要 Loop 为 true，就持续循环（模拟数据接收）
@@ -596,16 +621,32 @@ void task_dispatch::init()
 void task_dispatch::run()
 {
 	//BindThreadToCPU(0); // 绑定到CPU 0
-	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+	//SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 	OPEN_TASK_DISPATCH_DBG(LogTaskDispatch.txt);                      // 打开调试日志
+	
+	// 优化：减少性能测量频率
+	static int dispatch_count = 0;
+	static auto last_perf_log = std::chrono::steady_clock::now();
+	
 	while(Loop)                                                       // 只要 Loop 为 true，就一直循环
 	{
 		RcvData Data;
-		//task_rcv::QueueRcv.rear(Data);                                // 从接收队列取出一个数据包（尾部出队）
-		auto t_rear_start = std::chrono::steady_clock::now();
+		
+		// 优化：减少队列操作的时间测量频率
+		dispatch_count++;
+		bool should_measure = (dispatch_count % 1000 == 0);
+		
+		auto t_rear_start = should_measure ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
 		task_rcv::QueueRcv.rear(Data);
-		auto t_rear_end = std::chrono::steady_clock::now();
-		WRITE_TASK_DATA_SEND_DBG("QueueRcv.rear耗时: %lld us\n", std::chrono::duration_cast<std::chrono::microseconds>(t_rear_end - t_rear_start).count());
+		auto t_rear_end = should_measure ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
+		
+		if (should_measure) {
+			auto rear_duration = std::chrono::duration_cast<std::chrono::microseconds>(t_rear_end - t_rear_start).count();
+			// 只记录异常的队列操作耗时（超过1ms）
+			if (rear_duration > 1000) {
+				WRITE_TASK_DATA_SEND_DBG("QueueRcv.rear异常耗时: %lld us\n", rear_duration);
+			}
+		}
 
 		if(Data.GetData().get())                                      // 如果数据有效
 		{
@@ -613,31 +654,32 @@ void task_dispatch::run()
 			{
 			case 0x28:
 			{
-				/*static std::chrono::steady_clock::time_point lastStoreTime;
-				static bool firstStore = true;
-
-				auto now = std::chrono::steady_clock::now();
-				if (!firstStore) {
-					auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastStoreTime).count();
-					WRITE_TASK_DATA_SEND_DBG("分发线程间隔: %lld ms\n", interval);
+				auto t_store_start = should_measure ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
+				
+				int fluidVal = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac;
+				FCT::FluidCtrlGlob->FluidStore(0, fluidVal); // 更新流控缓存
+				
+				auto t_store_end = should_measure ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
+				
+				// 优化：减少日志输出频率
+				if (should_measure) {
+					auto store_duration = std::chrono::duration_cast<std::chrono::microseconds>(t_store_end - t_store_start).count();
+					// 只在每1000次操作时记录一次流控信息
+					WRITE_TASK_DATA_SEND_DBG("第%d次0x28包, 剩余缓存空间: %d, FluidStore耗时: %lld us\n", 
+											dispatch_count, fluidVal, store_duration);
 				}
-				else {
-					firstStore = false;
-				}
-				lastStoreTime = now;*/
 
-				//FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac);            // 更新流控缓存
-				//TaskChipStatParsing::QueueChipStatParsing.front(Data);// 如果是 0x28 类型的数据包，放入芯片状态解析队列
-
-				auto t_store_start = std::chrono::steady_clock::now();
-				FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac); // 更新流控缓存
-				auto t_store_end = std::chrono::steady_clock::now();
-				WRITE_TASK_DATA_SEND_DBG("FluidStore耗时: %lld us\n", std::chrono::duration_cast<std::chrono::microseconds>(t_store_end - t_store_start).count());
-
-				auto t_queue_start = std::chrono::steady_clock::now();
+				auto t_queue_start = should_measure ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
 				TaskChipStatParsing::QueueChipStatParsing.front(Data); // 放入芯片状态解析队列
-				auto t_queue_end = std::chrono::steady_clock::now();
-				WRITE_TASK_DATA_SEND_DBG("QueueChipStatParsing.front耗时: %lld us\n", std::chrono::duration_cast<std::chrono::microseconds>(t_queue_end - t_queue_start).count());
+				auto t_queue_end = should_measure ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
+				
+				if (should_measure) {
+					auto queue_duration = std::chrono::duration_cast<std::chrono::microseconds>(t_queue_end - t_queue_start).count();
+					// 只记录异常的队列操作耗时
+					if (queue_duration > 500) {
+						WRITE_TASK_DATA_SEND_DBG("QueueChipStatParsing.front异常耗时: %lld us\n", queue_duration);
+					}
+				}
 				break;
 				/*新增：分发过程中进行ram_id的判断*/
 			}
@@ -931,7 +973,7 @@ void TaskTestStatistics::init()
 	Loop = true;
 }
 /******************************高精度时钟定义*****************************************************/
-void HighPrecisionWait(double waitMs)
+void HighPrecisionWait_High(double waitMs)
 {
 	LARGE_INTEGER freq, start, now;
 	QueryPerformanceFrequency(&freq);
@@ -943,10 +985,26 @@ void HighPrecisionWait(double waitMs)
 	} while ((now.QuadPart - start.QuadPart) < waitCounts);
 }
 
+void HighPrecisionWait_Low(double waitMs)
+{
+	timeBeginPeriod(1);
+	auto start = std::chrono::steady_clock::now();
+	// 先Sleep大部分时间，最后用忙等补偿
+	if (waitMs > 3) {
+		Sleep((DWORD)waitMs - 3);
+	}
+	while (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start).count() < waitMs * 1000) {
+		// busy wait
+	}
+
+	// 关闭高精度定时（可选，频繁调用建议全局只设置一次）
+	// timeEndPeriod(1);
+}
+
 void TaskTestStatistics::run()
 {
 	//BindThreadToCPU(0); // 绑定到CPU 0
-	OPEN_TASK_STATISTICS_DBG(LogTaskStatistics.txt);                                                                   // 打开调试日志
+	//OPEN_TASK_STATISTICS_DBG(LogTaskStatistics.log);                                                                   // 打开调试日志
 	WRITE_TASK_STATISTICS_DBG("TaskTestStatistics::run()\n");                                                          // 写入调试日志
 	while (Loop)
 	{
@@ -962,6 +1020,10 @@ void TaskTestStatistics::run()
 			{
 				for(int j = 0; j < 4; j++)
 				{
+					/*qDebug() << "统计前 Board" << i << "Chip" << j
+						<< "在线:" << DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline()
+						<< "Codec包:" << DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifCodec()
+						<< "Adpow包:" << DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifAdpow();*/
 					int codec = DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifCodec();
 					int adpow = DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifAdpow();
 					/*WRITE_TASK_STATISTICS_DBG("Board[%d] Chip[%d] Codec连续有效包数: %d, Adpow连续有效包数: %d, 目标: %lld\n",
@@ -974,19 +1036,23 @@ void TaskTestStatistics::run()
 					//		{
 					if (codec < ContinousValidNum || adpow < ContinousValidNum)
 					{
-								if (DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckResult())                    // 如果之前检测结果为 true，需要更新统计
-								{
-									DCR::DeviceCheckResultGlobal->ChipSatisfiedNumDec();                                       // 满足芯片数减一
-									if (DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline())
-									{
-										WRITE_TASK_STATISTICS_DBG("Check Result A Mif: False\n");
-										DCR::DeviceCheckResultGlobal->ChipUnSatisfiedNumInc();                                 // 如果芯片在线，不满足芯片数加一
-										WRITE_TASK_STATISTICS_DBG("Board[%d] Chip[%d] Codec连续有效包数: %d, Adpow连续有效包数: %d, 目标: %lld\n",
-											i, j, codec, adpow, ContinousValidNum);
-									}
-								}
-								DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).UpdateCheckResult(false);               // 更新检测结果为 false
+						if (DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckResult())                    // 如果之前检测结果为 true，需要更新统计
+						{
+							DCR::DeviceCheckResultGlobal->ChipSatisfiedNumDec();                                       // 满足芯片数减一
+							if (DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline())
+							{
+								WRITE_TASK_STATISTICS_DBG("Check Result A Mif: False\n");
+								DCR::DeviceCheckResultGlobal->ChipUnSatisfiedNumInc();                                 // 如果芯片在线，不满足芯片数加一
+								WRITE_TASK_STATISTICS_DBG("Board[%d] Chip[%d] Codec连续有效包数: %d, Adpow连续有效包数: %d, 目标: %lld\n",
+									i, j, codec, adpow, ContinousValidNum);
 							}
+						}
+
+						DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).UpdateCheckResult(false);               // 更新检测结果为 false
+						/*WRITE_TASK_STATISTICS_DBG("Check Result A Mif: False\n");
+						WRITE_TASK_STATISTICS_DBG("Board[%d] Chip[%d] Codec连续有效包数: %d, Adpow连续有效包数: %d, 目标: %lld\n",
+							i, j, codec, adpow, ContinousValidNum);*/
+					}
 						
 					else
 					{
@@ -997,6 +1063,7 @@ void TaskTestStatistics::run()
 					}
 				}
 			}
+			WRITE_TASK_STATISTICS_DBG("统计完成\n\n");
 			emit MsgOfStatistics(MsgToCentralWt(TestStat::TEST_RUNNING, StatisticMode::STATISTICS_A_MIF)); // 统计完成后，发出统计结果信号
 			break;
 		case STATISTICS_A_TIME:
@@ -1018,7 +1085,7 @@ void TaskTestStatistics::run()
 			break;                                                                                         // 其他未知模式，不做处理
 		}
 	}
-	CLOSE_TASK_STATISTICS_DBG();
+	//CLOSE_TASK_STATISTICS_DBG();
 }
 
 void TaskTestStatistics::close()
@@ -1152,7 +1219,7 @@ void TaskDataSend::run()
 	//BindThreadToCPU(2); // 绑定到CPU 2
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 	// 设置当前进程为高优先级
-	//SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 	//SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
 
 
@@ -1162,6 +1229,7 @@ void TaskDataSend::run()
 	OPEN_LOG_UP_RECORD(LogUpRecord.log);                                                                        // 3. 打开上报记录日志
 	OPEN_LOG_SE_RECORD("");
 	OPEN_CHECK_DELAY_DBG(CHECK_DELAY.txt);
+	OPEN_TASK_STATISTICS_DBG(LogTaskStatistics.log);
 
 	emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_START, StatisticMode::STATISTICS_A_MIF));                  // 4. 发送测试开始信号
 	SemaWaitForUI.acquire(1);                                                                                   // 5. 等待UI信号量，确保UI准备好
@@ -1200,7 +1268,7 @@ void TaskDataSend::run()
 			WRITE_LOG_UP_RECORD("第%d组参数与条件：\n", i + 1);                                                      //记录本组下发第几组条件和具体条件内容
 			WRITE_LOG_SE_RECORD("第%d组参数与条件：\n", i + 1);
 			WRITE_TASK_STATISTICS_DBG("第%d组参数与条件：\n", i + 1);
-			WRITE_TASK_DATA_SEND_DBG("第%d组参数与条件：\n", i + 1);
+			WRITE_TASK_DATA_SEND_DBG("\n第%d组参数与条件：\n", i + 1);
 			if (i < g_ParamList.size()) {
 				const auto& param = g_ParamList[i];
 				WRITE_LOG_UP_PARAM_RECORD
@@ -1339,10 +1407,13 @@ void TaskDataSend::run()
 					TaskChipStatParsing::chipSeLogStat[board][chip].clear();
 					TaskChipStatParsing::chipSeLogError[board][chip].clear();
 					//TaskChipStatParsing::chipSeLogError[i][j].clear();
+					DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetRangeSINAD(TCOND::Range(0, 0));		//每组数据下发前重置芯片的SINAD范围
 				}
 			}
 			WRITE_TASK_STATISTICS_DBG("发送清零: SetCheckPacksOfMif(0,0) at group %d\n", i + 1);
 			TaskChipStatParsing::ChipLogBuffer.clear();
+
+
 			TaskChipStatParsing::bPackLogRecord = true;                                                         // 19. 启用芯片包日志记录
 			/*************************************for轮询流控反馈直接发送方式******************************************************************/
 //			for (int i = 0; i < Node->GetData()->GetSendNum(); )                                                // 20. 发送每个数据包
@@ -1407,15 +1478,15 @@ void TaskDataSend::run()
 			timeBeginPeriod(1);
 			int sendIdx = 0;
 			const int totalNum = Node->GetData()->GetSendNum();
-
-			// 先连续发3个包（不等待）
+			
+			/**********************************每组发送前先连续发2个包，对空间进行预填充*******************************************/ 
 			for (; sendIdx < 3 && sendIdx < totalNum; ++sendIdx) {
 				FCT::FluidCtrlGlob->FluidFetchSub(0, 512);
 				DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(sendIdx);
 				SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());
 			}
 
-			// 后续每发1包，按流控空间决定等待时间
+			/*******************************上报流控多次未变化时采用8ms标准速率进行发包，使用标志位通知***************************************************/
 			int lastFluidVal = -1;
 			int fluidValStableCount = 0;
 			bool force8ms = false;
@@ -1444,51 +1515,100 @@ void TaskDataSend::run()
 				}
 
 				// 新增：如果流控空间大于等于1536，直接发包，跳过等待
-				if (fluidVal >= 1536)
-				{  // 精准等待2ms
-					//auto t_start = std::chrono::steady_clock::now();
-					//while (std::chrono::duration_cast<std::chrono::milliseconds>(
-					//	std::chrono::steady_clock::now() - t_start).count() < 2)
-					//{
-					//	// busy wait
-					//}
-					HighPrecisionWait(2);
+				//if (fluidVal >= 2048)
+				//{  // 精准等待2ms
+				//	//auto t_start = std::chrono::steady_clock::now();
+				//	//while (std::chrono::duration_cast<std::chrono::milliseconds>(
+				//	//	std::chrono::steady_clock::now() - t_start).count() < 2)
+				//	//{
+				//	//	// busy wait
+				//	//}
 
-					int oldVal = FCT::FluidCtrlGlob->FluidFetchSub(0, 512);
-					if (oldVal >= 512)
+				//	int oldVal = FCT::FluidCtrlGlob->FluidFetchSub(0, 512);
+				//	/*if (oldVal >= 512)
+				//	{*/
+				//		DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(sendIdx);
+				//		SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());
+				//		++sendIdx;
+
+				//		if (!Loop)
+				//		{
+				//			WRITE_TASK_DATA_SEND_DBG("break\n");
+				//			break;
+				//		}
+				//		//continue; // 跳过后续等待
+				//	//}
+				//}
+				/***************************************上报流控过空的话直接发包并本地修改缓存空间***********************************************/
+				if (fluidVal >= 3072)//空余六包
+				{
+					// 立刻发两包
+					for (int n = 0; n < 2 && sendIdx < totalNum; ++n)
 					{
+						int oldVal = FCT::FluidCtrlGlob->FluidFetchSub(0, 512);//发包后本地修改缓存空间
 						DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(sendIdx);
 						SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());
 						++sendIdx;
+						HighPrecisionWait_High(2);
 						if (!Loop)
 						{
 							WRITE_TASK_DATA_SEND_DBG("break\n");
 							break;
 						}
-						//continue; // 跳过后续等待
+					}
+				}
+				else if (fluidVal >= 1536)//空余三包
+				{
+					// 立刻发一包
+					int oldVal = FCT::FluidCtrlGlob->FluidFetchSub(0, 512);//发包后本地修改缓存空间
+					DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(sendIdx);
+					SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());
+					++sendIdx;
+					HighPrecisionWait_High(2);
+					if (!Loop)
+					{
+						WRITE_TASK_DATA_SEND_DBG("break\n");
+						break;
 					}
 				}
 
-				int waitMs = 8;
-				if (!force8ms) {
+				/*int waitMs = 8;
+				if (!force8ms) 
+				{
 					if (fluidVal > 1024)
+					{
 						waitMs = 7;
+					}
 					else if (fluidVal < 768)
 						waitMs = 9;
+				}*/
+				/*********************************依照剩余缓存空间调整流速，目标是将剩余空间调整在3包左右，定时发送，不进行本地缓存空间修改****************************************************/
+				int waitMs = 8;
+				if (!force8ms) {
+					if (fluidVal > 1536)//空余空间大于3包，发送间隔6ms
+					{
+						waitMs = 6; 
+					}
+					else if (fluidVal > 1024) // 空余空间大于2包
+					{
+						waitMs = 7; // 发送间隔7ms
+					}
+					else if (fluidVal < 768) // 空余空间大于1包半
+					{
+						waitMs = 9;
+					}
 				}
-
+				WRITE_TASK_DATA_SEND_DBG("剩余空间fluidVal = %lld \n" , fluidVal);
 
 				auto t_start = std::chrono::steady_clock::now();
 				//while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t_start).count() < waitMs) {
 				//	// busy wait
 				//}
-				HighPrecisionWait(waitMs);
+				HighPrecisionWait_Low(waitMs);
 				auto t_end = std::chrono::steady_clock::now();
 				auto busywait_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
-				WRITE_TASK_DATA_SEND_DBG("busy wait 期望:%d ms, 实际:%lld us\n", waitMs, busywait_ms);
+				WRITE_TASK_DATA_SEND_DBG("延时期望:%d ms, 实际:%lld us\n", waitMs, busywait_ms);
 
-				/*DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(sendIdx);
-				SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());*/
 				auto t_get_start = std::chrono::steady_clock::now();
 				DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(sendIdx);
 				auto t_get_end = std::chrono::steady_clock::now();
@@ -1502,9 +1622,34 @@ void TaskDataSend::run()
 					WRITE_TASK_DATA_SEND_DBG("break\n");
 					break;
 				}
+				/*int sendCount = 0;
+				while (sendCount < 2 && sendIdx < totalNum) {
+
+					auto t_get_start = std::chrono::steady_clock::now();
+					DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(sendIdx);
+					auto t_get_end = std::chrono::steady_clock::now();
+					WRITE_TASK_DATA_SEND_DBG("GetPackInfo耗时: %lld us\n", std::chrono::duration_cast<std::chrono::microseconds>(t_get_end - t_get_start).count());
+
+					SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());
+					auto t_send_end = std::chrono::steady_clock::now();
+					WRITE_TASK_DATA_SEND_DBG("Send耗时: %lld us\n\n", std::chrono::duration_cast<std::chrono::microseconds>(t_send_end - t_get_end).count());
+
+					++sendIdx;
+					++sendCount;
+					if (!Loop) {
+						WRITE_TASK_DATA_SEND_DBG("break\n");
+						break;
+					}
+				}*/
+
+				//HighPrecisionWait(waitMs);
+				/*auto t_end = std::chrono::steady_clock::now();
+				auto busywait_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
+				WRITE_TASK_DATA_SEND_DBG("busy wait 期望:%d ms, 实际:%lld us\n", waitMs, busywait_ms);*/
+
+			
 				/********************************检测数据：应用重发机制清空计数器******************************************************/
-				
-				// 检查计数器是否变化
+				/* 检查计数器是否变化*/
 				if (resendCounter.load(std::memory_order_acquire) > 0)
 				{
 					int req = resendCounter.fetch_sub(1, std::memory_order_acq_rel);
@@ -1522,6 +1667,7 @@ void TaskDataSend::run()
 								//DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetRangeSINAD(TCOND::Range(0, 0));
 								TaskChipStatParsing::chipSeLogStat[board][chip].clear();
 								TaskChipStatParsing::chipSeLogError[board][chip].clear();
+								DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetRangeSINAD(TCOND::Range(0, 0));		//每组数据下发前重置芯片的SINAD范围
 							}
 						}
 						WRITE_TASK_STATISTICS_DBG("重发清零: SetCheckPacksOfMif(0,0) at group %d\n", i + 1);
@@ -1538,10 +1684,11 @@ void TaskDataSend::run()
 						}
 					}
 				}
+			
 			}
 			
-			timeEndPeriod(1);
-			/*******************************************************************************************/
+			/************************************等待缓冲区清空*******************************************************/
+			//timeEndPeriod(1);
 			WRITE_TASK_DATA_SEND_DBG("Get Fluid\n");
                                                                                                                 // 等待缓冲区清空
 			for (; FCT::FluidCtrlGlob->FluidLoad(0) < FLUID_SIZE_INDEX0; )
@@ -1556,7 +1703,7 @@ void TaskDataSend::run()
 					break;
 				}
 			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			std::this_thread::sleep_for(std::chrono::milliseconds(20));
 			TaskChipStatParsing::bPackLogRecord = false;                                                        // 28. 关闭芯片包日志记录
 			//resendCounter.store(0, std::memory_order_release);
 
@@ -1608,8 +1755,8 @@ void TaskDataSend::run()
 						for (const auto& line : TaskChipStatParsing::chipSeLogError[i][j]) {
 							LWZ::Log::LogInstance->Write(LOG_SE_RECORD_INDEX, "%s", line.toUtf8().constData());
 						}
-						TaskChipStatParsing::chipSeLogStat[i][j].clear();
-						TaskChipStatParsing::chipSeLogError[i][j].clear();
+						//TaskChipStatParsing::chipSeLogStat[i][j].clear();
+						//TaskChipStatParsing::chipSeLogError[i][j].clear();
 					}
 				}
 			}
@@ -1619,14 +1766,15 @@ void TaskDataSend::run()
 			//TaskChipStatParsing::bPackLogRecord = false;                                                        // 28. 关闭芯片包日志记录
 
 			WRITE_TASK_DATA_SEND_DBG("Fluid Buffer Empty\n");
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));                                         // 29. 等待100ms
+			//std::this_thread::sleep_for(std::chrono::milliseconds(100));                                         // 29. 等待100ms
 			resendCounter.store(0, std::memory_order_release);                                                   //重发计数器重置
 			//TaskTestStatistics::ContinousValidNum = Node->GetData()->GetDuration() * 125 - 1;                   // 30. 设置连续有效包数目标
-			StatisticMode Mode = TASKWZ::StatisticMode::STATISTICS_A_MIF;                                       // 31. 设置统计模式
+			StatisticMode Mode = TASKWZ::StatisticMode::STATISTICS_A_MIF;                                       // 31. 设置统计模式为A_MIF
 			TaskTestStatistics::QueueStatistcsMODE.front(Mode);                                                 // 32. 推送统计模式到队列
 			WRITE_TASK_DATA_SEND_DBG("Semaphore Release Statistics a mif\n");
 			SemaWaitForUI.acquire(1);                                                                           // 33. 等待UI信号量，等待统计完成
 			WRITE_TASK_DATA_SEND_DBG("Semaphore Acquire Statistics a mif\n");
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));                                         // 29. 等待100ms
 		}
                                                                                                                 // DCR::DeviceCheckResultGlobal->CheckCompletedCountInc();
 		StatisticMode Mode = TASKWZ::StatisticMode::STATISTICS_A_TIME;                                          // 34. 设置统计模式为A_TIME
@@ -1648,6 +1796,7 @@ void TaskDataSend::run()
 	CLOSE_TASK_DATA_SEND_DBG();                                                                                 // 42. 关闭调试日志
 	CLOSE_TASK_DATA_SEND_INFO_VERIFY();                                                                         // 43. 关闭信息校验日志
 	CLOSE_CHECK_DELAY_DBG();
+	CLOSE_TASK_STATISTICS_DBG();
 }
 
 void TaskDataSend::close()

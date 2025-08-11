@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\MNIC_autogen\mocs_compilation_Debug.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\CentralWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\ConfigInit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\DataConstruct.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\DeviceCheckResult.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\DlgMenuCFG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\DlgMenuFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\FileList.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\FileParsing.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\FluidCtrl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\GlobalConditionList.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\LogProcess.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\LogWZ.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\MNIC.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\SamplingDataGenerate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\SocketWZ.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\TaskWZ.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\TestCondition.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\ToolWZ.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\MNIC_autogen\mocs_compilation_Release.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\MNIC_autogen\mocs_compilation_MinSizeRel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\AAA_Work_Code_Space\MNIC_VS\MNIC_autogen\mocs_compilation_RelWithDebInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="D:\AAA_Work_Code_Space\MNIC_VS\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{085FCB49-76B0-3620-8021-9B3636F26DAC}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

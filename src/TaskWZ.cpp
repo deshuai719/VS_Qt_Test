@@ -238,7 +238,7 @@ void worker_manager::create(task_wz* t, worker_type typ)//ui线程
 				stack_idle_index.pop(index);            // 9. 从空闲栈弹出一个可用 worker 的索引
 				workers.addr[index].create(t, typ);     // 10. 用该 worker 创建新任务
 				queue_worker.front(index);              // 11. 把该 worker 的索引放入队列头，等待调度
-                Semaphore.release(1);                   // 12. 信号量+1，唤醒等待的调度线程
+                Semaphore.release(1);                   // 12. 信号+1，唤醒等待的调度线程
 			}
 		}
 	}
@@ -305,7 +305,7 @@ void worker_manager::task_callback_func(TOOLWZ::data_wz<task_wz, 20, task_destru
 {
 	t->addr->init();							 // 1. 调用任务对象的 init() 方法，进行任务初始化
 	t->addr->run();								// 2. 调用任务对象的 run() 方法，执行任务的主要逻辑
-	//t = 0;										// 3. 将指针 t 置为 0（仅清空本地指针，不释放内存，防止误用）
+	//t = 0;										// 3. 将指针 t 置为 0 （仅清空本地指针，不释放内存，防止误用）
 }
 
 TOOLWZ::data_wz<worker, sizeof(worker), worker_destruct> worker_manager::workers;
@@ -469,13 +469,13 @@ void task_rcv::run()
 {
 	qDebug() << "Rcv thread:" << QString::number(reinterpret_cast<quintptr>(QThread::currentThreadId()));
 	
-	// 优化：设置最高线程优先级并绑定到专用CPU核心
+	// 优化：设置最高线程优先级
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 	
 	// 新增：绑定到CPU核心0，避免线程切换开销
-	DWORD_PTR mask = 1ull << 0; // 绑定到CPU 0
-	HANDLE hThread = GetCurrentThread();
-	SetThreadAffinityMask(hThread, mask);
+	//DWORD_PTR mask = 1ull << 0; // 绑定到CPU 0
+	//HANDLE hThread = GetCurrentThread();
+	//SetThreadAffinityMask(hThread, mask);
 	
 	// 新增：设置进程为高优先级类
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
@@ -1020,20 +1020,9 @@ void TaskTestStatistics::run()
 			{
 				for(int j = 0; j < 4; j++)
 				{
-					/*qDebug() << "统计前 Board" << i << "Chip" << j
-						<< "在线:" << DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline()
-						<< "Codec包:" << DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifCodec()
-						<< "Adpow包:" << DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifAdpow();*/
 					int codec = DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifCodec();
 					int adpow = DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifAdpow();
-					/*WRITE_TASK_STATISTICS_DBG("Board[%d] Chip[%d] Codec连续有效包数: %d, Adpow连续有效包数: %d, 目标: %lld\n",
-						i, j, codec, adpow, ContinousValidNum);*/
-					//打印统计的连续有效包数
-					/*qDebug() << "Board" << i << "Chip" << j << "Codec连续有效包数:"<< DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifCodec()<< "要求:" << ContinousValidNum;
-					qDebug() << "Board" << i << "Chip" << j << "Adpow连续有效包数:" << DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifAdpow() << "要求:" << ContinousValidNum;*/
-					//if(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifCodec() < ContinousValidNum
-					//	|| DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckPacksOfMifAdpow() < ContinousValidNum)// 判断该芯片的连续有效包数是否小于要求
-					//		{
+					
 					if (codec < ContinousValidNum || adpow < ContinousValidNum)
 					{
 						if (DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckResult())                    // 如果之前检测结果为 true，需要更新统计
@@ -1060,10 +1049,16 @@ void TaskTestStatistics::run()
 						DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).UpdateCheckResult(true);                // 检测结果为 true
 						WRITE_TASK_STATISTICS_DBG("Board[%d] Chip[%d] Codec连续有效包数: %d, Adpow连续有效包数: %d, 目标: %lld\n",
 							i, j, codec, adpow, ContinousValidNum);
+						// 新增：在芯片测试通过时，调用该芯片的通过测试组数自增
+						DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).PassedGroupCountInc();
 					}
 				}
 			}
 			WRITE_TASK_STATISTICS_DBG("统计完成\n\n");
+			// 新增：在统计完成前调用总测试组数自增和已测试组数自增
+			DCR::DeviceCheckResultGlobal->TotalGroupCountInc();
+			DCR::DeviceCheckResultGlobal->CheckedGroupCountInc();
+
 			emit MsgOfStatistics(MsgToCentralWt(TestStat::TEST_RUNNING, StatisticMode::STATISTICS_A_MIF)); // 统计完成后，发出统计结果信号
 			break;
 		case STATISTICS_A_TIME:
@@ -1374,11 +1369,11 @@ void TaskDataSend::run()
 			if (!ackReceived)
 			{
 				WRITE_TASK_DATA_SEND_DBG("No 0xA0 ACK received, aborting this group!\n");
-				//break;                                                                  // 或 return，或继续重试，视你的业务需求
+				//break;                                                                  // 或 return，视你的业务需求
 			}
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(320));            //硬件配置后会有一定时间的缓慢上升期，默认20ms，最大320ms
-			DCR::DeviceCheckResultGlobal->SetCheckedGroupCount(i + 1);
+			//DCR::DeviceCheckResultGlobal->SetCheckedGroupCount(i + 1);
 
 			/************************************收到0x28包后立即发0x38包*************************************************************/
 			int lastTimeStamp = DCR::DeviceCheckResultGlobal->GetUpPackCount();
@@ -1397,7 +1392,7 @@ void TaskDataSend::run()
 				// 收到0x28包后立即发0x38包
 			}
 
-			/*****************************在准备发送该组数据前重置所有芯片的检查结果***********************************************/
+			/*****************************在发送该组数据前重置所有芯片的检查结果***********************************************/
 			for (int board = 0; board < 8; ++board) {
 				for (int chip = 0; chip < 4; ++chip) {
 					DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetCheckPacksOfMif(0, 0);
@@ -1406,7 +1401,6 @@ void TaskDataSend::run()
 					//DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetRangeSINAD(TCOND::Range(0, 0));
 					TaskChipStatParsing::chipSeLogStat[board][chip].clear();
 					TaskChipStatParsing::chipSeLogError[board][chip].clear();
-					//TaskChipStatParsing::chipSeLogError[i][j].clear();
 					DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetRangeSINAD(TCOND::Range(0, 0));		//每组数据下发前重置芯片的SINAD范围
 				}
 			}
@@ -1457,8 +1451,8 @@ void TaskDataSend::run()
 //				{
 //					 //精准等待1ms
 //					auto t_start = std::chrono::steady_clock::now();
-//					while (std::chrono::duration_cast<std::chrono::microseconds>(
-//						std::chrono::steady_clock::now() - t_start).count() < 1000)
+//					while (std::chrono::duration_cast<std::chrono::milliseconds>(
+//						std::chrono::steady_clock::now() - t_start).count() < 1)
 //					{
 //						// busy wait
 //					}
@@ -1479,7 +1473,7 @@ void TaskDataSend::run()
 			int sendIdx = 0;
 			const int totalNum = Node->GetData()->GetSendNum();
 			
-			/**********************************每组发送前先连续发2个包，对空间进行预填充*******************************************/ 
+			/**********************************每组发送前先连续发3个包，对空间进行预填充*******************************************/ 
 			for (; sendIdx < 3 && sendIdx < totalNum; ++sendIdx) {
 				FCT::FluidCtrlGlob->FluidFetchSub(0, 512);
 				DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(sendIdx);
@@ -1706,6 +1700,7 @@ void TaskDataSend::run()
 			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(20));
 			TaskChipStatParsing::bPackLogRecord = false;                                                        // 28. 关闭芯片包日志记录
+			//DCR::DeviceCheckResultGlobal->CheckedGroupCountInc();
 			//resendCounter.store(0, std::memory_order_release);
 
 			/*****************************原始版本日志输出***********************************************/

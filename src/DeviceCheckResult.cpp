@@ -4,7 +4,7 @@
 namespace DCR{
 
     ChipCheckResult::ChipCheckResult()  
-        : CheckResult(true), IfOnline(false), CheckSatisfiedCount(0), CheckPacksOfMifCodec(0), CheckPacksOfMifAdpow(0), TotalValidCodec(0), TotalValidAdpow(0), RangeSINAD(), ChipTestSt(WAITING_FOR_TESTING),  
+        : CheckResult(true), IfOnline(false), CheckSatisfiedCount(0), CheckPacksOfMifCodec(0), CheckPacksOfMifAdpow(0), TotalValidCodec(0), TotalValidAdpow(0), PassedGroupCount(0), RangeSINAD(), ChipTestSt(WAITING_FOR_TESTING),  
         ChipTestStCodec(WAITING_FOR_TESTING), ChipTestStAdpow(WAITING_FOR_TESTING) // 初始化 ChipTestStCodec 和 ChipTestStAdpow  
     {}
 
@@ -41,6 +41,7 @@ namespace DCR{
         CheckPacksOfMifAdpow = 0;
         TotalValidCodec = 0;      // 新增
         TotalValidAdpow = 0;      // 新增
+        PassedGroupCount = 0;     // 新增：初始化芯片级别的通过组数
         RangeSINAD.SetRange(0, 0);
         ChipTestSt = WAITING_FOR_TESTING;
         ChipTestStCodec = WAITING_FOR_TESTING;
@@ -54,6 +55,7 @@ namespace DCR{
         CheckPacksOfMifAdpow = 0;
         TotalValidCodec = 0;      // 新增
         TotalValidAdpow = 0;      // 新增
+        //PassedGroupCount = 0;     // 新增：重置芯片级别的通过组数
         ChipTestSt = WAITING_FOR_TESTING;
         ChipTestStCodec = WAITING_FOR_TESTING;
         ChipTestStAdpow = WAITING_FOR_TESTING;
@@ -78,6 +80,11 @@ namespace DCR{
     {
         TotalValidCodec = totalCodec;
         TotalValidAdpow = totalAdpow;
+    }
+
+    void ChipCheckResult::SetPassedGroupCount(int count)
+    {
+        PassedGroupCount = count;
     }
 
     void ChipCheckResult::SetCheckPacksOfMif(int CheckPacksCodec, int CheckPacksAdpow)
@@ -133,6 +140,11 @@ namespace DCR{
         return TotalValidAdpow; 
     }
 
+	int ChipCheckResult::GetPassedGroupCount() const //获取芯片级别的通过组数
+    { 
+        return PassedGroupCount;
+    }
+
 	int ChipCheckResult::GetCheckPacksOfMifCodec() const //获取连续有效的Codec包数
     { 
         return CheckPacksOfMifCodec;
@@ -156,6 +168,11 @@ namespace DCR{
     void ChipCheckResult::CheckSatisfiedCountInc()
     {
         CheckSatisfiedCount++;
+    }
+
+    void ChipCheckResult::PassedGroupCountInc()
+    {
+        PassedGroupCount++;
     }
 
    /* void ChipCheckResult::CheckPacksOfMifInc(bool res)
@@ -307,8 +324,8 @@ namespace DCR{
         BoardNum(0), ChipNum(0), CheckCount(0),
         CheckCompletedCount(0), CheckedGroupCount(0),
         ChipOnLineNum(0), ChipSatisfiedNum(0), 
-        ChipUnSatisfiedNum(0),TemperatureInner(0),
-        TemperatureEnviroment(0),UpPackCount(0)
+        ChipUnSatisfiedNum(0), PassedGroupCount(0), TotalGroupCount(0),
+        TemperatureInner(0), TemperatureEnviroment(0),UpPackCount(0)
     {}
 
     DeviceCheckResult::~DeviceCheckResult()
@@ -341,6 +358,8 @@ namespace DCR{
         ChipSatisfiedNum = BoardNum * ChipNum;
         //ChipSatisfiedNum = 0;
         ChipUnSatisfiedNum = 0;
+        //PassedGroupCount = 0;//新增：初始化通过测试的组数
+        TotalGroupCount = 0;//新增：初始化总测试组数
     }
 
     void DeviceCheckResult::Reset()
@@ -353,9 +372,10 @@ namespace DCR{
             }
         }
         ChipSatisfiedNum = BoardNum * ChipNum;
-        CheckedGroupCount = 0;
-        //ChipSatisfiedNum = 0;
-        ChipUnSatisfiedNum = 0;
+        //CheckedGroupCount = 0;
+        ChipSatisfiedNum = 0;
+        //PassedGroupCount = 0;//新增：重置通过测试的组数
+        //TotalGroupCount = 0;//新增：重置总测试组数
     }
 
     void DeviceCheckResult::Clear()
@@ -408,6 +428,16 @@ namespace DCR{
         ChipUnSatisfiedNum = chipUnSatisfiedNum;
     }
 
+    void DeviceCheckResult::SetPassedGroupCount(int count)
+    {
+        PassedGroupCount = count;
+    }
+
+    void DeviceCheckResult::SetTotalGroupCount(int count)
+    {
+        TotalGroupCount = count;
+    }
+
     void DeviceCheckResult::SetTemperatureInner(unsigned short Temp)
     {
         TemperatureInner = TemperatureTransferInner(Temp);
@@ -451,6 +481,16 @@ namespace DCR{
     int DeviceCheckResult::GetChipUnSatisfiedNum() const
     {
         return ChipUnSatisfiedNum;
+    }
+
+    int DeviceCheckResult::GetPassedGroupCount() const
+    {
+        return PassedGroupCount;
+    }
+
+    int DeviceCheckResult::GetTotalGroupCount() const
+    {
+        return TotalGroupCount;
     }
 
     double DeviceCheckResult::GetTemperatureInner() const
@@ -505,6 +545,16 @@ namespace DCR{
     {
         if(ChipUnSatisfiedNum > 0)
             ChipUnSatisfiedNum--;
+    }
+
+    void DeviceCheckResult::PassedGroupCountInc()
+    {
+        PassedGroupCount++;
+    }
+
+    void DeviceCheckResult::TotalGroupCountInc()
+    {
+        TotalGroupCount++;
     }
 
     double DeviceCheckResult::TemperatureTransferInner(unsigned short data)

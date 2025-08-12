@@ -579,7 +579,7 @@ namespace CWD {
 		QLabel* colon3 = new QLabel(":", this);
 		QLabel* colon4 = new QLabel(":", this);
 		QLabel* colon5 = new QLabel(":", this);
-		QLabel* colon6 = new QLabel(":", this);
+	 QLabel* colon6 = new QLabel(":", this);
 
                                                                                                                                               // 内容
 		LocalIP.setParent(this);
@@ -633,21 +633,21 @@ namespace CWD {
 
 		QHBoxLayout* row2 = new QHBoxLayout;
 		row2->addWidget(labelVersion);
-		row2->addWidget(colon3);
-		row2->addWidget(&VersionNum);
-		row2->addSpacing(30);
-		row2->addWidget(labelChipType);
-		row2->addWidget(colon4);
-		row2->addWidget(&ChipType);
+	 row2->addWidget(colon3);
+	 row2->addWidget(&VersionNum);
+	 row2->addSpacing(30);
+	 row2->addWidget(labelChipType);
+	 row2->addWidget(colon4);
+	 row2->addWidget(&ChipType);
 
 		QHBoxLayout* row3 = new QHBoxLayout;
 		row3->addWidget(labelTempInner);
-		row3->addWidget(colon5);
-		row3->addWidget(&TemperatureInner);
-		row3->addSpacing(30);
-		row3->addWidget(labelTempEnv);
-		row3->addWidget(colon6);
-		row3->addWidget(&TemperatureEnv);
+	 row3->addWidget(colon5);
+	 row3->addWidget(&TemperatureInner);
+	 row3->addSpacing(30);
+	 row3->addWidget(labelTempEnv);
+	 row3->addWidget(colon6);
+	 row3->addWidget(&TemperatureEnv);
 
 		QVBoxLayout* statLayout = new QVBoxLayout;
 		statLayout->addLayout(row1);
@@ -703,26 +703,6 @@ namespace CWD {
 		PSatisfiedChipNum.setMaximumWidth(60);
 		PRejectionChipNum.setMaximumWidth(60);
 
-                                                                                                                                              //HlIP.addWidget(&LocalIP);
-//                                                                                                                                            // HlIP.addStretch();
-                                                                                                                                              //HlIP.addSpacing(30);
-                                                                                                                                              //HlIP.addWidget(&DeviceIP);
-                                                                                                                                              //HlIP.addStretch();
-                                                                                                                                              //HlNum.addWidget(&VersionNum);
-//                                                                                                                                            // HlNum.addStretch();
-                                                                                                                                              //HlNum.addSpacing(30);
-                                                                                                                                              //HlNum.addWidget(&ChipType);
-                                                                                                                                              //HlNum.addStretch();
-                                                                                                                                              //HlTemp.addWidget(&TemperatureInner);
-//                                                                                                                                            // HlTemp.addStretch();
-                                                                                                                                              //HlTemp.addSpacing(30);
-                                                                                                                                              //HlTemp.addWidget(&TemperatureEnv);
-                                                                                                                                              //HlTemp.addStretch();
-                                                                                                                                              //VlStat.addLayout(&HlIP);
-                                                                                                                                              //VlStat.addLayout(&HlNum);
-                                                                                                                                              //VlStat.addLayout(&HlTemp);
-                                                                                                                                              //GbStat.setLayout(&VlStat);
-
 		HlTestNum.addWidget(&LTestNum);
 		HlTestNum.addStretch();
 		HlTestNum.addWidget(&PTestNum);
@@ -742,11 +722,9 @@ namespace CWD {
 		HlSatisfiedNum.addWidget(&LSatisfiedChipNum);
 		HlSatisfiedNum.addStretch();
 		HlSatisfiedNum.addWidget(&PSatisfiedChipNum);
-                                                                                                                                              // HlSatisfiedNum.addStretch();
 		HlRejectedNum.addWidget(&LRejectionChipNum);
 		HlRejectedNum.addStretch();
 		HlRejectedNum.addWidget(&PRejectionChipNum);
-                                                                                                                                              // HlRejectedNum.addStretch();
 		HlBtn.addStretch();
 		HlBtn.addWidget(&BtnStartTest);
 		HlBtn.addStretch();
@@ -837,22 +815,25 @@ namespace CWD {
 
 			LWZ::Log::LogInstance->Init(LOG_SE_RECORD_INDEX, currentLogSePath.toStdString().c_str());                                         //新增：生成并记录日志文件名
 
-			DCR::DeviceCheckResultGlobal->SetCheckedGroupCount(0);
+		//	DCR::DeviceCheckResultGlobal->SetCheckedGroupCount(0);
+		///*	DCR::DeviceCheckResultGlobal->SetPassedGroupCount(0);
+		//	DCR::DeviceCheckResultGlobal->SetTotalGroupCount(0);*/
+
+
 			PTestedNum.setText("0(0/0)");                                                                                                     // 已测试次数清零，界面显示为0
 			PSatisfiedChipNum.setText("");                                                                                                    // 测试通过数量清零
 			PRejectionChipNum.setText("");                                                                                                    // 测试失败数量清零
-			TOOLWZ::stack_wz<TASKWZ::task_type> stack_join;                                                                                   // 创建一个任务类型栈，用于后续批量join任务
+			TOOLWZ::stack_wz<TASKWZ::task_type> stack_join;                                                                                   // 创建一个任务类型栈，需要批量join的任务
 			stack_join.push(TASKWZ::task_type::TASK_END);                                                                                     // 压入“结束任务”类型
 			stack_join.push(TASKWZ::task_type::TASK_JOIN);                                                                                    // 压入“join任务”类型
 			stack_join.push(TASKWZ::TASK_DATA_CONSTRUCT);                                                                                     // 压入“数据构建任务”类型
-
-			stack_join.push(TASKWZ::TASK_DATA_SEND);                                                                                          // 压入“数据发送任务”类型
+		 stack_join.push(TASKWZ::TASK_DATA_SEND);                                                                                          // 压入“数据发送任务”类型
 			CREATE_TASK_JOIN(stack_join);                                                                                                     // 创建一个join任务，批量等待上述所有类型的任务完成
 			TaskSend = new TASKWZ::TaskDataSend(PTestNum.toPlainText().toInt());                                                              // 创建数据发送任务对象，参数为界面输入的测试次数
 			connect(TaskSend, &TASKWZ::TaskDataSend::MsgOfStartEnd, this, &CentralWidget::UpdateCheckResult, Qt::QueuedConnection);           // 连接TaskSend的“测试开始/结束”信号到界面结果更新槽函数
 			TASKWZ::worker_manager::create(TaskSend, TASKWZ::worker_type::EXECUTE_THREAD);                                                    // 将TaskSend任务交给任务管理器调度（以线程方式执行）
 			StatOfBtnStart = false;                                                                                                           // 状态切换为“测试中”
-			BtnStartTest.setText("结束测试");                                                                                                     // 按钮文本切换为“结束测试”
+			BtnStartTest.setText("结束测试");                                                                                                 // 按钮文本切换为“结束测试”
 		}
 		else
 		{
@@ -927,8 +908,8 @@ namespace CWD {
 					{
 						Models[i].UpdateItem(j + 1, CWD::Item(
 							DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline(),                                             // 芯片是否在线
-							Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckSatisfiedCount(),
-								DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()),                                                      // 满足/总次数
+							Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetPassedGroupCount(),
+								DCR::DeviceCheckResultGlobal->GetTotalGroupCount()),                                                      // 该芯片的通过组数/总组数
 							Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetRangeSINAD())                                     // SINAD范围
 						));
 						//DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetRangeSINAD(TCOND::Range(0, 0));
@@ -951,8 +932,8 @@ namespace CWD {
 					{
 						Models[i].UpdateItem(j + 1, CWD::Item(
 							DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline(),                                             // 芯片是否在线
-							Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetCheckSatisfiedCount(),
-								DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1),                                                  // 满足/总次数+1
+							Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetPassedGroupCount(),
+								DCR::DeviceCheckResultGlobal->GetTotalGroupCount()),                                                  // 该芯片的通过组数/总组数
 							Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetRangeSINAD())                                     // SINAD范围
 						));
 						//DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).SetRangeSINAD(TCOND::Range(0, 0));                             //新增：SINAD范围清零
@@ -977,6 +958,7 @@ namespace CWD {
 		{
 			WRITE_CENTRAL_WIDGET_DBG("TEST OVER\n");                                                                                          // 记录调试信息
 			std::unique_lock lock(mtx);                                                                                                       // 加锁，保证线程安全
+			ClockEvent();                                                                                                                     // 最后强制刷新一次
 			Clock->stop();                                                                                                                    // 停止计时器
 			if (TaskSend)
 			{
@@ -993,10 +975,10 @@ namespace CWD {
                                                                                                                                               // 生成带日期时间后缀的输出文件名
 /* QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
  QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(datetime);*/
-                                                                                                                                              // 结束时用同一个时间戳生成处理后日志名
-			QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(testSessionTime);
-			LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", processedLogPath.toStdString());
-
+			if (g_logOn) {                                                                                                                             // 结束时用同一个时间戳生成处理后日志名
+				QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(testSessionTime);
+				LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", processedLogPath.toStdString());
+			}
 			//                                                                                                                                // 调用日志处理
                                                                                                                                               //LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", processedLogPath.toStdString());
 
@@ -1024,21 +1006,7 @@ namespace CWD {
 			arg(TASKWZ::TaskVersionParsing::Version.VER, 5, 10, QChar(u'0')));
 	}
 
-                                                                                                                                              //void CentralWidget::ClockEvent()
-                                                                                                                                              //{
-//                                                                                                                                            //PTestTime.setText(QString("%1:%2:%3").arg(ClockVal / 3600, 2, 10).arg(ClockVal / 60, 2, 10).arg(ClockVal, 2, 10));
-                                                                                                                                              //	PTestTime.setText(QString("%1:%2:%3")
-                                                                                                                                              //		.arg(ClockVal / 3600, 2, 10, QChar('0'))
-                                                                                                                                              //		.arg((ClockVal / 60) % 60, 2, 10, QChar('0'))
-                                                                                                                                              //		.arg(ClockVal % 60, 2, 10, QChar('0')));
-                                                                                                                                              //	ClockVal++;
 
-//                                                                                                                                            // 新增：每秒刷新已测试次数/组数
-                                                                                                                                              //	PTestedNum.setText(QString("%1(%2/%3)")
-   //		.arg(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()+1)                                                                   //传输已测试的次数
-   //		.arg(DCR::DeviceCheckResultGlobal->GetCheckedGroupCount())                                                                       //传输已测试的组值
-   //		.arg(TotalGroupCount));                                                                                                          //从文件中读取总的测试组数，只读取一次缓存值，不会每秒重复读取文件
-                                                                                                                                              //}
 
 	void CentralWidget::ClockEvent()
 	{
@@ -1051,9 +1019,9 @@ namespace CWD {
 
 
 		PTestedNum.setText(QString("%1(%2/%3)")                                                                                               // 新增：每秒刷新已测试次数/组数
-			.arg(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1)                                                                  //传输已测试的次数
-			.arg(DCR::DeviceCheckResultGlobal->GetCheckedGroupCount())                                                                        //传输已测试的组值
-			.arg(TotalGroupCount));                                                                                                           //从文件中读取总的测试组数，只读取一次缓存值，不会每秒重复读取文件
+			.arg(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount())                                                                      // 传输已测试的次数
+			.arg(DCR::DeviceCheckResultGlobal->GetCheckedGroupCount())                                                                        // 传输已测试的组值
+			.arg(TotalGroupCount));                                                                                                           // 从文件中读取总的测试组数，只读取一次缓存值，不会每秒重复读取文件
 	}
 
 	void CentralWidget::NetConnected()

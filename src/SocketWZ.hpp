@@ -16,20 +16,16 @@ namespace SOCKWZ {
     class Socket {
         WSADATA wsa;
         sockaddr_in localAddr, chipAddr;
-        sockaddr_in sendLocalAddr;  // 发送socket的本地地址
         uint16_t localPort, chipPort;
-        uint16_t sendLocalPort;     // 发送socket的本地端口
-        SOCKET RecvSock{ INVALID_SOCKET };  // 接收socket
-        SOCKET SendSock{ INVALID_SOCKET };  // 发送socket
-        QString SockAddr[5];        // 扩展为5个：本地IP、接收端口、发送端口、芯片IP、芯片端口
+        SOCKET sock{ INVALID_SOCKET };  // 单一socket，既用于发送也用于接收
+        QString SockAddr[4];        // 回到4个：本地IP、本地端口、芯片IP、芯片端口
         std::atomic_bool LOCK;
         std::mutex mtx;
     public:
         Socket();
         ~Socket();
         bool Connect(QString localip,
-            QString recvport,        // 接收端口参数
-            QString sendport,        // 发送端口参数
+            QString localport,       // 本地端口参数
             QString chipip,
             QString chipport);
         void DisConnect();
@@ -47,8 +43,7 @@ namespace SOCKWZ {
         static std::mutex mtx;
 
         static bool Connect(QString localip,
-            QString recvport,        // 接收端口参数
-            QString sendport,        // 发送端口参数
+            QString localport,       // 本地端口参数
             QString chipip,
             QString chipport);
         static void DisConnect();

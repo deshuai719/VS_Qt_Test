@@ -797,8 +797,8 @@ namespace CWD {
 	/************************* 更新套接字信息，主要是IP地址等 *************************/
 	void CentralWidget::UpdateSockInfo()
 	{
-		LocalIP.setText(SOCKWZ::SockGlob::Sock->GetAddr()[0] + ":R" + SOCKWZ::SockGlob::Sock->GetAddr()[1] + "/S" + SOCKWZ::SockGlob::Sock->GetAddr()[2]);
-		DeviceIP.setText(SOCKWZ::SockGlob::Sock->GetAddr()[3] + ":" + SOCKWZ::SockGlob::Sock->GetAddr()[4]);
+		LocalIP.setText(SOCKWZ::SockGlob::Sock->GetAddr()[0] + ":" + SOCKWZ::SockGlob::Sock->GetAddr()[1] );
+		DeviceIP.setText(SOCKWZ::SockGlob::Sock->GetAddr()[2] + ":" + SOCKWZ::SockGlob::Sock->GetAddr()[3]);
 	}
 
 	/************************* 开始测试槽函数：启动测试流程 *************************/

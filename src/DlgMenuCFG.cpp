@@ -657,9 +657,6 @@ namespace MenuSocketCFG {
         CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_CENTRALIZE, "NETADDR/DeviceIP", info.DeviceIP);
         CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_CENTRALIZE, "NETADDR/DevicePort", info.DevicePort);
 
-        // 计算发送端口（接收端口+1）
-        QString sendPort = QString::number(info.LocalPort.toInt() - 1);
-
         switch (Option)
         {
         case SockOPT::CONNECT:
@@ -669,8 +666,8 @@ namespace MenuSocketCFG {
                 if (!(Record == info))
                 {
                     SOCKWZ::SockGlob::DisConnect();
-                    // 更新为5参数调用：本地IP, 接收端口, 发送端口, 芯片IP, 芯片端口
-                    if (SOCKWZ::SockGlob::Connect(info.LocalIP, info.LocalPort, sendPort, info.DeviceIP, info.DevicePort))
+                    // 更新为4参数调用：本地IP, 本地端口, 芯片IP, 芯片端口
+                    if (SOCKWZ::SockGlob::Connect(info.LocalIP, info.LocalPort, info.DeviceIP, info.DevicePort))
                     {
                         Record = info;
                         BtnConnect->setText("断开");
@@ -691,8 +688,8 @@ namespace MenuSocketCFG {
                 }
                 break;
             case SockOPT::DISCONNECT:
-                // 更新为5参数调用：本地IP, 接收端口, 发送端口, 芯片IP, 芯片端口
-                if (SOCKWZ::SockGlob::Connect(info.LocalIP, info.LocalPort, sendPort, info.DeviceIP, info.DevicePort))
+                // 更新为4参数调用：本地IP, 本地端口, 芯片IP, 芯片端口
+                if (SOCKWZ::SockGlob::Connect(info.LocalIP, info.LocalPort, info.DeviceIP, info.DevicePort))
                 {
                     Record = info;
                     BtnConnect->setText("断开");
@@ -757,7 +754,6 @@ namespace MenuSocketCFG {
         else
         {
             BtnConnect->setText("断开");
-
         }
     }
 
@@ -1488,4 +1484,4 @@ namespace MenuSINADCFG {
         SpinVppRMSADPOWLeft->setValue(adpowCond.GetRangeVppRMS().GetLeft());
         SpinVppRMSADPOWRight->setValue(adpowCond.GetRangeVppRMS().GetRight());
     }
-}; // namespace MenuSINADCFG
+};

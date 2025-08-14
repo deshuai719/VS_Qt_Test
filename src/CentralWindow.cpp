@@ -6,6 +6,9 @@
 #include <QMessageBox>
 #include <QDateTime>
 #include <QString>
+#include <QFileDialog>
+#include <QTextStream>
+#include <QFile>
 
 /************************* CWD命名空间：中央窗口相关类的实现 *************************/
 namespace CWD {
@@ -147,8 +150,8 @@ namespace CWD {
 						painter->drawRoundedRect(Rc[1].adjusted(1, 1, -1, -1), 2, 2);
 
                                                                                                                                                // 绘制进度条
-						QRect progressRect = Rc[1].adjusted(2, 2, -2, -2);                                                          
-						painter->fillRect(progressRect, QColor(Qt::red));                                                                   // 填充红色表示异常
+						QRect progressRect = Rc[1].adjusted(2, 2, -2, -2);                                                                  
+						painter->fillRect(progressRect, QColor(Qt::red));                                                                   // 塕充红色表示异常
 					}
 					else                                                                                                                      // 测试未完全通过
 					{
@@ -159,7 +162,6 @@ namespace CWD {
 
                                                                                                                                               // 绘制进度条
 						QRect progressRect = Rc[1].adjusted(2, 2, -2, -2);
-                                                                                                                                              // progressRect.setWidth(progressRect.width() * TestRes.GetLeft() / TestRes.GetRight());
 						painter->fillRect(progressRect, QColor(Qt::red));                                                                     // 填充红色表示失败
 					}
 
@@ -263,7 +265,7 @@ namespace CWD {
 					painter->drawRoundedRect(Rc[1].adjusted(1, 1, -1, -1), 2, 2);
 
 					painter->setPen(Qt::black);                                                                                               // 设置黑色文字
-					painter->drawText(Rc[1], Qt::AlignCenter, QString("%1\%(%2/%3)").                                                         // 绘制测试进度文本
+					painter->drawText(Rc[1], Qt::AlignCenter, QString("%1\%(%2/%3)").                                                         // 绵制测试进度文本
 						arg((TestRes.GetLeft() * 100) / (TestRes.GetRight() + ((TestRes.GetRight() == 0) ? 1 : 0)), 3, 10).
 						arg(TestRes.GetLeft(), 3, 10).arg(TestRes.GetRight(), 3, 10));
 				}
@@ -653,6 +655,8 @@ namespace CWD {
 		statLayout->addLayout(row1);
 		statLayout->addLayout(row2);
 		statLayout->addLayout(row3);
+		statLayout->setContentsMargins(8, 8, 8, 8);  // 减少边距
+		statLayout->setSpacing(3);  // 减少行间距
 
 		GbStat.setLayout(statLayout);
 
@@ -667,7 +671,7 @@ namespace CWD {
 			Delegates[i].SetBoardNum(i + 1);
 			Lists[i].setModel(&Models[i]);
 			Lists[i].setItemDelegate(&Delegates[i]);
-			Lists[i].setMinimumSize(270, 160);
+			//Lists[i].setMinimumSize(270, 160);
 		}
 
 		Filter = new RetEventFilter(this);
@@ -693,10 +697,10 @@ namespace CWD {
 		POnlineChipNum.setMaximumHeight(20);
 		PSatisfiedChipNum.setMaximumHeight(20);
 		PRejectionChipNum.setMaximumHeight(20);
-		GbInstrumentBoard.setMinimumSize(270, 160);
+
 		PTestNum.setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 		PTestNum.setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-		PTestNum.setMaximumWidth(60);
+		PTestNum.setMaximumWidth(40);   // 缩短总测试次数输入框，适合4位数字
 		PTestedNum.setMaximumWidth(60);
 		PTestTime.setMaximumWidth(60);
 		POnlineChipNum.setMaximumWidth(60);
@@ -706,19 +710,19 @@ namespace CWD {
 		HlTestNum.addWidget(&LTestNum);
 		HlTestNum.addStretch();
 		HlTestNum.addWidget(&PTestNum);
-                                                                                                                                              // HlTestNum.addStretch();
+		HlTestNum.addSpacing(5); // 减少间距
 		HlTestedNum.addWidget(&LTestedNum);
 		HlTestedNum.addStretch();
 		HlTestedNum.addWidget(&PTestedNum);
-                                                                                                                                              // HlTestedNum.addStretch();
+		HlTestedNum.addSpacing(5); // 减少间距
 		HlTestTime.addWidget(&LTestTime);
 		HlTestTime.addStretch();
 		HlTestTime.addWidget(&PTestTime);
-                                                                                                                                              // HlTestTime.addStretch();
+		HlTestTime.addSpacing(5); // 减少间距
 		HlOnlineChipNum.addWidget(&LOnlineChipNum);
 		HlOnlineChipNum.addStretch();
 		HlOnlineChipNum.addWidget(&POnlineChipNum);
-                                                                                                                                              // HlOnlineChipNum.addStretch();
+		HlOnlineChipNum.addSpacing(5); // 减少间距
 		HlSatisfiedNum.addWidget(&LSatisfiedChipNum);
 		HlSatisfiedNum.addStretch();
 		HlSatisfiedNum.addWidget(&PSatisfiedChipNum);
@@ -738,6 +742,8 @@ namespace CWD {
 		VlInstrumentBoard.addLayout(&HlRejectedNum);
 		VlInstrumentBoard.addLayout(&HlBtn);
 		VlInstrumentBoard.addStretch();
+		VlInstrumentBoard.setContentsMargins(8, 8, 8, 8);  // 恢复原来的边距
+		VlInstrumentBoard.setSpacing(4);  // 恢复原来的间距
 		GbInstrumentBoard.setLayout(&VlInstrumentBoard);
 
 		HlLineFst.addWidget(&Lists[0]);
@@ -752,10 +758,20 @@ namespace CWD {
 		VlDevStatistics.addLayout(&HlLineFst);
 		VlDevStatistics.addLayout(&HlLineSec);
 		VlDevStatistics.addLayout(&HlLineThd);
+		VlDevStatistics.setContentsMargins(5, 5, 5, 5);  // 减少边距
+		VlDevStatistics.setSpacing(3);  // 减少行间距
 		GbDevStatistics.setLayout(&VlDevStatistics);
+
+		// 新增：初始化底部信息显示区域
+		InitInfoArea();
 
 		VlAll.addWidget(&GbStat);
 		VlAll.addWidget(&GbDevStatistics);
+		VlAll.addWidget(&GbInfoArea);  // 添加信息显示区域到主布局
+		
+		// 优化主布局的间距和边距
+		VlAll.setContentsMargins(5, 5, 5, 5);  // 减少主布局边距
+		VlAll.setSpacing(3);  // 减少各部分之间的间距
 
 		setLayout(&VlAll);
 
@@ -782,6 +798,11 @@ namespace CWD {
 		connect(TaskVersion, &TASKWZ::TaskVersionParsing::UpdateBoardVersion, this, &CentralWidget::UpdateVersion, Qt::QueuedConnection);
 		connect(Clock, &QTimer::timeout, this, &CentralWidget::ClockEvent);
 		connect(TimingDetection, &QTimer::timeout, this, &CentralWidget::TimingDetectionEvent);
+		
+		// 新增：信息显示区域信号槽连接
+		connect(&BtnClearInfo, &QPushButton::clicked, this, &CentralWidget::OnClearInfo);
+		connect(&BtnSaveInfo, &QPushButton::clicked, this, &CentralWidget::OnSaveInfo);
+		connect(&ChkAutoScroll, &QCheckBox::toggled, this, &CentralWidget::OnAutoScrollToggled);
 	}
 
 	/************************* 创建线程与任务 *************************/
@@ -806,7 +827,7 @@ namespace CWD {
 	{
 		WRITE_CENTRAL_WIDGET_DBG("StartTest(), Enter\n");                                                                                     // 写调试日志，记录进入StartTest函数
 
-		if (StatOfBtnStart)                                                                                                                   // 如果当前是“开始测试”状态（按钮未被按下，准备开始测试）
+		if (StatOfBtnStart)                                                                                                                   // 如果当前是"开始测试"状态（按钮未被按下，准备开始测试）
 		{
                                                                                                                                               // 只在测试开始时生成一次时间戳
 			testSessionTime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
@@ -819,25 +840,31 @@ namespace CWD {
 		///*	DCR::DeviceCheckResultGlobal->SetPassedGroupCount(0);
 		//	DCR::DeviceCheckResultGlobal->SetTotalGroupCount(0);*/
 
+			// 新增：添加测试开始信息
+			AppendInfoWithTime(QString("开始测试，计划测试 %1 次").arg(PTestNum.toPlainText()), "INFO");
+			AppendInfoWithTime(QString("日志文件: %1").arg(currentLogSePath), "INFO");
 
 			PTestedNum.setText("0(0/0)");                                                                                                     // 已测试次数清零，界面显示为0
 			PSatisfiedChipNum.setText("");                                                                                                    // 测试通过数量清零
 			PRejectionChipNum.setText("");                                                                                                    // 测试失败数量清零
 			TOOLWZ::stack_wz<TASKWZ::task_type> stack_join;                                                                                   // 创建一个任务类型栈，需要批量join的任务
-			stack_join.push(TASKWZ::task_type::TASK_END);                                                                                     // 压入“结束任务”类型
-			stack_join.push(TASKWZ::task_type::TASK_JOIN);                                                                                    // 压入“join任务”类型
-			stack_join.push(TASKWZ::TASK_DATA_CONSTRUCT);                                                                                     // 压入“数据构建任务”类型
-		 stack_join.push(TASKWZ::TASK_DATA_SEND);                                                                                          // 压入“数据发送任务”类型
+			stack_join.push(TASKWZ::task_type::TASK_END);                                                                                     // 压入"结束任务"类型
+			stack_join.push(TASKWZ::task_type::TASK_JOIN);                                                                                    // 压入"join任务"类型
+			stack_join.push(TASKWZ::TASK_DATA_CONSTRUCT);                                                                                     // 压入"数据构建任务"类型
+		 stack_join.push(TASKWZ::TASK_DATA_SEND);                                                                                          // 压入"数据发送任务"类型
 			CREATE_TASK_JOIN(stack_join);                                                                                                     // 创建一个join任务，批量等待上述所有类型的任务完成
 			TaskSend = new TASKWZ::TaskDataSend(PTestNum.toPlainText().toInt());                                                              // 创建数据发送任务对象，参数为界面输入的测试次数
-			connect(TaskSend, &TASKWZ::TaskDataSend::MsgOfStartEnd, this, &CentralWidget::UpdateCheckResult, Qt::QueuedConnection);           // 连接TaskSend的“测试开始/结束”信号到界面结果更新槽函数
+			connect(TaskSend, &TASKWZ::TaskDataSend::MsgOfStartEnd, this, &CentralWidget::UpdateCheckResult, Qt::QueuedConnection);           // 连接TaskSend的"测试开始/结束"信号到界面结果更新槽函数
 			TASKWZ::worker_manager::create(TaskSend, TASKWZ::worker_type::EXECUTE_THREAD);                                                    // 将TaskSend任务交给任务管理器调度（以线程方式执行）
-			StatOfBtnStart = false;                                                                                                           // 状态切换为“测试中”
-			BtnStartTest.setText("结束测试");                                                                                                 // 按钮文本切换为“结束测试”
+			StatOfBtnStart = false;                                                                                                           // 状态切换为"测试中"
+			BtnStartTest.setText("结束测试");                                                                                                 // 按钮文本切换为"结束测试"
 		}
 		else
 		{
-                                                                                                                                              // 如果当前是“结束测试”状态（按钮已按下，准备结束测试）
+                                                                                                                                              // 如果当前是"结束测试"状态（按钮已按下，准备结束测试）
+			// 新增：添加测试结束信息
+			AppendInfoWithTime("用户手动结束测试", "WARNING");
+			
 			std::unique_lock lock(mtx);                                                                                                       // 加锁，保证线程安全
 			Clock->stop();                                                                                                                    // 停止计时器
 			if (TaskSend)                                                                                                                     // 如果TaskSend存在，断开信号连接，关闭任务并释放对象
@@ -850,16 +877,19 @@ namespace CWD {
 
 			TOOLWZ::stack_wz<TASKWZ::task_type> stack_end;                                                                                    // 创建一个任务类型栈，用于批量结束任务
 
-			stack_end.push(TASKWZ::TASK_DATA_SEND);                                                                                           // 压入“数据发送任务”类型
+			stack_end.push(TASKWZ::TASK_DATA_SEND);                                                                                           // 压入"数据发送任务"类型
 
 			CREATE_TASK_END(stack_end);                                                                                                       // 创建一个end任务，批量关闭上述类型的任务
 
-			StatOfBtnStart = true;                                                                                                            // 状态切换为“未测试”
-			BtnStartTest.setText("开始测试");                                                                                                     // 按钮文本切换为“开始测试”
+			StatOfBtnStart = true;                                                                                                            // 状态切换为"未测试"
+			BtnStartTest.setText("开始测试");                                                                                                     // 按钮文本切换为"开始测试"
 
                                                                                                                                               // 结束时用同一个时间戳生成处理后日志名
 			QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(testSessionTime);
 			LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", processedLogPath.toStdString());
+			
+			// 新增：添加日志处理完成信息
+			AppendInfoWithTime(QString("日志处理完成: %1").arg(processedLogPath), "SUCCESS");
 
 			lock.unlock();                                                                                                                    // 解锁
 		}
@@ -894,6 +924,8 @@ namespace CWD {
 			Clock->start(1000);                                                                                                               // 启动计时器，每秒触发
 			DCR::DeviceCheckResultGlobal->Init();                                                                                             // 初始化检测结果
 			DCR::DeviceCheckResultGlobal->SetCheckCount(TaskSend->TestCount);                                                                 // 设置本次测试总次数
+			// 新增：添加测试开始信息
+			AppendInfoWithTime("测试流程正式开始", "SUCCESS");
 			TASKWZ::TaskDataSend::SemaWaitForUI.release(1);                                                                                   // 通知UI可以继续
 			break;
 		case TASKWZ::TestStat::TEST_RUNNING:
@@ -921,6 +953,11 @@ namespace CWD {
 				POnlineChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipOnLineNum()));                                  // 更新在线芯片数
 				PSatisfiedChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipSatisfiedNum()));                            // 更新通过芯片数
 				PRejectionChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipUnSatisfiedNum()));                          // 更新失败芯片数
+				// 新增：添加测试状态信息
+				AppendInfo(QString("数据统计完成 - 在线:%1 通过:%2 失败:%3")
+					.arg(DCR::DeviceCheckResultGlobal->GetChipOnLineNum())
+					.arg(DCR::DeviceCheckResultGlobal->GetChipSatisfiedNum())
+					.arg(DCR::DeviceCheckResultGlobal->GetChipUnSatisfiedNum()), "INFO");
 				TASKWZ::TaskDataSend::SemaWaitForUI.release(1);                                                                               // 通知UI可以继续
 				WRITE_CENTRAL_WIDGET_DBG("case: STATISTICS_A_MIF Leave\n");                                                                   // 记录调试信息
 				break;
@@ -948,6 +985,10 @@ namespace CWD {
 				//PRejectionChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipUnSatisfiedNum()));                        // 更新失败芯片数
 				DCR::DeviceCheckResultGlobal->Reset();                                                                                        // 重置检测结果
 				DCR::DeviceCheckResultGlobal->CheckCompletedCountInc();                                                                       // 已完成测试数加1
+				// 新增：添加测试进度信息
+				AppendInfo(QString("测试进度更新: %1/%2 组")
+					.arg(DCR::DeviceCheckResultGlobal->GetCheckedGroupCount())
+					.arg(TotalGroupCount), "INFO");
 				TASKWZ::TaskDataSend::SemaWaitForUI.release(1);                                                                               // 通知UI可以继续
 				break;
 			default:
@@ -967,10 +1008,10 @@ namespace CWD {
 				TaskSend = nullptr;                                                                                                           // 释放对象
 			}
 			TOOLWZ::stack_wz<TASKWZ::task_type> stack_end;                                                                                    // 创建任务类型栈
-			stack_end.push(TASKWZ::TASK_DATA_SEND);                                                                                           // 压入“数据发送任务”
+			stack_end.push(TASKWZ::TASK_DATA_SEND);                                                                                           // 压入"数据发送任务"
 			CREATE_TASK_END(stack_end);                                                                                                       // 批量关闭任务
-			StatOfBtnStart = true;                                                                                                            // 状态切换为“未测试”
-			BtnStartTest.setText("开始测试");                                                                                                     // 按钮文本切换为“开始测试”
+			StatOfBtnStart = true;                                                                                                            // 状态切换为"未测试"
+			BtnStartTest.setText("开始测试");                                                                                                     // 按钮文本切换为"开始测试"
 
                                                                                                                                               // 生成带日期时间后缀的输出文件名
 /* QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
@@ -978,6 +1019,9 @@ namespace CWD {
 			if (g_logOn) {                                                                                                                             // 结束时用同一个时间戳生成处理后日志名
 				QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(testSessionTime);
 				LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", processedLogPath.toStdString());
+				// 新增：添加测试完成信息
+				AppendInfoWithTime("测试流程全部完成", "SUCCESS");
+				AppendInfoWithTime(QString("处理后日志: %1").arg(processedLogPath), "INFO");
 			}
 			//                                                                                                                                // 调用日志处理
                                                                                                                                               //LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", processedLogPath.toStdString());
@@ -1028,12 +1072,16 @@ namespace CWD {
 	{
 		TimingDetection->start(1000);
 		IfNoticeMNICWhenDisconnect = true;
+		// 新增：添加网络连接信息
+		AppendInfoWithTime("设备网络连接已建立", "SUCCESS");
 		//UpdateChipOnlineStatus();                                                                                                           // 新增：网口连接时刷新芯片在线状态
 	}
 
 	void CentralWidget::NetDisconnected()
 	{
 		TimingDetection->stop();
+		// 新增：添加网络断开信息
+		AppendInfoWithTime("设备网络连接已断开", "ERROR");
 		//UpdateChipOnlineStatus();                                                                                                           // 新增：定时刷新芯片在线状态
 		ResetModelItemStat();
 	}
@@ -1072,6 +1120,162 @@ namespace CWD {
 			{
 				it.RestOnLineStat();
 			}
+		}
+	}
+
+	/************************* 信息显示区域相关方法实现 *************************/
+	
+	void CentralWidget::InitInfoArea()
+	{
+		// 初始化信息显示文本区域
+		InfoTextArea.setParent(this);
+		InfoTextArea.setReadOnly(true);
+		InfoTextArea.setMinimumHeight(160);   // 增大最小高度，显示更多行
+		InfoTextArea.setMaximumHeight(240);   // 增大最大高度，显示更多行
+		InfoTextArea.setPlaceholderText("测试信息将在此显示...");
+		InfoTextArea.setStyleSheet(
+			"QPlainTextEdit {"
+			"    background-color: #f8f8f8;"
+			"    border: 1px solid #d0d0d0;"
+			"    border-radius: 4px;"
+			"    font-family: 'Microsoft YaHei', 'Consolas';"
+			"    font-size: 12px;"
+			"    padding: 3px;"  // 减少内边距
+			"}"
+		);
+		
+		// 初始化控制按钮
+		BtnClearInfo.setParent(this);
+		BtnClearInfo.setText("清空");
+		BtnClearInfo.setFixedSize(50, 20);  // 减小按钮尺寸
+		BtnClearInfo.setToolTip("清空所有信息");
+		
+		BtnSaveInfo.setParent(this);
+		BtnSaveInfo.setText("保存");
+		BtnSaveInfo.setFixedSize(50, 20);   // 减小按钮尺寸
+		BtnSaveInfo.setToolTip("保存信息到文件");
+		
+		// 初始化自动滚动复选框
+		ChkAutoScroll.setParent(this);
+		ChkAutoScroll.setText("自动滚动");
+		ChkAutoScroll.setChecked(true);  // 默认开启自动滚动
+		ChkAutoScroll.setToolTip("新信息添加时自动滚动到底部");
+		
+		// 设置控制按钮布局 - 将标题和控制按钮都放在一行
+		HlInfoControls.addWidget(new QLabel("测试信息:", this));
+		HlInfoControls.addStretch();
+		HlInfoControls.addWidget(&ChkAutoScroll);
+		HlInfoControls.addSpacing(5);  // 减少间距
+		HlInfoControls.addWidget(&BtnClearInfo);
+		HlInfoControls.addSpacing(3); // 减少间距
+		HlInfoControls.addWidget(&BtnSaveInfo);
+		HlInfoControls.setContentsMargins(3, 0, 3, 0);  // 减少边距
+		
+		// 设置信息区域整体布局
+		VlInfoArea.addLayout(&HlInfoControls);
+		VlInfoArea.addWidget(&InfoTextArea);
+		VlInfoArea.setContentsMargins(3, 3, 3, 3);  // 减少边距
+		VlInfoArea.setSpacing(3);  // 减少布局间距
+		
+		// 设置分组框
+		GbInfoArea.setTitle("");  // 移除分组框标题，因为已在控制行显示
+		GbInfoArea.setLayout(&VlInfoArea);
+		GbInfoArea.setStyleSheet(
+			"QGroupBox {"
+			"    border: 1px solid #d0d0d0;"
+			"    border-radius: 4px;"
+			"    margin-top: 0px;"  // 减少上边距
+			"    padding-top: 3px;" // 减少上内边距
+			"}"
+		);
+		
+		// 添加初始信息
+		AppendInfoWithTime("系统初始化完成", "INFO");
+	}
+	
+	void CentralWidget::AppendInfo(const QString& message, const QString& level)
+	{
+		// 根据级别设置不同颜色
+		QString colorCode;
+		if (level == "ERROR") {
+			colorCode = "#ff4444";
+		} else if (level == "WARNING") {
+			colorCode = "#ff8800";
+		} else if (level == "SUCCESS") {
+			colorCode = "#00aa00";
+		} else {
+			colorCode = "#333333";  // INFO默认颜色
+		}
+		
+		// 格式化消息
+		QString formattedMessage = QString("<span style='color: %1'>[%2] %3</span>")
+			.arg(colorCode)
+			.arg(level)
+			.arg(message);
+		
+		// 添加到文本区域
+		InfoTextArea.appendHtml(formattedMessage);
+		
+		// 自动滚动到底部
+		if (ChkAutoScroll.isChecked()) {
+			QScrollBar* scrollBar = InfoTextArea.verticalScrollBar();
+			scrollBar->setValue(scrollBar->maximum());
+		}
+		
+		// 限制最大行数，防止内存占用过大
+		QTextDocument* doc = InfoTextArea.document();
+		if (doc->blockCount() > 1000) {
+			QTextCursor cursor = InfoTextArea.textCursor();
+			cursor.movePosition(QTextCursor::Start);
+			cursor.select(QTextCursor::BlockUnderCursor);
+			cursor.removeSelectedText();
+		}
+	}
+	
+	void CentralWidget::AppendInfoWithTime(const QString& message, const QString& level)
+	{
+		QString timeStamp = QDateTime::currentDateTime().toString("hh:mm:ss");
+		QString messageWithTime = QString("[%1] %2").arg(timeStamp).arg(message);
+		AppendInfo(messageWithTime, level);
+	}
+	
+	void CentralWidget::OnClearInfo()
+	{
+		InfoTextArea.clear();
+		AppendInfoWithTime("信息已清空", "INFO");
+	}
+	
+	void CentralWidget::OnSaveInfo()
+	{
+		QString fileName = QFileDialog::getSaveFileName(
+			this,
+			"保存测试信息",
+			QString("./LOG/TestInfo_%1.txt").arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")),
+			"文本文件 (*.txt);;所有文件 (*.*)"
+		);
+		
+		if (!fileName.isEmpty()) {
+			QFile file(fileName);
+			if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+				QTextStream out(&file);
+				out << InfoTextArea.toPlainText();
+				file.close();
+				AppendInfoWithTime(QString("信息已保存到: %1").arg(fileName), "SUCCESS");
+			} else {
+				AppendInfoWithTime("保存失败: 无法创建文件", "ERROR");
+			}
+		}
+	}
+	
+	void CentralWidget::OnAutoScrollToggled(bool enabled)
+	{
+		if (enabled) {
+			AppendInfoWithTime("自动滚动已开启", "INFO");
+			// 立即滚动到底部
+			QScrollBar* scrollBar = InfoTextArea.verticalScrollBar();
+			scrollBar->setValue(scrollBar->maximum());
+		} else {
+						AppendInfoWithTime("自动滚动已关闭", "INFO");
 		}
 	}
 };

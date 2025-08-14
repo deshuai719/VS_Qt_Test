@@ -809,8 +809,8 @@ void TaskChipStatParsing::run()
 				//lastPackLogRecord = bPackLogRecord;
 				
 				/********************************直接读取缓存空间设置重发信号标志**********************************************/
-				static int lastFluidValue = -1;  // 记录上一次的流控值，替代cnt_dn_empty_start和cnt_dn_full_start
-				static bool lastPackLogRecord = false;
+				static int lastFluidValue = -1;			// 记录上一次的流控值，替代cnt_dn_empty_start和cnt_dn_full_start
+				static bool lastPackLogRecord = false;			// 初始包记录关闭，不对开始测试前解析的数据包进行记录
 
 				//static std::atomic<int> resendCounter{ 0 };
 				if (bPackLogRecord)
@@ -821,12 +821,11 @@ void TaskChipStatParsing::run()
 					qDebug() << "free_codec_dac:" << up_mnic_sta->free_codec_dac;
 
 					// 新增：基于流控空间变化的重发机制，替代上下溢计数器机制
-					int currentFluidValue = up_mnic_sta->free_codec_dac;
+					int currentFluidValue = up_mnic_sta->free_codec_dac; // 设置当前的缓存空间值
 
 					// 检测bPackLogRecord从false变为true
 					if (!lastPackLogRecord) {
-						// 刚开启时同步流控值，避免误判
-						lastFluidValue = currentFluidValue;
+						lastFluidValue = currentFluidValue;			// 刚开启时同步流控值，避免误判
 					}
 					else {
 						// 检查是否从有数据状态变为空状态（从小于FLUID_SIZE_INDEX0变为等于或大于FLUID_SIZE_INDEX0）
@@ -835,10 +834,10 @@ void TaskChipStatParsing::run()
 							WRITE_TASK_DATA_SEND_DBG("流控空间从%d变为%d，从有数据变为空状态，重发计数器+1，当前计数器值: %d\n",
 								lastFluidValue, currentFluidValue, newVal);
 						}
-						lastFluidValue = currentFluidValue;
+						lastFluidValue = currentFluidValue;			// 更新用于比较的缓存空间值
 					}
 				}
-				lastPackLogRecord = bPackLogRecord; // 更新上一次的包日志记录状态
+				lastPackLogRecord = bPackLogRecord;			// 更新上一次的包日志记录状态
 				// 遍历所有板卡和芯片
 				for(int i = 0; i < 8; i++)
 				{

@@ -20,6 +20,11 @@
 #include <QApplication>
 #include <QRandomGenerator>
 #include <QTimer>
+#include <QCheckBox>
+#include <QFileDialog>
+#include <QScrollBar>
+#include <QTextCursor>
+#include <QDateTime>
 #include <memory>
 #include "TestCondition.hpp"
 #include "TaskWZ.hpp"
@@ -155,6 +160,15 @@ namespace CWD{
         QPushButton BtnStartTest;
         QPushButton BtnOpenLog;
 
+        // 新增：底部信息显示区域
+        QPlainTextEdit InfoTextArea;           // 信息显示文本区域
+        QPushButton BtnClearInfo;              // 清空信息按钮
+        QPushButton BtnSaveInfo;               // 保存信息按钮
+        QCheckBox ChkAutoScroll;               // 自动滚动复选框
+        QHBoxLayout HlInfoControls;            // 信息区域控制按钮布局
+        QVBoxLayout VlInfoArea;                // 信息区域整体布局
+        QGroupBox GbInfoArea;                  // 信息区域分组框
+
         QHBoxLayout HlIP;
         QHBoxLayout HlNum;
         QHBoxLayout HlTemp;
@@ -200,6 +214,12 @@ namespace CWD{
         void Connect();
         void CreateThread();
         void ResetModelItemStat();
+        
+        // 新增：信息显示区域相关方法
+        void InitInfoArea();                   // 初始化信息显示区域
+        void AppendInfo(const QString& message, const QString& level = "INFO"); // 添加信息
+        void AppendInfoWithTime(const QString& message, const QString& level = "INFO"); // 添加带时间戳的信息
+        
     public slots:
         void UpdateSockInfo();
         void StartTest();
@@ -211,6 +231,12 @@ namespace CWD{
         void NetDisconnected();//msg from MNIC
         void TimingDetectionEvent();
         void UpdateChipOnlineStatus();//新增：在线状态刷新
+        
+        // 新增：信息显示区域槽函数
+        void OnClearInfo();                    // 清空信息槽函数
+        void OnSaveInfo();                     // 保存信息槽函数
+        void OnAutoScrollToggled(bool enabled); // 自动滚动切换槽函数
+        
     signals:
         void NetRecovery();//msg to MNIC
         void NetLoss();//msg to MNIC

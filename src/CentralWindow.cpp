@@ -513,6 +513,10 @@ namespace CWD {
 		InitThread();                                                                                                                         // 初始化线程
 		Connect();                                                                                                                            // 连接信号槽
 		CreateThread();                                                                                                                       // 创建工作线程
+		
+		// 新增：连接全局信息管理器信号到当前实例
+		connect(InfoMessageManager::getInstance(), &InfoMessageManager::infoMessageReady,
+			this, &CentralWidget::OnGlobalInfoMessage, Qt::QueuedConnection);
                                                                                                                                               // TimingDetection->start(1000);
 	}
 
@@ -842,7 +846,7 @@ namespace CWD {
 
 			// 新增：添加测试开始信息
 			AppendInfoWithTime(QString("开始测试，计划测试 %1 次").arg(PTestNum.toPlainText()), "INFO");
-			AppendInfoWithTime(QString("日志文件: %1").arg(currentLogSePath), "INFO");
+			AppendInfoWithTime(QString("简要日志文件: %1").arg(currentLogSePath), "INFO");
 
 			PTestedNum.setText("0(0/0)");                                                                                                     // 已测试次数清零，界面显示为0
 			PSatisfiedChipNum.setText("");                                                                                                    // 测试通过数量清零
@@ -953,11 +957,11 @@ namespace CWD {
 				POnlineChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipOnLineNum()));                                  // 更新在线芯片数
 				PSatisfiedChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipSatisfiedNum()));                            // 更新通过芯片数
 				PRejectionChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipUnSatisfiedNum()));                          // 更新失败芯片数
-				// 新增：添加测试状态信息
-				AppendInfo(QString("数据统计完成 - 在线:%1 通过:%2 失败:%3")
-					.arg(DCR::DeviceCheckResultGlobal->GetChipOnLineNum())
-					.arg(DCR::DeviceCheckResultGlobal->GetChipSatisfiedNum())
-					.arg(DCR::DeviceCheckResultGlobal->GetChipUnSatisfiedNum()), "INFO");
+				//// 新增：添加测试状态信息
+				//AppendInfo(QString("数据统计完成 - 在线:%1 通过:%2 失败:%3")
+				//	.arg(DCR::DeviceCheckResultGlobal->GetChipOnLineNum())
+				//	.arg(DCR::DeviceCheckResultGlobal->GetChipSatisfiedNum())
+				//	.arg(DCR::DeviceCheckResultGlobal->GetChipUnSatisfiedNum()), "INFO");
 				TASKWZ::TaskDataSend::SemaWaitForUI.release(1);                                                                               // 通知UI可以继续
 				WRITE_CENTRAL_WIDGET_DBG("case: STATISTICS_A_MIF Leave\n");                                                                   // 记录调试信息
 				break;
@@ -988,7 +992,7 @@ namespace CWD {
 				// 新增：添加测试进度信息
 				AppendInfo(QString("测试进度更新: %1/%2 组")
 					.arg(DCR::DeviceCheckResultGlobal->GetCheckedGroupCount())
-					.arg(TotalGroupCount), "INFO");
+					.arg(TotalGroupCount));
 				TASKWZ::TaskDataSend::SemaWaitForUI.release(1);                                                                               // 通知UI可以继续
 				break;
 			default:
@@ -1039,15 +1043,18 @@ namespace CWD {
 	void CentralWidget::UpdateVersion()
 	{
 		WRITE_CENTRAL_WIDGET_DBG("CentralWidget::UpdateVersion(), Enter\n");
-                                                                                                                                              // VersionNum.setText(QString("版本号:%1\%2%3-%4\%5%6:R%7").arg(TASKWZ::TaskVersionParsing::Version.YEAR, 2, 16, QChar(u'0')).
-                                                                                                                                              // arg(TASKWZ::TaskVersionParsing::Version.MONTH, 2, 16, QChar(u'0')).arg(TASKWZ::TaskVersionParsing::Version.DAY, 2, 16, QChar(u'0')).
-                                                                                                                                              // arg(TASKWZ::TaskVersionParsing::Version.HOUR, 2, 16 , QChar(u'0')).arg(TASKWZ::TaskVersionParsing::Version.MIN, 2, 16, QChar(u'0')).
-                                                                                                                                              // arg(TASKWZ::TaskVersionParsing::Version.SEC, 2, 16  , QChar(u'0')).arg(TASKWZ::TaskVersionParsing::Version.VER, 4, 16, QChar(u'0')));
-
+		//顶部输出版本号
 		VersionNum.setText(QString("20%1-%2-%3-%4-%5:R%6").arg(TASKWZ::TaskVersionParsing::Version.YEAR, 2, 16, QChar(u'0')).
 			arg(TASKWZ::TaskVersionParsing::Version.MONTH, 2, 16, QChar(u'0')).arg(TASKWZ::TaskVersionParsing::Version.DAY, 2, 16, QChar(u'0')).
 			arg(TASKWZ::TaskVersionParsing::Version.HOUR, 2, 16, QChar(u'0')).arg(TASKWZ::TaskVersionParsing::Version.MIN, 2, 16, QChar(u'0')).
 			arg(TASKWZ::TaskVersionParsing::Version.VER, 5, 10, QChar(u'0')));
+
+		//底部输出栏显示版本号和温度
+		AppendInfoWithTime(QString("版本号: 20%1-%2-%3-%4-%5:R%6").arg(TASKWZ::TaskVersionParsing::Version.YEAR, 2, 16, QChar(u'0')).
+			arg(TASKWZ::TaskVersionParsing::Version.MONTH, 2, 16, QChar(u'0')).arg(TASKWZ::TaskVersionParsing::Version.DAY, 2, 16, QChar(u'0')).
+			arg(TASKWZ::TaskVersionParsing::Version.HOUR, 2, 16, QChar(u'0')).arg(TASKWZ::TaskVersionParsing::Version.MIN, 2, 16, QChar(u'0')).
+			arg(TASKWZ::TaskVersionParsing::Version.VER, 5, 10, QChar(u'0')), "INFO");
+		AppendInfoWithTime(QString("FPGA温度: %1℃, 环境温度:  %2℃").arg(DCR::DeviceCheckResultGlobal->GetTemperatureInner(), 4, 'f', 1, '0').arg(DCR::DeviceCheckResultGlobal->GetTempeartureEnv(), 4, 'f', 1, '0'), "INFO");
 	}
 
 
@@ -1074,8 +1081,7 @@ namespace CWD {
 		IfNoticeMNICWhenDisconnect = true;
 		// 新增：添加网络连接信息
 		AppendInfoWithTime("设备网络连接已建立", "SUCCESS");
-		//UpdateChipOnlineStatus();                                                                                                           // 新增：网口连接时刷新芯片在线状态
-	}
+		}
 
 	void CentralWidget::NetDisconnected()
 	{
@@ -1208,9 +1214,8 @@ namespace CWD {
 		}
 		
 		// 格式化消息
-		QString formattedMessage = QString("<span style='color: %1'>[%2] %3</span>")
+		QString formattedMessage = QString("<span style='color: %1'> %3</span>")
 			.arg(colorCode)
-			.arg(level)
 			.arg(message);
 		
 		// 添加到文本区域
@@ -1277,6 +1282,38 @@ namespace CWD {
 		} else {
 						AppendInfoWithTime("自动滚动已关闭", "INFO");
 		}
+	}
+	
+	// 新增：接收全局信息的槽函数实现
+	void CentralWidget::OnGlobalInfoMessage(const QString& message, const QString& level)
+	{
+		AppendInfo(message, level);
+	}
+
+	/************************* 全局信息管理器实现 *************************/
+	
+	// 静态成员初始化
+	InfoMessageManager* InfoMessageManager::instance = nullptr;
+	
+	InfoMessageManager* InfoMessageManager::getInstance()
+	{
+		if (instance == nullptr) {
+			instance = new InfoMessageManager();
+		}
+		return instance;
+	}
+	
+	void InfoMessageManager::postInfo(const QString& message, const QString& level)
+	{
+		InfoMessageManager* mgr = getInstance();
+		emit mgr->infoMessageReady(message, level);
+	}
+	
+	void InfoMessageManager::postInfoWithTime(const QString& message, const QString& level)
+	{
+		QString timeStamp = QDateTime::currentDateTime().toString("hh:mm:ss");
+		QString messageWithTime = QString("[%1] %2").arg(timeStamp).arg(message);
+		postInfo(messageWithTime, level);
 	}
 };
 

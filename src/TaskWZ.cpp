@@ -1,6 +1,7 @@
 ﻿#include "TaskWZ.hpp"
 #include "GlobalConditionList.hpp"
 #include "DeviceCheckResult.hpp"
+#include "CentralWindow.hpp"
 #include <QDebug>
 #include <QThread>
 #include <atomic>
@@ -1267,11 +1268,12 @@ void TaskDataSend::run()
 		return;                                                                                                 // 9. 直接返回
 	}
 
-	while (Loop && TestCount--)                                                                                 // 10. 主循环，Loop为true且TestCount大于0时循环
+	while (Loop && TestCount--)                                                                                   // 10. 主循环，Loop为true且TestCount大于0时循环
 	{
-		WRITE_TASK_DATA_SEND_DBG("TestCount = %lld\n", TestCount);                                              // 11. 记录当前测试次数
-		//WRITE_LOG_UP_RECORD("\n[第%03d次参数下发开始]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()+1); // 12. 记录本次参数下发开始
-		//WRITE_LOG_SE_RECORD("\n[第%03d次参数下发开始]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()+1);
+		WRITE_TASK_DATA_SEND_DBG("TestCount = %lld\n", TestCount+1);                                              // 11. 记录当前测试次数
+		WRITE_LOG_UP_RECORD("\n[第%03d次参数下发开始]\n", TestCount+1);                                           // 12. 记录本次参数下发开始
+		WRITE_LOG_SE_RECORD("\n[第%03d次参数下发开始]\n", TestCount+1);
+		POST_INFO(QString::asprintf("\n[第%03d次参数下发开始]\n", TestCount+1));
 		std::shared_ptr<DCWZ::DataNode> Node = DCWZ::DataMana::DataListGlobal.GetHead();                        // 13. 获取数据链表头节点
 		DCR::DeviceCheckResultGlobal->SetCheckedGroupCount(0);//新增：清空已测组数组数据
 		for (int i = 0; Node != nullptr && Loop; Node = Node->GetNext(), i++)                                   // 14. 遍历所有数据节点
@@ -1286,13 +1288,10 @@ void TaskDataSend::run()
 			DCR::DeviceCheckResultGlobal->GetCondition()[0] = g_ConditionList[i].first;
 			DCR::DeviceCheckResultGlobal->GetCondition()[1] = g_ConditionList[i].second;
 
-
-			WRITE_LOG_UP_RECORD("[第%03d组参数下发开始]\n", i + 1);                                              //  记录本组参数下发开始
-			WRITE_LOG_SE_RECORD("\n[第%03d次参数下发开始]\n", i + 1);
-
 		/**********************************************记录配置参数与条件******************************************************************************/
 			WRITE_LOG_UP_RECORD("第%d组参数与条件：\n", i + 1);                                                      //记录本组下发第几组条件和具体条件内容
 			WRITE_LOG_SE_RECORD("第%d组参数与条件：\n", i + 1);
+			POST_INFO(QString::asprintf("第%d组参数与条件：\n", i + 1));
 			WRITE_TASK_STATISTICS_DBG("第%d组参数与条件：\n", i + 1);
 			WRITE_TASK_DATA_SEND_DBG("\n第%d组参数与条件：\n", i + 1);
 			if (i < g_ParamList.size()) {
@@ -1317,6 +1316,17 @@ void TaskDataSend::run()
 					static_cast<signed char>(param.GetRegCfgARG().GetAL()),
 					static_cast<signed char>(param.GetRegCfgARG().GetAR())
 				);
+				POST_INFO(QString::asprintf(
+					"音频参数: DB=%d, Freq=%d, Dur=%d, DL=%d, DR=%d, AL=%d, AR=%d",
+					param.GetAudioARG().GetDB(),
+					param.GetAudioARG().GetFreq(),
+					param.GetAudioARG().GetDur(),
+					static_cast<signed char>(param.GetRegCfgARG().GetDL()),
+					static_cast<signed char>(param.GetRegCfgARG().GetDR()),
+					static_cast<signed char>(param.GetRegCfgARG().GetAL()),
+					static_cast<signed char>(param.GetRegCfgARG().GetAR())
+				));
+
 			WRITE_LOG_UP_CODEC_COND_RECORD(
 				g_ConditionList[i].first.GetRangeSINAD().GetLeft(), g_ConditionList[i].first.GetRangeSINAD().GetRight(),
 				g_ConditionList[i].first.GetRangeVppPTP().GetLeft(), g_ConditionList[i].first.GetRangeVppPTP().GetRight(),
@@ -1327,6 +1337,14 @@ void TaskDataSend::run()
 				g_ConditionList[i].first.GetRangeVppPTP().GetLeft(), g_ConditionList[i].first.GetRangeVppPTP().GetRight(),
 				g_ConditionList[i].first.GetRangeVppRMS().GetLeft(), g_ConditionList[i].first.GetRangeVppRMS().GetRight()
 			);
+
+			POST_INFO(QString::asprintf(
+				"  Codec SINAD[%d,%d], VppPTP[%d,%d], VppRMS[%d,%d]\n",
+				g_ConditionList[i].first.GetRangeSINAD().GetLeft(), g_ConditionList[i].first.GetRangeSINAD().GetRight(),
+				g_ConditionList[i].first.GetRangeVppPTP().GetLeft(), g_ConditionList[i].first.GetRangeVppPTP().GetRight(),
+				g_ConditionList[i].first.GetRangeVppRMS().GetLeft(), g_ConditionList[i].first.GetRangeVppRMS().GetRight()
+			));
+
 			WRITE_LOG_UP_ADPOW_COND_RECORD(
 				g_ConditionList[i].second.GetRangeSINAD().GetLeft(), g_ConditionList[i].second.GetRangeSINAD().GetRight(),
 				g_ConditionList[i].second.GetRangeVppPTP().GetLeft(), g_ConditionList[i].second.GetRangeVppPTP().GetRight(),
@@ -1335,6 +1353,13 @@ void TaskDataSend::run()
 				g_ConditionList[i].second.GetRangeSINAD().GetLeft(), g_ConditionList[i].second.GetRangeSINAD().GetRight(),
 				g_ConditionList[i].second.GetRangeVppPTP().GetLeft(), g_ConditionList[i].second.GetRangeVppPTP().GetRight(),
 				g_ConditionList[i].second.GetRangeVppRMS().GetLeft(), g_ConditionList[i].second.GetRangeVppRMS().GetRight());
+			POST_INFO(QString::asprintf(
+				"  Adpow SINAD[%d,%d], VppPTP[%d,%d], VppRMS[%d,%d]\n",
+				g_ConditionList[i].first.GetRangeSINAD().GetLeft(), g_ConditionList[i].first.GetRangeSINAD().GetRight(),
+				g_ConditionList[i].first.GetRangeVppPTP().GetLeft(), g_ConditionList[i].first.GetRangeVppPTP().GetRight(),
+				g_ConditionList[i].first.GetRangeVppRMS().GetLeft(), g_ConditionList[i].first.GetRangeVppRMS().GetRight()
+			));
+
 			//qDebug() << typeid(g_ConditionList[i].first.GetRangeSINAD().GetLeft()).name();//确认GetLeft中数据的类型，此处为int
 			// 输出本次下发到全局的条件
 			qDebug() << "第" << i + 1 << "组条件：";
@@ -1682,6 +1707,7 @@ void TaskDataSend::run()
 					if (req > 0)
 					{
 						WRITE_TASK_DATA_SEND_DBG("检测到重发请求，已处理\n");
+						POST_WARNING_WITH_TIME("检测到重发请求，已处理\n");
 						TaskChipStatParsing::bPackLogRecord = false;
 						// 清空统计量和日志
 						std::this_thread::sleep_for(std::chrono::milliseconds(32));
@@ -1764,6 +1790,13 @@ void TaskDataSend::run()
 							totalValidCodec, contCodec, target, contCodec >= target ? "成功" : "失败",
 							totalValidAdpow, contAdpow, target, contAdpow >= target ? "成功" : "失败"
 						);
+						// 显示到底部日志框，并根据结果设置颜色
+						if (contCodec < target || contAdpow < target) {
+							POST_ERROR(statLine);
+						}
+						else {
+							POST_INFO(statLine);
+						}
 						//TaskChipStatParsing::chipSeLogStat[i][j].clear();
 						TaskChipStatParsing::chipSeLogStat[i][j].push_back(statLine);
 					}

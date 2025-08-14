@@ -33,6 +33,25 @@
 
 namespace CWD{
 
+    // 新增：全局信息管理器类（单例模式）
+    class InfoMessageManager : public QObject
+    {
+        Q_OBJECT
+    private:
+        static InfoMessageManager* instance;
+        InfoMessageManager(QObject* parent = nullptr) : QObject(parent) {}
+        
+    public:
+        static InfoMessageManager* getInstance();
+        
+        // 静态方法：其他文档可以直接调用
+        static void postInfo(const QString& message, const QString& level = "INFO");
+        static void postInfoWithTime(const QString& message, const QString& level = "INFO");
+        
+    signals:
+        void infoMessageReady(const QString& message, const QString& level);
+    };
+
     class Range{
         long long Left;
         long long Right;
@@ -237,6 +256,9 @@ namespace CWD{
         void OnSaveInfo();                     // 保存信息槽函数
         void OnAutoScrollToggled(bool enabled); // 自动滚动切换槽函数
         
+        // 新增：接收全局信息的槽函数
+        void OnGlobalInfoMessage(const QString& message, const QString& level);
+        
     signals:
         void NetRecovery();//msg to MNIC
         void NetLoss();//msg to MNIC
@@ -245,5 +267,15 @@ namespace CWD{
         ~CentralWidget();
     };
 };
+
+// 全局快捷宏定义：其他文档可以直接使用
+#define POST_INFO(msg) CWD::InfoMessageManager::postInfo(msg, "INFO")//表现为正常黑色
+#define POST_INFO_WITH_TIME(msg) CWD::InfoMessageManager::postInfoWithTime(msg, "INFO")//携带时间的信息
+#define POST_SUCCESS(msg) CWD::InfoMessageManager::postInfo(msg, "SUCCESS")    //表现为绿色
+#define POST_SUCCESS_WITH_TIME(msg) CWD::InfoMessageManager::postInfoWithTime(msg, "SUCCESS")
+#define POST_WARNING(msg) CWD::InfoMessageManager::postInfo(msg, "WARNING")    //表现为橙色
+#define POST_WARNING_WITH_TIME(msg) CWD::InfoMessageManager::postInfoWithTime(msg, "WARNING")
+#define POST_ERROR(msg) CWD::InfoMessageManager::postInfo(msg, "ERROR")        //表现为红色
+#define POST_ERROR_WITH_TIME(msg) CWD::InfoMessageManager::postInfoWithTime(msg, "ERROR")
 
 #endif

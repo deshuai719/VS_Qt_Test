@@ -20,19 +20,6 @@ namespace FCT{
         return FluidCtrlBuffer[Index].load();                                                //否则返回原子变量 FluidCtrlBuffer[Index] 的值。
     }
 
-    /*************************新增等待函数的实现*******************************************/
-    //void FluidCtrl::WaitForFluid(int index, FLUID_TYPE len, FLUID_TYPE remain) {
-    //    std::unique_lock<std::mutex> lock(mtx);
-    //    cv.wait(lock, [&] {
-    //        return FluidCheck(index, len, remain) == FLUID_SATISFY;
-    //        });
-    //    // 满足条件后返回，发送线程继续
-    //}
-
-    //void FluidCtrl::NotifyFluid() {
-    //    cv.notify_all();
-    //}
-
     void FluidCtrl::FluidStore(int Index, FLUID_TYPE v)                                      //设置指定通道（Index）的流控缓冲区的值为 v。
     {
         // 优化：移除频繁的性能测量，减少开销
@@ -54,25 +41,6 @@ namespace FCT{
             }
         }
     }
-
-   /* void FluidCtrl::FluidStore(int Index, FLUID_TYPE v)
-    {
-        static std::chrono::steady_clock::time_point lastUpdate;
-        static bool firstUpdate = true;
-
-        auto now = std::chrono::steady_clock::now();
-        if (!firstUpdate) {
-            auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdate).count();
-            WRITE_TASK_DATA_SEND_DBG("流控更新间隔: %lld ms\n", interval);
-        }
-        else {
-            firstUpdate = false;
-        }
-        lastUpdate = now;
-
-        FluidCtrlBuffer[Index].store(v);
-        NotifyFluid();
-    }*/
 
     void FluidCtrl::FluidStore(FLUID_TYPE v)                                                 //将所有通道的流控缓冲区的值都设置为 v。
     {
@@ -103,7 +71,7 @@ namespace FCT{
         }
     }
 
-    FluidCheckRes FluidCtrl::FluidCheckUpdate(int Index, FLUID_TYPE Len, FLUID_TYPE Remain)  //检查流控并原子性地减少缓冲区的值（即“消耗”掉本次要发送的数据量）。
+    FluidCheckRes FluidCtrl::FluidCheckUpdate(int Index, FLUID_TYPE Len, FLUID_TYPE Remain)  //检查流控并原子性地减少缓冲区的值（即"消耗"掉本次要发送的数据量）。
     {
 #if defined FLUID_IGNORE
         return FLUID_SATISFY;
@@ -115,6 +83,34 @@ namespace FCT{
         else
         {
             return FLUID_REJECTION;                                                          //否则返回 FLUID_REJECTION（不允许发送）。
+        }
+    }
+
+    // 新增：硬件缓存空间管理方法实现
+    void FluidCtrl::SetHardwareCacheSize(FLUID_TYPE size)
+    {
+        HardwareCacheSize.store(size);
+        CacheSizeInitialized.store(true);
+        WRITE_TASK_DATA_SEND_DBG("硬件缓存空间大小已设置为: %lld\n", size);
+    }
+
+    FLUID_TYPE FluidCtrl::GetHardwareCacheSize() const
+    {
+        return HardwareCacheSize.load();
+    }
+
+    bool FluidCtrl::IsCacheSizeInitialized() const
+    {
+        return CacheSizeInitialized.load();
+    }
+
+    FLUID_TYPE FluidCtrl::GetFluidSizeIndex0() const
+    {
+        if (IsCacheSizeInitialized()) {
+            return GetHardwareCacheSize();
+        } else {
+            // 如果还未初始化，返回默认值
+            return 16384;
         }
     }
 

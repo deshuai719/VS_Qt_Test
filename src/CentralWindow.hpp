@@ -243,6 +243,9 @@ namespace CWD{
         void CreateThread();
         void ResetModelItemStat();
         
+        // 新增：重置在线芯片状态为蓝色显示的方法
+        void ResetOnlineChipsToBlue();
+        
         // 新增：信息显示区域相关方法
         void InitInfoArea();                   // 初始化信息显示区域
         void AppendInfo(const QString& message, const QString& level = "INFO"); // 添加信息

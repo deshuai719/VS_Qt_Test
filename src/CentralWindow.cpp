@@ -534,6 +534,31 @@ namespace CWD {
 		CLOSE_CENTRAL_WIDGET_DBG();                                                                                                           // 关闭调试日志
 	}
 
+	/************************* 新增：重置在线芯片状态为蓝色显示的方法 *************************/
+	void CentralWidget::ResetOnlineChipsToBlue()
+	{
+		for (int i = 0; i < 8; i++)                                                                                                           // 遍历8块板卡
+		{
+			for (int j = 0; j < 4; j++)                                                                                                       // 每块板卡4个芯片
+			{
+				if (DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetIfOnline())                                                     // 如果芯片在线
+				{
+					// 重置在线状态为初始离线状态，这样在Paint方法中会转换为蓝色显示
+					Models[i].UpdateItem(j + 1, CWD::Item(
+						true,                                                                                                                 // 芯片有效（在线）
+						Range(0, 0),                                                                                                          // 测试结果范围重置为0/0，触发蓝色显示
+						Range(DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j).GetRangeSINAD())                                         // 保持当前SINAD范围
+					));
+					
+					// 重置芯片的在线状态为初始状态，确保下次Paint时会显示蓝色
+					Models[i].Items[j].RestOnLineStat();
+				}
+			}
+		}
+		
+		AppendInfoWithTime("在线芯片界面已重置为蓝色显示", "INFO");
+	}
+
 	/************************* 芯片在线状态更新方法：定时刷新所有芯片的在线状态 *************************/
    /* void CentralWidget::UpdateChipOnlineStatus()                                                                                            // 注释掉的旧版本实现
 	{
@@ -703,24 +728,24 @@ namespace CWD {
 		// 第二行：版本号和芯片型号 (版本号 : xxx        芯片型号 : xxx)
 		QHBoxLayout* row2 = new QHBoxLayout;
 		row2->addWidget(labelVersion);
-		row2->addWidget(colon3);
-		row2->addWidget(&VersionNum);
-		row2->addSpacing(40);  // 版本号和芯片型号之间的间距
-		row2->addWidget(labelChipType);
-		row2->addWidget(colon4);
-		row2->addWidget(&ChipType);
-		row2->addStretch();
+	 row2->addWidget(colon3);
+	 row2->addWidget(&VersionNum);
+	 row2->addSpacing(40);  // 版本号和芯片型号之间的间距
+	 row2->addWidget(labelChipType);
+	 row2->addWidget(colon4);
+	 row2->addWidget(&ChipType);
+	 row2->addStretch();
 
 		// 第三行：FPGA温度和环境温度 (FPGA温度 : xxx℃    环境温度 : xxx℃)
 		QHBoxLayout* row3 = new QHBoxLayout;
 		row3->addWidget(labelTempInner);
-		row3->addWidget(colon5);
-		row3->addWidget(&TemperatureInner);
-		row3->addSpacing(40);  // FPGA温度和环境温度之间的间距
-		row3->addWidget(labelTempEnv);
-		row3->addWidget(colon6);
-		row3->addWidget(&TemperatureEnv);
-		row3->addStretch();
+	 row3->addWidget(colon5);
+	 row3->addWidget(&TemperatureInner);
+	 row3->addSpacing(40);  // FPGA温度和环境温度之间的间距
+	 row3->addWidget(labelTempEnv);
+	 row3->addWidget(colon6);
+	 row3->addWidget(&TemperatureEnv);
+	 row3->addStretch();
 
 		// 整体状态信息布局
 		QVBoxLayout* statLayout = new QVBoxLayout;
@@ -911,6 +936,9 @@ namespace CWD {
 			// 新增：添加测试开始信息
 			AppendInfoWithTime(QString("开始测试，计划测试 %1 次").arg(PTestNum.toPlainText()), "INFO");
 			AppendInfoWithTime(QString("简要日志文件: %1").arg(currentLogSePath), "INFO");
+
+			// 新增：重置在线芯片界面为蓝色显示
+			ResetOnlineChipsToBlue();
 
 			//PTestedNum.setText("0(0/0)");                                                                                                    // 已测试次数清零，界面显示为0
 			PTestedNum.setText("");                                                                                                            // 已测试次数清零

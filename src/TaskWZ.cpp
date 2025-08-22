@@ -745,27 +745,25 @@ void TaskChipStatParsing::run()
 	while(Loop)
 	{
 		RcvData Data;
-		//QueueChipStatParsing.rear(Data);                                                                                             // 从队列尾部取出一个数据包
-		//auto t0 = std::chrono::steady_clock::now();
 		QueueChipStatParsing.rear(Data);
-		//auto t1 = std::chrono::steady_clock::now();
-		// 记录队列等待耗时
-		//qDebug() << "[TaskChipStatParsing] rear耗时:" << std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count() << "us";
 
-		//auto t2 = std::chrono::steady_clock::now();
 		if(Data.GetData().get())
 		{
 			if(FRAME_HEAD_STAR(Data.GetData().get())->msgID == 0x28)                                                                 // 判断数据包类型是否为0x28（芯片状态包）
 			{
-				//FCT::FluidCtrlGlob->FluidStore(0, PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac);            // 更新流控缓存
-				//ReadyForSend38.store(true, std::memory_order_release);
+				// 新增：从0x28包动态获取硬件缓存空间大小
+				int fluidVal = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->free_codec_dac;
+				
+				// 在首次收到0x28包时，如果缓存空间未初始化，则将fluidVal设置为硬件缓存空间大小
+				if (!FCT::FluidCtrlGlob->IsCacheSizeInitialized() && fluidVal > 0) {
+					FCT::FluidCtrlGlob->SetHardwareCacheSize(fluidVal);
+					WRITE_TASK_DATA_SEND_DBG("从0x28包获取硬件缓存空间: %d\n", fluidVal);
+				}
+
 				/*******************收到0x28包时，记录时间戳并通知条件变量：************************************/
 				last28Time = std::chrono::steady_clock::now();
 				{
-					//std::lock_guard<std::mutex> lk(mtxReadyForSend38);
-					//qDebug() << "准备加锁" << reinterpret_cast<quintptr>(QThread::currentThreadId());
 					std::lock_guard<std::mutex> lk(mtxReadyForSend38);
-					//qDebug() << "加锁成功" << reinterpret_cast<quintptr>(QThread::currentThreadId());
 					ReadyForSend38.store(true, std::memory_order_release);
 					cvReadyForSend38.notify_all();
 				}
@@ -773,51 +771,11 @@ void TaskChipStatParsing::run()
 				DCR::DeviceCheckResultGlobal->SetTemperatureInner(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->fpga_heat ); // 更新芯片内部温度
 				DCR::DeviceCheckResultGlobal->SetTemperatureEnv(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->ds18b20_16b); // 更新环境温度
 				DCR::DeviceCheckResultGlobal->SetUpPackCount(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->timeStamp_8ms);  // 更新上行包计数
-				// 如果启用包日志记录，写入一条记录
-				/**********************************启用包日志记录的情况下获取记录时标，设置重发信号标志*****************************************************/
-				//auto up_mnic_sta = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN);
-				
-				//static int cnt_dn_empty_start = -1;
-				//static int cnt_dn_full_start = -1;
-				//static bool lastPackLogRecord = false;
-				//
-				////static std::atomic<int> resendCounter{ 0 };
-				//if(bPackLogRecord)
-				//{
-				//	ASYNC_WRITE_LOG_UP_PACK_RECORD(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()+1, DCR::DeviceCheckResultGlobal->GetUpPackCount());
-				//	WRITE_TASK_DATA_SEND_DBG("记录0x28包, 时标: %d\n", DCR::DeviceCheckResultGlobal->GetUpPackCount());
-				//	auto up_mnic_sta = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN);
-				//	qDebug() << "cnt_dn_empty:" << up_mnic_sta->cnt_dn_empty
-				//					<< "cnt_dn_full:" << up_mnic_sta->cnt_dn_full;
 
-				//	// 新增：上下溢计数器变化时递增重发计数器
-				//	int cnt_dn_empty_now = up_mnic_sta->cnt_dn_empty;
-				//	int cnt_dn_full_now = up_mnic_sta->cnt_dn_full;
-
-				//	// 检测bPackLogRecord从false变为true
-				//	if (!lastPackLogRecord) {
-				//		// 刚开启时同步计数器，避免误判
-				//		cnt_dn_empty_start = cnt_dn_empty_now;
-				//		cnt_dn_full_start = cnt_dn_full_now;
-				//	}
-				//	else {
-				//		// 正常比较
-				//		if (cnt_dn_empty_now != cnt_dn_empty_start ||
-				//			cnt_dn_full_now != cnt_dn_full_start) {
-				//			int newVal = resendCounter.fetch_add(1, std::memory_order_release) + 1;
-				//			WRITE_TASK_DATA_SEND_DBG("计数器变化，重发计数器+1，当前计数器值: %d\n", newVal);
-				//			cnt_dn_empty_start = cnt_dn_empty_now;
-				//			cnt_dn_full_start = cnt_dn_full_now;
-				//		}
-				//	}
-				//}
-				//lastPackLogRecord = bPackLogRecord;
-				
 				/********************************直接读取缓存空间设置重发信号标志**********************************************/
 				static int lastFluidValue = -1;			// 记录上一次的流控值，替代cnt_dn_empty_start和cnt_dn_full_start
 				static bool lastPackLogRecord = false;			// 初始包记录关闭，不对开始测试前解析的数据包进行记录
 
-				//static std::atomic<int> resendCounter{ 0 };
 				if (bPackLogRecord)
 				{
 					ASYNC_WRITE_LOG_UP_PACK_RECORD(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1, DCR::DeviceCheckResultGlobal->GetUpPackCount());
@@ -825,24 +783,26 @@ void TaskChipStatParsing::run()
 					auto up_mnic_sta = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN);
 					qDebug() << "free_codec_dac:" << up_mnic_sta->free_codec_dac;
 
-					// 新增：基于流控空间变化的重发机制，替代上下溢计数器机制
+					// 新增：基于流控空间变化的重发机制，使用动态获取的硬件缓存空间大小
 					int currentFluidValue = up_mnic_sta->free_codec_dac; // 设置当前的缓存空间值
+					FLUID_TYPE fluidSizeIndex0 = FCT::FluidCtrlGlob->GetFluidSizeIndex0(); // 获取动态的硬件缓存空间大小
 
 					// 检测bPackLogRecord从false变为true
 					if (!lastPackLogRecord) {
 						lastFluidValue = currentFluidValue;			// 刚开启时同步流控值，避免误判
 					}
 					else {
-						// 检查是否从有数据状态变为空状态（从小于FLUID_SIZE_INDEX0变为等于或大于FLUID_SIZE_INDEX0）
-						if (lastFluidValue < FLUID_SIZE_INDEX0 && currentFluidValue >= FLUID_SIZE_INDEX0) {
+						// 检查是否从有数据状态变为空状态（从小于fluidSizeIndex0变为等于或大于fluidSizeIndex0）
+						if (lastFluidValue < fluidSizeIndex0 && currentFluidValue >= fluidSizeIndex0) {
 							int newVal = resendCounter.fetch_add(1, std::memory_order_release) + 1;
-							WRITE_TASK_DATA_SEND_DBG("流控空间从%d变为%d，从有数据变为空状态，重发计数器+1，当前计数器值: %d\n",
-								lastFluidValue, currentFluidValue, newVal);
+							WRITE_TASK_DATA_SEND_DBG("流控空间从%d变为%d，从有数据变为空状态，重发计数器+1，当前计数器值: %d (硬件缓存空间: %lld)\n",
+								lastFluidValue, currentFluidValue, newVal, fluidSizeIndex0);
 						}
 						lastFluidValue = currentFluidValue;			// 更新用于比较的缓存空间值
 					}
 				}
 				lastPackLogRecord = bPackLogRecord;			// 更新上一次的包日志记录状态
+
 				// 遍历所有板卡和芯片
 				for(int i = 0; i < 8; i++)
 				{
@@ -890,16 +850,7 @@ void TaskChipStatParsing::run()
 							// 如果启用芯片日志记录，写入详细记录
 							if(bPackLogRecord)
 							{
-								//qDebug() << "记录0x28包, 时标:" << DCR::DeviceCheckResultGlobal->GetUpPackCount();
-								
-								
-
-								/*WRITE_LOG_UP_CHIP_RECORD(i + 1, j + 1,
-									TCOND::TestCondition::SinadTransfer(Sinad[0]), Vpp[0], Rms[0], Res[0] ? " TRUE" : "FALSE",
-									TCOND::TestCondition::SinadTransfer(Sinad[1]), Vpp[1], Rms[1], Res[1] ? " TRUE" : "FALSE",
-									TCOND::TestCondition::SinadTransfer(Sinad[2]), Vpp[2], Rms[2], Res[2] ? " TRUE" : "FALSE");*/
-
-									// 在芯片循环内，原来的 WRITE_LOG_UP_CHIP_RECORD(...) 替换为：
+								// 在芯片循环内，原来的 WRITE_LOG_UP_CHIP_RECORD(...) 替换为：
 								ASYNC_WRITE_LOG_UP_CHIP_RECORD(
 									i + 1, j + 1,
 									TCOND::TestCondition::SinadTransfer(Sinad[0]), Vpp[0], Rms[0], Res[0] ? " TRUE" : "FALSE",
@@ -1614,12 +1565,7 @@ void TaskDataSend::run()
 						HighPrecisionWait_High(2);
 						if (!Loop)
 						{
-							WRITE_TASK_DATA_SEND_DBG("break\n");
 							break;
-						}
-
-						if (sendIdx != 0 && sendIdx % 125 == 0) {
-							POST_INFO_WITH_TIME(QString("已发送 = %1").arg(sendIdx));
 						}
 					}
 				}
@@ -1633,12 +1579,7 @@ void TaskDataSend::run()
 					HighPrecisionWait_High(2);
 					if (!Loop)
 					{
-						WRITE_TASK_DATA_SEND_DBG("break\n");
 						break;
-					}
-
-					if (sendIdx != 0 && sendIdx % 125 == 0) {
-						POST_INFO_WITH_TIME(QString("已发送 = %1").arg(sendIdx));
 					}
 				}
 
@@ -1766,7 +1707,9 @@ void TaskDataSend::run()
 			//timeEndPeriod(1);
 			WRITE_TASK_DATA_SEND_DBG("Get Fluid\n");
                                                                                                                 // 等待缓冲区清空
-			for (; FCT::FluidCtrlGlob->FluidLoad(0) < FLUID_SIZE_INDEX0; )
+			// 使用动态获取的硬件缓存空间大小替代硬编码的FLUID_SIZE_INDEX0
+			FLUID_TYPE fluidSizeIndex0 = FCT::FluidCtrlGlob->GetFluidSizeIndex0();
+			for (; FCT::FluidCtrlGlob->FluidLoad(0) < fluidSizeIndex0; )
 			{
 				if (Loop)
 				{
@@ -2011,4 +1954,4 @@ void TaskVersionParsing::clear()
 TOOLWZ::queue<RcvData, 500, RcvDataDestruct> TaskVersionParsing::QueueVeriosnParsing;
 DF::VERSION_UP TaskVersionParsing::Version = { 0, 0, 0 };
 
-};
+}

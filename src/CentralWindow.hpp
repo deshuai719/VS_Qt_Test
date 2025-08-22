@@ -25,9 +25,13 @@
 #include <QScrollBar>
 #include <QTextCursor>
 #include <QDateTime>
+#include <QLineEdit>
+#include <QRegularExpressionValidator>
 #include <memory>
 #include "TestCondition.hpp"
 #include "TaskWZ.hpp"
+#include "SocketWZ.hpp"
+#include "ConfigInit.hpp"
 
 #define VERSION_NUM "圆芯Codec测试软件2508071718--V0"
 
@@ -150,8 +154,6 @@ namespace CWD{
     {
         Q_OBJECT
 
-        QLabel LocalIP;
-        QLabel DeviceIP;
         QLabel VersionNum;
         QLabel ChipType;
         QLabel TemperatureInner;
@@ -159,6 +161,16 @@ namespace CWD{
         QString currentLogSePath; 
         QString testSessionTime; // 新增：测试会话时间戳
         
+        // 网络配置相关控件
+        QLineEdit LeLocalIP;          // 本地IP输入框
+        QLineEdit LeLocalPort;        // 本地端口输入框
+        QLineEdit LeDeviceIP;         // 设备IP输入框  
+        QLineEdit LeDevicePort;       // 设备端口输入框
+        QPushButton BtnConnect;       // 连接按钮
+        QRegularExpressionValidator* ValidatorIP;  // IP地址验证器
+        QRegularExpressionValidator* ValidatorPort; // 端口验证器
+        bool isConnected;             // 连接状态标志
+    
         Model Models[8];//8个
         Delegate Delegates[8];//8个
         QListView Lists[8];//8个
@@ -188,9 +200,6 @@ namespace CWD{
         QVBoxLayout VlInfoArea;                // 信息区域整体布局
         QGroupBox GbInfoArea;                  // 信息区域分组框
 
-        QHBoxLayout HlIP;
-        QHBoxLayout HlNum;
-        QHBoxLayout HlTemp;
         QVBoxLayout VlStat;
         QGroupBox GbStat;
 
@@ -239,8 +248,15 @@ namespace CWD{
         void AppendInfo(const QString& message, const QString& level = "INFO"); // 添加信息
         void AppendInfoWithTime(const QString& message, const QString& level = "INFO"); // 添加带时间戳的信息
         
+        // 网络配置相关方法
+        void InitNetworkConfig();              // 初始化网络配置控件
+        void LoadNetworkConfig();              // 从配置文件加载网络设置
+        void SaveNetworkConfig();              // 保存网络设置到配置文件
+        bool ValidateNetworkInputs();          // 验证网络输入
+        void OnNetworkConnect();               // 处理连接/断开操作
+        void UpdateConnectionStatus(bool connected); // 更新连接状态显示
+    
     public slots:
-        void UpdateSockInfo();
         void StartTest();
         void OpenLog();
         void UpdateCheckResult(TASKWZ::MsgToCentralWt msg);
@@ -255,10 +271,14 @@ namespace CWD{
         void OnClearInfo();                    // 清空信息槽函数
         void OnSaveInfo();                     // 保存信息槽函数
         void OnAutoScrollToggled(bool enabled); // 自动滚动切换槽函数
-        
+    
         // 新增：接收全局信息的槽函数
         void OnGlobalInfoMessage(const QString& message, const QString& level);
         
+        // 新增：网络配置槽函数
+        void OnConnectBtnClicked();            // 连接按钮点击槽函数
+        void OnNetworkInputChanged();          // 网络输入改变槽函数
+
     signals:
         void NetRecovery();//msg to MNIC
         void NetLoss();//msg to MNIC
@@ -278,4 +298,4 @@ namespace CWD{
 #define POST_ERROR(msg) CWD::InfoMessageManager::postInfo(msg, "ERROR")        //表现为红色
 #define POST_ERROR_WITH_TIME(msg) CWD::InfoMessageManager::postInfoWithTime(msg, "ERROR")
 
-#endif
+#endif#endif

@@ -1,4 +1,6 @@
-﻿#include "TaskWZ.hpp"
+﻿//主要线程实现部分，设计并实现了收线程，分发线程，解析线程，发线程，读取版本号线程
+
+#include "TaskWZ.hpp"
 #include "GlobalConditionList.hpp"
 #include "DeviceCheckResult.hpp"
 #include "CentralWindow.hpp"
@@ -443,17 +445,21 @@ inline void BindThreadToCPU(int cpuIndex)
 	SetThreadAffinityMask(hThread, mask);
 }
 
-void ThreadFunc(int cpuIndex)
+// 新增：设置线程亲和性排除指定CPU核心
+inline void SetThreadAffinityExcludeCPU(int excludeCpuIndex)
 {
-	BindThreadToCPU(cpuIndex);
-	for (int i = 0; i < 20; ++i)
-	{
-		// 获取当前线程正在运行的逻辑CPU编号
-		DWORD current_cpu = GetCurrentProcessorNumber();
-		std::cout << "Iteration " << i << ": Running on logical CPU " << current_cpu << std::endl;
-		Sleep(500);
+	SYSTEM_INFO sysInfo;
+	GetSystemInfo(&sysInfo);
+	
+	// 创建包含所有CPU核心的掩码
+	DWORD_PTR mask = (1ull << sysInfo.dwNumberOfProcessors) - 1;
+	
+	// 排除指定的CPU核心
+	mask &= ~(1ull << excludeCpuIndex);
+	
+	HANDLE hThread = GetCurrentThread();
+	SetThreadAffinityMask(hThread, mask);
 	}
-}
 
 //
 
@@ -470,16 +476,14 @@ void task_rcv::run()
 {
 	qDebug() << "Rcv thread:" << QString::number(reinterpret_cast<quintptr>(QThread::currentThreadId()));
 	
-	// 优化：设置最高线程优先级
-	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+	// 设置线程亲和性，排除CPU核心0，避免与系统进程争抢
+	SetThreadAffinityExcludeCPU(0);
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
 	
-	// 新增：绑定到CPU核心0，避免线程切换开销
-	//DWORD_PTR mask = 1ull << 0; // 绑定到CPU 0
-	//HANDLE hThread = GetCurrentThread();
-	//SetThreadAffinityMask(hThread, mask);
+	OPEN_TASK_RCV_DBG(LogTaskRcv.txt);
 	
 	// 新增：设置进程为高优先级类
-	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+	//SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
 	OPEN_TASK_RCV_DBG(LogTaskRcv.txt);                               // 1. 打开接收任务的调试日志文件
 
@@ -621,7 +625,7 @@ void task_dispatch::init()
 
 void task_dispatch::run()
 {
-	//BindThreadToCPU(0); // 绑定到CPU 0
+	SetThreadAffinityExcludeCPU(0);
 	//SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 	OPEN_TASK_DISPATCH_DBG(LogTaskDispatch.txt);                      // 打开调试日志
 	
@@ -736,7 +740,7 @@ std::atomic<int> resendCounter{ 0 };
 
 void TaskChipStatParsing::run()
 {
-	//BindThreadToCPU(0); // 绑定到CPU 0
+	SetThreadAffinityExcludeCPU(0);
 	OPEN_TASK_0X28_PARSING(LogTask0X28Parsing.txt);
 	while(Loop)
 	{
@@ -1035,7 +1039,7 @@ void HighPrecisionWait_Low(double waitMs)
 
 void TaskTestStatistics::run()
 {
-	//BindThreadToCPU(0); // 绑定到CPU 0
+	SetThreadAffinityExcludeCPU(0);
 	//OPEN_TASK_STATISTICS_DBG(LogTaskStatistics.log);                                                                   // 打开调试日志
 	WRITE_TASK_STATISTICS_DBG("TaskTestStatistics::run()\n");                                                          // 写入调试日志
 	while (Loop)
@@ -1140,7 +1144,7 @@ void TaskDataConstruct::init()
 
 void TaskDataConstruct::run()                                                                               // 任务主循环，处理文件链表中的每个节点
 {
-	//BindThreadToCPU(0); // 绑定到CPU 0
+	SetThreadAffinityExcludeCPU(0);
 	OPEN_TASK_CONSTRUCT_DBG(LogTaskConstruct.txt);
 	for(auto it = FileList.GetHead(); it != nullptr; it = it->GetNext())                                    // 遍历文件链表的每个节点
 	{
@@ -1186,7 +1190,7 @@ void TaskDataConstructARG::init(){}
 
 void TaskDataConstructARG::run()
 {
-	//BindThreadToCPU(0); // 绑定到CPU 0
+	SetThreadAffinityExcludeCPU(0);
 
 	OPEN_TASK_CONSTRUCT_ARG_DBG(LogTaskConstructArg.txt);
 	// 遍历参数链表 ArgList 的每个节点
@@ -1243,10 +1247,10 @@ void TaskDataSend::init()
 void TaskDataSend::run()
 {
 	qDebug() << "Send thread:" << QString::number(reinterpret_cast<quintptr>(QThread::currentThreadId()));
-	//BindThreadToCPU(2); // 绑定到CPU 2
-	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+	SetThreadAffinityExcludeCPU(0);
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
 	// 设置当前进程为高优先级
-	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+	//SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 	//SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
 
 
@@ -1270,10 +1274,12 @@ void TaskDataSend::run()
 
 	while (Loop && TestCount--)                                                                                   // 10. 主循环，Loop为true且TestCount大于0时循环
 	{
-		WRITE_TASK_DATA_SEND_DBG("TestCount = %lld\n", TestCount+1);                                              // 11. 记录当前测试次数
-		WRITE_LOG_UP_RECORD("\n[第%03d次参数下发开始]\n", TestCount+1);                                           // 12. 记录本次参数下发开始
-		WRITE_LOG_SE_RECORD("\n[第%03d次参数下发开始]\n", TestCount+1);
-		POST_INFO(QString::asprintf("\n[第%03d次参数下发开始]\n", TestCount+1));
+		int time = 0;
+		time++;
+		WRITE_TASK_DATA_SEND_DBG("TestCount = %lld\n", time);                                              // 11. 记录当前测试次数
+		WRITE_LOG_UP_RECORD("\n[第%03d次参数下发开始]\n", time);                                           // 12. 记录本次参数下发开始
+		WRITE_LOG_SE_RECORD("\n[第%03d次参数下发开始]\n", time);
+		POST_INFO_WITH_TIME(QString::asprintf("\n[第%03d次参数下发开始]\n", time));
 		std::shared_ptr<DCWZ::DataNode> Node = DCWZ::DataMana::DataListGlobal.GetHead();                        // 13. 获取数据链表头节点
 		DCR::DeviceCheckResultGlobal->SetCheckedGroupCount(0);//新增：清空已测组数组数据
 		for (int i = 0; Node != nullptr && Loop; Node = Node->GetNext(), i++)                                   // 14. 遍历所有数据节点
@@ -1291,7 +1297,7 @@ void TaskDataSend::run()
 		/**********************************************记录配置参数与条件******************************************************************************/
 			WRITE_LOG_UP_RECORD("第%d组参数与条件：\n", i + 1);                                                      //记录本组下发第几组条件和具体条件内容
 			WRITE_LOG_SE_RECORD("第%d组参数与条件：\n", i + 1);
-			POST_INFO(QString::asprintf("第%d组参数与条件：\n", i + 1));
+			POST_INFO_WITH_TIME(QString::asprintf("第%d组参数与条件：\n", i + 1));
 			WRITE_TASK_STATISTICS_DBG("第%d组参数与条件：\n", i + 1);
 			WRITE_TASK_DATA_SEND_DBG("\n第%d组参数与条件：\n", i + 1);
 			if (i < g_ParamList.size()) {
@@ -1316,15 +1322,11 @@ void TaskDataSend::run()
 					static_cast<signed char>(param.GetRegCfgARG().GetAL()),
 					static_cast<signed char>(param.GetRegCfgARG().GetAR())
 				);
-				POST_INFO(QString::asprintf(
-					"音频参数: DB=%d, Freq=%d, Dur=%d, DL=%d, DR=%d, AL=%d, AR=%d",
+				POST_INFO_WITH_TIME(QString::asprintf(
+					"正弦波参数：DB=%d, Freq=%d, Dur=%d",
 					param.GetAudioARG().GetDB(),
 					param.GetAudioARG().GetFreq(),
-					param.GetAudioARG().GetDur(),
-					static_cast<signed char>(param.GetRegCfgARG().GetDL()),
-					static_cast<signed char>(param.GetRegCfgARG().GetDR()),
-					static_cast<signed char>(param.GetRegCfgARG().GetAL()),
-					static_cast<signed char>(param.GetRegCfgARG().GetAR())
+					param.GetAudioARG().GetDur()
 				));
 
 			WRITE_LOG_UP_CODEC_COND_RECORD(
@@ -1338,8 +1340,8 @@ void TaskDataSend::run()
 				g_ConditionList[i].first.GetRangeVppRMS().GetLeft(), g_ConditionList[i].first.GetRangeVppRMS().GetRight()
 			);
 
-			POST_INFO(QString::asprintf(
-				"  Codec SINAD[%d,%d], VppPTP[%d,%d], VppRMS[%d,%d]\n",
+			POST_INFO_WITH_TIME(QString::asprintf(
+				"Codec条件 ：  Codec SINAD[%d,%d], VppPTP[%d,%d], VppRMS[%d,%d]\n",
 				g_ConditionList[i].first.GetRangeSINAD().GetLeft(), g_ConditionList[i].first.GetRangeSINAD().GetRight(),
 				g_ConditionList[i].first.GetRangeVppPTP().GetLeft(), g_ConditionList[i].first.GetRangeVppPTP().GetRight(),
 				g_ConditionList[i].first.GetRangeVppRMS().GetLeft(), g_ConditionList[i].first.GetRangeVppRMS().GetRight()
@@ -1353,13 +1355,20 @@ void TaskDataSend::run()
 				g_ConditionList[i].second.GetRangeSINAD().GetLeft(), g_ConditionList[i].second.GetRangeSINAD().GetRight(),
 				g_ConditionList[i].second.GetRangeVppPTP().GetLeft(), g_ConditionList[i].second.GetRangeVppPTP().GetRight(),
 				g_ConditionList[i].second.GetRangeVppRMS().GetLeft(), g_ConditionList[i].second.GetRangeVppRMS().GetRight());
-			POST_INFO(QString::asprintf(
-				"  Adpow SINAD[%d,%d], VppPTP[%d,%d], VppRMS[%d,%d]\n",
-				g_ConditionList[i].first.GetRangeSINAD().GetLeft(), g_ConditionList[i].first.GetRangeSINAD().GetRight(),
-				g_ConditionList[i].first.GetRangeVppPTP().GetLeft(), g_ConditionList[i].first.GetRangeVppPTP().GetRight(),
-				g_ConditionList[i].first.GetRangeVppRMS().GetLeft(), g_ConditionList[i].first.GetRangeVppRMS().GetRight()
+			POST_INFO_WITH_TIME(QString::asprintf(
+				"Adpow条件：  Adpow SINAD[%d,%d], VppPTP[%d,%d], VppRMS[%d,%d]\n",
+				g_ConditionList[i].second.GetRangeSINAD().GetLeft(), g_ConditionList[i].second.GetRangeSINAD().GetRight(),
+				g_ConditionList[i].second.GetRangeVppPTP().GetLeft(), g_ConditionList[i].second.GetRangeVppPTP().GetRight(),
+				g_ConditionList[i].second.GetRangeVppRMS().GetLeft(), g_ConditionList[i].second.GetRangeVppRMS().GetRight()
 			));
 
+			POST_INFO_WITH_TIME(QString::asprintf(
+					"下发A0配置命令：Digital=%d, PGA=%d, Playback=%d, Headset=%d",
+					static_cast<signed char>(param.GetRegCfgARG().GetDL()),
+					static_cast<signed char>(param.GetRegCfgARG().GetDR()),
+					static_cast<signed char>(param.GetRegCfgARG().GetAL()),
+					static_cast<signed char>(param.GetRegCfgARG().GetAR())
+				));
 			//qDebug() << typeid(g_ConditionList[i].first.GetRangeSINAD().GetLeft()).name();//确认GetLeft中数据的类型，此处为int
 			// 输出本次下发到全局的条件
 			qDebug() << "第" << i + 1 << "组条件：";
@@ -1417,6 +1426,7 @@ void TaskDataSend::run()
 					{
 						ackReceived = true;
 						WRITE_TASK_DATA_SEND_DBG("Ture 0xA0 ACK received.\n");
+						POST_SUCCESS_WITH_TIME("接收到正确A0回包\n");
 						break;
 					}
 				}
@@ -1425,7 +1435,8 @@ void TaskDataSend::run()
 			if (!ackReceived)
 			{
 				WRITE_TASK_DATA_SEND_DBG("No 0xA0 ACK received, aborting this group!\n");
-				//break;                                                                  // 或 return，视你的业务需求
+				POST_ERROR_WITH_TIME("未接收到A0回包，终止该组\n");
+				break;                                                                  // 或 return，视你的业务需求
 			}
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(320));            //硬件配置后会有一定时间的缓慢上升期，默认20ms，最大320ms
@@ -1528,12 +1539,13 @@ void TaskDataSend::run()
 			timeBeginPeriod(1);
 			int sendIdx = 0;
 			const int totalNum = Node->GetData()->GetSendNum();
-			
+			POST_INFO_WITH_TIME(QString("下发音频包中，共 %1 包").arg(totalNum));
 			/**********************************每组发送前先连续发3个包，对空间进行预填充*******************************************/ 
 			for (; sendIdx < 3 && sendIdx < totalNum; ++sendIdx) {
 				FCT::FluidCtrlGlob->FluidFetchSub(0, 512);
 				DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(sendIdx);
 				SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());
+				HighPrecisionWait_High(1);
 			}
 
 			/*******************************上报流控多次未变化时采用8ms标准速率进行发包，使用标志位通知***************************************************/
@@ -1605,6 +1617,10 @@ void TaskDataSend::run()
 							WRITE_TASK_DATA_SEND_DBG("break\n");
 							break;
 						}
+
+						if (sendIdx != 0 && sendIdx % 125 == 0) {
+							POST_INFO_WITH_TIME(QString("已发送 = %1").arg(sendIdx));
+						}
 					}
 				}
 				else if (fluidVal >= 1536)//空余三包
@@ -1619,6 +1635,10 @@ void TaskDataSend::run()
 					{
 						WRITE_TASK_DATA_SEND_DBG("break\n");
 						break;
+					}
+
+					if (sendIdx != 0 && sendIdx % 125 == 0) {
+						POST_INFO_WITH_TIME(QString("已发送 = %1").arg(sendIdx));
 					}
 				}
 
@@ -1669,6 +1689,9 @@ void TaskDataSend::run()
 				WRITE_TASK_DATA_SEND_DBG("Send耗时: %lld us\n", std::chrono::duration_cast<std::chrono::microseconds>(t_send_end - t_get_end).count());
 				WRITE_TASK_DATA_SEND_DBG("定时Send总耗时: %lld us\n\n", std::chrono::duration_cast<std::chrono::microseconds>(t_send_end - t_start).count());
 				++sendIdx;
+				if (sendIdx != 0 && sendIdx % 125 == 0) {
+					POST_INFO_WITH_TIME(QString("已发送 = %1").arg(sendIdx));
+				}
 				if (!Loop) {
 					WRITE_TASK_DATA_SEND_DBG("break\n");
 					break;
@@ -1892,7 +1915,7 @@ void TaskVersionParsing::init()
 
 void TaskVersionParsing::run()
 {
-	//BindThreadToCPU(0);// 绑定到CPU 0
+	SetThreadAffinityExcludeCPU(0);
 
 	OPEN_TASK_VERSION_GET_DBG(LogTaskVersionGet.txt);                                                                                      // 1. 打开版本号获取任务的调试日志文件
 

@@ -7,8 +7,8 @@
 #include <QCloseEvent>
 #include <QTextEdit>
 #include <QFile>
+#include <QMessageBox>
 #include "DlgMenuFile.hpp"
-#include "DlgMenuCFG.hpp"
 #include "CentralWindow.hpp"
 
 #define DEFAULT_FILE_PATH "./InitFile"
@@ -22,10 +22,6 @@ private:
     //QAction* AddFileAction;
     QAction* AddArgAction;
 
-    QMenu* ConfigMenu;
-    QAction* NetConfigAction;
-    //QAction* SinadConfigAction;
-
     QMenu* LogMenu;
     QAction* LogONAction;
     QAction* LogOFFAction;
@@ -37,13 +33,10 @@ private:
 
     DlgMenu::DlgMu* DlgMenuFileSelect;
     DlgMenuARG::DlgARG* DlgMenuArgAdd;
-    MenuSocketCFG::DialogSockCFG* DlgMenuSocketCFG;
-    //MenuSINADCFG::DialogSinadCFG* DlgMenuSinadCFG;
     CWD::CentralWidget* CentralWt;
 
     void InitMenuBar();
     void InitFileMenu();
-    void InitConfigMenu();
     void InitLogMenu();
     //void InitHelpMenu();
     void InitStatusBar();
@@ -52,16 +45,12 @@ private:
 
     //void AddFile();
     void AddArg();
-    void NetConfig();
-    //void SinadConfig();
     void LogON();
     void LogOFF();
 
     void ModifyStatus(bool);
 
     void closeEvent(QCloseEvent* event) override;
-signals:
-    void NetLoss();//to Dlg Sock CFG
 signals:
     void NetConnected();//to Central Widget
     void NetDisconnected();//to central widget

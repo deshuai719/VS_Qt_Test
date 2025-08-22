@@ -1,4 +1,7 @@
-﻿#include "DlgMenuFile.hpp"
+﻿//顶部菜单栏添加参数的UI设计及功能实现
+//
+
+#include "DlgMenuFile.hpp"
 #include "DlgMenuCFG.hpp"
 
 #include <QDebug>

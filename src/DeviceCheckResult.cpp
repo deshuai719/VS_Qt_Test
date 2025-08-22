@@ -1,4 +1,7 @@
-﻿#include "DeviceCheckResult.hpp"
+﻿//设置各类变量和接口用来表示测试结果
+//
+
+#include "DeviceCheckResult.hpp"
 #include <QDebug>
 
 namespace DCR{
@@ -32,7 +35,7 @@ namespace DCR{
         ChipTestStAdpow = WAITING_FOR_TESTING;
     }*/
 
-    void ChipCheckResult::Init()
+    void ChipCheckResult::Init()//初始化
     {
         CheckResult = true;
         IfOnline = false;
@@ -48,9 +51,9 @@ namespace DCR{
         ChipTestStAdpow = WAITING_FOR_TESTING;
     }
 
-    void ChipCheckResult::Reset()
+    void ChipCheckResult::Reset()//每次下发完成后重置
     {
-        CheckResult = true;
+        //CheckResult = true;
         CheckPacksOfMifCodec = 0;
         CheckPacksOfMifAdpow = 0;
         TotalValidCodec = 0;      // 新增
@@ -371,9 +374,9 @@ namespace DCR{
                 CheckResult[i][j].Reset();
             }
         }
-        ChipSatisfiedNum = BoardNum * ChipNum;
+        //ChipSatisfiedNum = BoardNum * ChipNum;
         //CheckedGroupCount = 0;
-        ChipSatisfiedNum = 0;
+        //ChipSatisfiedNum = 0;
         //PassedGroupCount = 0;//新增：重置通过测试的组数
         //TotalGroupCount = 0;//新增：重置总测试组数
     }

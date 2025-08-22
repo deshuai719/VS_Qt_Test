@@ -1,4 +1,7 @@
-﻿#include "TestCondition.hpp"
+﻿//数据转化部分，将上报包中的数据转化为易理解的数据
+//
+
+#include "TestCondition.hpp"
 #include <QDebug> 
 
 namespace TCOND{

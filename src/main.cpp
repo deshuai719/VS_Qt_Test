@@ -1,3 +1,6 @@
+﻿//主函数入口
+//
+
 #include "MNIC.h"
 
 #include <QApplication>

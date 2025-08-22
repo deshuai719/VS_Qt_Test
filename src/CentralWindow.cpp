@@ -1,4 +1,7 @@
-﻿#include "CentralWindow.hpp"
+﻿//主界面的实现文件，包含中央窗口、范围类、芯片状态项类和底部日志栏的实现
+//
+
+#include "CentralWindow.hpp"
 #include "DlgMenuFile.hpp"
 #include <QDesktopServices>
 #include <QUrl>
@@ -133,13 +136,13 @@ namespace CWD {
 
 					else if(TestRes.GetLeft() == TestRes.GetRight())
 					{
-						painter->setPen(QPen(QColor(Qt::cyan), 2));                                                                          // 设置绿色边框
+						painter->setPen(QPen(QColor(Qt::cyan), 2));                                                                          // 设置蓝色边框
 						painter->setBrush(QColor(Qt::white));                                                                                 // 设置白色填充
 						painter->drawRoundedRect(Rc[1].adjusted(1, 1, -1, -1), 2, 2);                                                         // 绘制圆角矩形
 
 						// 绘制进度条
 						QRect progressRect = Rc[1].adjusted(2, 2, -2, -2);                                                                    // 进度条矩形
-						painter->fillRect(progressRect, QColor(Qt::cyan));                                                                   // 填充蓝色表示测试中
+						painter->fillRect(progressRect, QColor(Qt::cyan));                                                                   // 填充蓝色表示等待中
 					}
 
 					else if (TestRes.GetRight() == 0)                                                                                         // 测试总数为0
@@ -150,7 +153,7 @@ namespace CWD {
 						painter->drawRoundedRect(Rc[1].adjusted(1, 1, -1, -1), 2, 2);
 
                                                                                                                                                // 绘制进度条
-						QRect progressRect = Rc[1].adjusted(2, 2, -2, -2);                                                                  
+						QRect progressRect = Rc[1].adjusted(2, 2, -2, -2);                                                                   // 进度条矩形
 						painter->fillRect(progressRect, QColor(Qt::red));                                                                   // 塕充红色表示异常
 					}
 					else                                                                                                                      // 测试未完全通过
@@ -505,7 +508,7 @@ namespace CWD {
 	/************************* CentralWidget类：中央窗口主控件实现 *************************/
 
 	CentralWidget::CentralWidget(QWidget* parent)
-		:QWidget(parent)                                                                                                                      // 继承自QWidget
+		:QWidget(parent), isConnected(false)                                                                                                 // 继承自QWidget，初始化连接状态为false
 	{
 		OPEN_CENTRAL_WIDGWT_DBG(LogCenTralWidget.txt);                                                                                        // 打开调试日志
 
@@ -517,6 +520,9 @@ namespace CWD {
 		// 新增：连接全局信息管理器信号到当前实例
 		connect(InfoMessageManager::getInstance(), &InfoMessageManager::infoMessageReady,
 			this, &CentralWidget::OnGlobalInfoMessage, Qt::QueuedConnection);
+		
+		// 检查是否已经有网络连接，如果有则启动定时检测
+		// 这里可以添加检查当前连接状态的逻辑
                                                                                                                                               // TimingDetection->start(1000);
 	}
 
@@ -564,14 +570,7 @@ namespace CWD {
 	/************************* 用户界面初始化方法：构建整个界面布局 *************************/
 	void CentralWidget::InitUI()
 	{
-		/* LocalIP             .setText("本机IPPORT:00.00.00.00:0000");
-		 DeviceIP            .setText("设备IPPORT:00.00.00.00:0000");
-		 VersionNum          .setText("版本号:--");
-		 ChipType            .setText("芯片型号:AIC9628BM");
-		 TemperatureInner    .setText("FPGA温度:--℃");
-		 TemperatureEnv      .setText("环境温度:--℃");*/
-
-                                                                                                                                              // 标签名
+		// 标签名
 		QLabel* labelLocalIP = new QLabel("本机IP", this);
 		QLabel* labelDeviceIP = new QLabel("设备IP", this);
 		QLabel* labelVersion = new QLabel("版本号", this);
@@ -579,32 +578,41 @@ namespace CWD {
 		QLabel* labelTempInner = new QLabel("FPGA温度", this);
 		QLabel* labelTempEnv = new QLabel("环境温度", this);
 
-                                                                                                                                              // 冒号
+		// 冒号
 		QLabel* colon1 = new QLabel(":", this);
 		QLabel* colon2 = new QLabel(":", this);
 		QLabel* colon3 = new QLabel(":", this);
 		QLabel* colon4 = new QLabel(":", this);
 		QLabel* colon5 = new QLabel(":", this);
-	 QLabel* colon6 = new QLabel(":", this);
+		QLabel* colon6 = new QLabel(":", this);
 
-                                                                                                                                              // 内容
-		LocalIP.setParent(this);
-		DeviceIP.setParent(this);
+		// 初始化版本和芯片信息标签
 		VersionNum.setParent(this);
 		ChipType.setParent(this);
 		TemperatureInner.setParent(this);
 		TemperatureEnv.setParent(this);
+		
+		// 初始化网络配置输入框
+		LeLocalIP.setParent(this);
+		LeLocalPort.setParent(this);
+		LeDeviceIP.setParent(this);
+		LeDevicePort.setParent(this);
+		BtnConnect.setParent(this);
 
-		LocalIP.setText("00.00.00.00:0000");
-		DeviceIP.setText("00.00.00.00:0000");
 		VersionNum.setText("--");
 		ChipType.setText("AIC9628BM");
 		TemperatureInner.setText("--℃");
 		TemperatureEnv.setText("--℃");
 
-                                                                                                                                              // 统一宽度
-		int labelWidth = 60;
-		int colonWidth = 10;
+		// 统一宽度设置
+		int labelWidth = 60;   // 标签宽度
+		int colonWidth = 8;    // 冒号宽度
+		int ipWidth = 100;     // IP输入框宽度
+		int portWidth = 50;    // 端口输入框宽度
+		int infoWidth = 150;   // 信息显示宽度
+		int btnWidth = 50;     // 按钮宽度
+		
+		// 设置控件宽度
 		labelLocalIP->setFixedWidth(labelWidth);
 		labelDeviceIP->setFixedWidth(labelWidth);
 		labelVersion->setFixedWidth(labelWidth);
@@ -618,49 +626,109 @@ namespace CWD {
 		colon4->setFixedWidth(colonWidth);
 		colon5->setFixedWidth(colonWidth);
 		colon6->setFixedWidth(colonWidth);
+		
+		LeLocalIP.setFixedWidth(ipWidth);
+		LeLocalPort.setFixedWidth(portWidth);
+		LeDeviceIP.setFixedWidth(ipWidth);
+		LeDevicePort.setFixedWidth(portWidth);
+		BtnConnect.setFixedWidth(btnWidth);
+		
+		VersionNum.setFixedWidth(infoWidth);
+		ChipType.setFixedWidth(infoWidth);
+		TemperatureInner.setFixedWidth(infoWidth);
+		TemperatureEnv.setFixedWidth(infoWidth);
 
-                                                                                                                                              // 内容左对齐
-		LocalIP.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-		DeviceIP.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+		// 内容左对齐
 		VersionNum.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 		ChipType.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 		TemperatureInner.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 		TemperatureEnv.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 
-                                                                                                                                              // 行布局
+		// 设置标签样式
+		QString labelStyle = "QLabel { color: #333333; font-weight: normal; }";
+		QString colonStyle = "QLabel { color: #666666; font-weight: normal; }";
+		
+		labelLocalIP->setStyleSheet(labelStyle);
+		labelDeviceIP->setStyleSheet(labelStyle);
+		labelVersion->setStyleSheet(labelStyle);
+		labelChipType->setStyleSheet(labelStyle);
+		labelTempInner->setStyleSheet(labelStyle);
+		labelTempEnv->setStyleSheet(labelStyle);
+		
+		colon1->setStyleSheet(colonStyle);
+		colon2->setStyleSheet(colonStyle);
+		colon3->setStyleSheet(colonStyle);
+		colon4->setStyleSheet(colonStyle);
+		colon5->setStyleSheet(colonStyle);
+		colon6->setStyleSheet(colonStyle);
+		
+		// 设置输入框样式
+		QString inputStyle = 
+			"QLineEdit {"
+			"    border: 1px solid #d0d0d0;"
+			"    border-radius: 3px;"
+			"    padding: 2px 4px;"
+			"    font-size: 12px;"
+			"    background-color: white;"
+			"}"
+			"QLineEdit:focus {"
+			"    border: 1px solid #4CAF50;"
+			"}";
+			
+		LeLocalIP.setStyleSheet(inputStyle);
+		LeLocalPort.setStyleSheet(inputStyle);
+		LeDeviceIP.setStyleSheet(inputStyle);
+		LeDevicePort.setStyleSheet(inputStyle);
+
+		// 初始化网络配置相关
+		InitNetworkConfig();
+
+		// 第一行：网络配置 (本机IP : xxx  端口框  设备IP : xxx  端口框  连接按钮)
 		QHBoxLayout* row1 = new QHBoxLayout;
 		row1->addWidget(labelLocalIP);
 		row1->addWidget(colon1);
-		row1->addWidget(&LocalIP);
-		row1->addSpacing(30);
+		row1->addWidget(&LeLocalIP);
+		row1->addSpacing(5);
+		row1->addWidget(&LeLocalPort);
+		row1->addSpacing(30);  // 本机和设备之间的间距
 		row1->addWidget(labelDeviceIP);
 		row1->addWidget(colon2);
-		row1->addWidget(&DeviceIP);
+		row1->addWidget(&LeDeviceIP);
+		row1->addSpacing(5);
+		row1->addWidget(&LeDevicePort);
+		row1->addSpacing(20);
+		row1->addWidget(&BtnConnect);
+		row1->addStretch();
 
+		// 第二行：版本号和芯片型号 (版本号 : xxx        芯片型号 : xxx)
 		QHBoxLayout* row2 = new QHBoxLayout;
 		row2->addWidget(labelVersion);
-	 row2->addWidget(colon3);
-	 row2->addWidget(&VersionNum);
-	 row2->addSpacing(30);
-	 row2->addWidget(labelChipType);
-	 row2->addWidget(colon4);
-	 row2->addWidget(&ChipType);
+		row2->addWidget(colon3);
+		row2->addWidget(&VersionNum);
+		row2->addSpacing(40);  // 版本号和芯片型号之间的间距
+		row2->addWidget(labelChipType);
+		row2->addWidget(colon4);
+		row2->addWidget(&ChipType);
+		row2->addStretch();
 
+		// 第三行：FPGA温度和环境温度 (FPGA温度 : xxx℃    环境温度 : xxx℃)
 		QHBoxLayout* row3 = new QHBoxLayout;
 		row3->addWidget(labelTempInner);
-	 row3->addWidget(colon5);
-	 row3->addWidget(&TemperatureInner);
-	 row3->addSpacing(30);
-	 row3->addWidget(labelTempEnv);
-	 row3->addWidget(colon6);
-	 row3->addWidget(&TemperatureEnv);
+		row3->addWidget(colon5);
+		row3->addWidget(&TemperatureInner);
+		row3->addSpacing(40);  // FPGA温度和环境温度之间的间距
+		row3->addWidget(labelTempEnv);
+		row3->addWidget(colon6);
+		row3->addWidget(&TemperatureEnv);
+		row3->addStretch();
 
+		// 整体状态信息布局
 		QVBoxLayout* statLayout = new QVBoxLayout;
 		statLayout->addLayout(row1);
 		statLayout->addLayout(row2);
 		statLayout->addLayout(row3);
-		statLayout->setContentsMargins(8, 8, 8, 8);  // 减少边距
-		statLayout->setSpacing(3);  // 减少行间距
+		statLayout->setContentsMargins(8, 8, 8, 8);  
+		statLayout->setSpacing(6);  // 行间距
 
 		GbStat.setLayout(statLayout);
 
@@ -675,17 +743,10 @@ namespace CWD {
 			Delegates[i].SetBoardNum(i + 1);
 			Lists[i].setModel(&Models[i]);
 			Lists[i].setItemDelegate(&Delegates[i]);
-			//Lists[i].setMinimumSize(270, 160);
 		}
 
 		Filter = new RetEventFilter(this);
 
-		/*  LocalIP         .setFixedWidth(200);
-		  DeviceIP        .setFixedWidth(200);
-		  VersionNum      .setFixedWidth(200);
-		  ChipType        .setFixedWidth(200);
-		  TemperatureInner.setFixedWidth(200);
-		  TemperatureEnv  .setFixedWidth(200);*/
 		LTestNum.setText("总测试次数");
 		LTestedNum.setText("已测试");
 		LTestTime.setText("总测试时间");
@@ -695,6 +756,7 @@ namespace CWD {
 		BtnStartTest.setText("开始测试");
 		BtnOpenLog.setText("打开日志");
 		PTestNum.installEventFilter(Filter);
+		PTestNum.setPlainText("1"); // 设置总测试次数初始值为1
 		PTestNum.setMaximumHeight(20);
 		PTestedNum.setMaximumHeight(20);
 		PTestTime.setMaximumHeight(20);
@@ -704,7 +766,7 @@ namespace CWD {
 
 		PTestNum.setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 		PTestNum.setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-		PTestNum.setMaximumWidth(40);   // 缩短总测试次数输入框，适合4位数字
+		PTestNum.setMaximumWidth(40);
 		PTestedNum.setMaximumWidth(60);
 		PTestTime.setMaximumWidth(60);
 		POnlineChipNum.setMaximumWidth(60);
@@ -714,25 +776,27 @@ namespace CWD {
 		HlTestNum.addWidget(&LTestNum);
 		HlTestNum.addStretch();
 		HlTestNum.addWidget(&PTestNum);
-		HlTestNum.addSpacing(5); // 减少间距
+		HlTestNum.addSpacing(5);
 		HlTestedNum.addWidget(&LTestedNum);
 		HlTestedNum.addStretch();
 		HlTestedNum.addWidget(&PTestedNum);
-		HlTestedNum.addSpacing(5); // 减少间距
+		HlTestedNum.addSpacing(5);
 		HlTestTime.addWidget(&LTestTime);
 		HlTestTime.addStretch();
 		HlTestTime.addWidget(&PTestTime);
-		HlTestTime.addSpacing(5); // 减少间距
+		HlTestTime.addSpacing(5);
 		HlOnlineChipNum.addWidget(&LOnlineChipNum);
 		HlOnlineChipNum.addStretch();
 		HlOnlineChipNum.addWidget(&POnlineChipNum);
-		HlOnlineChipNum.addSpacing(5); // 减少间距
+		HlOnlineChipNum.addSpacing(5);
 		HlSatisfiedNum.addWidget(&LSatisfiedChipNum);
 		HlSatisfiedNum.addStretch();
 		HlSatisfiedNum.addWidget(&PSatisfiedChipNum);
+		HlSatisfiedNum.addSpacing(5);
 		HlRejectedNum.addWidget(&LRejectionChipNum);
 		HlRejectedNum.addStretch();
 		HlRejectedNum.addWidget(&PRejectionChipNum);
+		HlRejectedNum.addSpacing(5);
 		HlBtn.addStretch();
 		HlBtn.addWidget(&BtnStartTest);
 		HlBtn.addStretch();
@@ -746,8 +810,8 @@ namespace CWD {
 		VlInstrumentBoard.addLayout(&HlRejectedNum);
 		VlInstrumentBoard.addLayout(&HlBtn);
 		VlInstrumentBoard.addStretch();
-		VlInstrumentBoard.setContentsMargins(8, 8, 8, 8);  // 恢复原来的边距
-		VlInstrumentBoard.setSpacing(4);  // 恢复原来的间距
+		VlInstrumentBoard.setContentsMargins(8, 8, 8, 8);
+		VlInstrumentBoard.setSpacing(4);
 		GbInstrumentBoard.setLayout(&VlInstrumentBoard);
 
 		HlLineFst.addWidget(&Lists[0]);
@@ -762,8 +826,8 @@ namespace CWD {
 		VlDevStatistics.addLayout(&HlLineFst);
 		VlDevStatistics.addLayout(&HlLineSec);
 		VlDevStatistics.addLayout(&HlLineThd);
-		VlDevStatistics.setContentsMargins(5, 5, 5, 5);  // 减少边距
-		VlDevStatistics.setSpacing(3);  // 减少行间距
+		VlDevStatistics.setContentsMargins(5, 5, 5, 5);
+		VlDevStatistics.setSpacing(3);
 		GbDevStatistics.setLayout(&VlDevStatistics);
 
 		// 新增：初始化底部信息显示区域
@@ -771,11 +835,11 @@ namespace CWD {
 
 		VlAll.addWidget(&GbStat);
 		VlAll.addWidget(&GbDevStatistics);
-		VlAll.addWidget(&GbInfoArea);  // 添加信息显示区域到主布局
+		VlAll.addWidget(&GbInfoArea);
 		
 		// 优化主布局的间距和边距
-		VlAll.setContentsMargins(5, 5, 5, 5);  // 减少主布局边距
-		VlAll.setSpacing(3);  // 减少各部分之间的间距
+		VlAll.setContentsMargins(5, 5, 5, 5);
+		VlAll.setSpacing(3);
 
 		setLayout(&VlAll);
 
@@ -807,6 +871,13 @@ namespace CWD {
 		connect(&BtnClearInfo, &QPushButton::clicked, this, &CentralWidget::OnClearInfo);
 		connect(&BtnSaveInfo, &QPushButton::clicked, this, &CentralWidget::OnSaveInfo);
 		connect(&ChkAutoScroll, &QCheckBox::toggled, this, &CentralWidget::OnAutoScrollToggled);
+		
+		// 新增：网络配置信号槽连接
+		connect(&BtnConnect, &QPushButton::clicked, this, &CentralWidget::OnConnectBtnClicked);
+		connect(&LeLocalIP, &QLineEdit::textChanged, this, &CentralWidget::OnNetworkInputChanged);
+		connect(&LeLocalPort, &QLineEdit::textChanged, this, &CentralWidget::OnNetworkInputChanged);
+		connect(&LeDeviceIP, &QLineEdit::textChanged, this, &CentralWidget::OnNetworkInputChanged);
+		connect(&LeDevicePort, &QLineEdit::textChanged, this, &CentralWidget::OnNetworkInputChanged);
 	}
 
 	/************************* 创建线程与任务 *************************/
@@ -817,13 +888,6 @@ namespace CWD {
 		CREATE_TASK_DISPATCH;
 		CREATE_TASK_RCV;
 		TASKWZ::worker_manager::create(TaskVersion, TASKWZ::worker_type::EXECUTE_THREAD);
-	}
-
-	/************************* 更新套接字信息，主要是IP地址等 *************************/
-	void CentralWidget::UpdateSockInfo()
-	{
-		LocalIP.setText(SOCKWZ::SockGlob::Sock->GetAddr()[0] + ":" + SOCKWZ::SockGlob::Sock->GetAddr()[1] );
-		DeviceIP.setText(SOCKWZ::SockGlob::Sock->GetAddr()[2] + ":" + SOCKWZ::SockGlob::Sock->GetAddr()[3]);
 	}
 
 	/************************* 开始测试槽函数：启动测试流程 *************************/
@@ -848,14 +912,16 @@ namespace CWD {
 			AppendInfoWithTime(QString("开始测试，计划测试 %1 次").arg(PTestNum.toPlainText()), "INFO");
 			AppendInfoWithTime(QString("简要日志文件: %1").arg(currentLogSePath), "INFO");
 
-			PTestedNum.setText("0(0/0)");                                                                                                     // 已测试次数清零，界面显示为0
+			//PTestedNum.setText("0(0/0)");                                                                                                    // 已测试次数清零，界面显示为0
+			PTestedNum.setText("");                                                                                                            // 已测试次数清零
+			PTestTime.setText("");                                                                                                             // 测试时间清零
 			PSatisfiedChipNum.setText("");                                                                                                    // 测试通过数量清零
 			PRejectionChipNum.setText("");                                                                                                    // 测试失败数量清零
 			TOOLWZ::stack_wz<TASKWZ::task_type> stack_join;                                                                                   // 创建一个任务类型栈，需要批量join的任务
 			stack_join.push(TASKWZ::task_type::TASK_END);                                                                                     // 压入"结束任务"类型
 			stack_join.push(TASKWZ::task_type::TASK_JOIN);                                                                                    // 压入"join任务"类型
 			stack_join.push(TASKWZ::TASK_DATA_CONSTRUCT);                                                                                     // 压入"数据构建任务"类型
-		 stack_join.push(TASKWZ::TASK_DATA_SEND);                                                                                          // 压入"数据发送任务"类型
+		 stack_join.push(TASKWZ::TASK_DATA_SEND);                                                                                             // 压入"数据发送任务"类型
 			CREATE_TASK_JOIN(stack_join);                                                                                                     // 创建一个join任务，批量等待上述所有类型的任务完成
 			TaskSend = new TASKWZ::TaskDataSend(PTestNum.toPlainText().toInt());                                                              // 创建数据发送任务对象，参数为界面输入的测试次数
 			connect(TaskSend, &TASKWZ::TaskDataSend::MsgOfStartEnd, this, &CentralWidget::UpdateCheckResult, Qt::QueuedConnection);           // 连接TaskSend的"测试开始/结束"信号到界面结果更新槽函数
@@ -865,7 +931,6 @@ namespace CWD {
 		}
 		else
 		{
-                                                                                                                                              // 如果当前是"结束测试"状态（按钮已按下，准备结束测试）
 			// 新增：添加测试结束信息
 			AppendInfoWithTime("用户手动结束测试", "WARNING");
 			
@@ -1098,21 +1163,31 @@ namespace CWD {
 		UpdateChipOnlineStatus();                                                                                                             // 新增：每秒刷新一次在线状态和颜色
 		TemperatureInner.setText(QString("%1℃").arg(DCR::DeviceCheckResultGlobal->GetTemperatureInner(), 4, 'f', 1, '0'));
 		TemperatureEnv.setText(QString("%1℃").arg(DCR::DeviceCheckResultGlobal->GetTempeartureEnv(), 4, 'f', 1, '0'));
+		
+		// 检测网络连接状态
 		if (DCR::DeviceCheckResultGlobal->GetUpPackCount() == UpPackCount)
 		{
+			// 上行包计数没有变化，可能断线了
 			if (IfNoticeMNICWhenDisconnect)
 			{
 				IfNoticeMNICWhenDisconnect = false;
 				ResetModelItemStat();
+				AppendInfoWithTime("检测到网络连接中断", "WARNING");
+				// 更新界面状态为断开
+				UpdateConnectionStatus(false);
 				emit NetLoss();
 			}
 		}
 		else
 		{
+			// 上行包计数有变化，连接正常
 			UpPackCount = DCR::DeviceCheckResultGlobal->GetUpPackCount();
 			if (!IfNoticeMNICWhenDisconnect)
 			{
 				IfNoticeMNICWhenDisconnect = true;
+				AppendInfoWithTime("网络连接已恢复", "SUCCESS");
+				// 更新界面状态为已连接
+				UpdateConnectionStatus(true);
 				emit NetRecovery();
 			}
 		}
@@ -1227,9 +1302,9 @@ namespace CWD {
 			scrollBar->setValue(scrollBar->maximum());
 		}
 		
-		// 限制最大行数，防止内存占用过大
+		// 限制最大行数，防止内存占用过大，限制10000行
 		QTextDocument* doc = InfoTextArea.document();
-		if (doc->blockCount() > 1000) {
+		if (doc->blockCount() > 10000) {
 			QTextCursor cursor = InfoTextArea.textCursor();
 			cursor.movePosition(QTextCursor::Start);
 			cursor.select(QTextCursor::BlockUnderCursor);
@@ -1288,6 +1363,210 @@ namespace CWD {
 	void CentralWidget::OnGlobalInfoMessage(const QString& message, const QString& level)
 	{
 		AppendInfo(message, level);
+	}
+
+	/************************* 网络配置相关方法实现 *************************/
+	
+	void CentralWidget::InitNetworkConfig()
+	{
+		// 初始化IP地址验证器
+		QString RangeIP = "(?:[0-1]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])";
+		QRegularExpression RegExpIP("^" + RangeIP + "\\." + RangeIP + "\\." + RangeIP + "\\." + RangeIP + "$");
+		ValidatorIP = new QRegularExpressionValidator(RegExpIP, this);
+		
+		// 初始化端口验证器（1-65535）
+		QRegularExpression RegExpPort("^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$");
+		ValidatorPort = new QRegularExpressionValidator(RegExpPort, this);
+		
+		// 设置验证器
+		LeLocalIP.setValidator(ValidatorIP);
+		LeDeviceIP.setValidator(ValidatorIP);
+		LeLocalPort.setValidator(ValidatorPort);
+		LeDevicePort.setValidator(ValidatorPort);
+		
+		// 设置占位符文本
+		LeLocalIP.setPlaceholderText("192.168.1.100");
+		LeLocalPort.setPlaceholderText("8254");
+		LeDeviceIP.setPlaceholderText("192.168.1.200");
+		LeDevicePort.setPlaceholderText("8204");
+		
+		// 设置按钮样式和状态
+		BtnConnect.setText("连接");
+		BtnConnect.setStyleSheet(
+			"QPushButton {"
+			"    background-color: #4CAF50;"
+			"    color: white;"
+			"    border: none;"
+			"    border-radius: 3px;"
+			"    font-weight: bold;"
+			"}"
+			"QPushButton:hover {"
+			"    background-color: #45a049;"
+			"}"
+			"QPushButton:pressed {"
+			"    background-color: #3d8b40;"
+			"}"
+			"QPushButton:disabled {"
+			"    background-color: #cccccc;"
+			"    color: #666666;"
+			"}"
+		);
+		
+		// 加载配置
+		LoadNetworkConfig();
+		
+		// 初始化状态
+		UpdateConnectionStatus(false);
+	}
+	
+	void CentralWidget::LoadNetworkConfig()
+	{
+		// 从配置文件加载网络设置
+		LeLocalIP.setText(CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalIP").toString());
+		LeLocalPort.setText(CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalPort").toString());
+		LeDeviceIP.setText(CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/DeviceIP").toString());
+		LeDevicePort.setText(CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_CENTRALIZE, "NETADDR/DevicePort").toString());
+		
+		AppendInfoWithTime("网络配置已从文件加载", "INFO");
+	}
+	
+	void CentralWidget::SaveNetworkConfig()
+	{
+		// 保存网络设置到配置文件
+		CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalIP", LeLocalIP.text());
+		CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_CENTRALIZE, "NETADDR/LocalPort", LeLocalPort.text());
+		CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_CENTRALIZE, "NETADDR/DeviceIP", LeDeviceIP.text());
+		CFGI::IniFileCFGGlobal->WriteINI(CFGI::INI_CENTRALIZE, "NETADDR/DevicePort", LeDevicePort.text());
+		
+		AppendInfoWithTime("网络配置已保存到文件", "SUCCESS");
+	}
+	
+	bool CentralWidget::ValidateNetworkInputs()
+	{
+		// 验证所有输入是否有效
+		if (LeLocalIP.text().isEmpty() || !LeLocalIP.hasAcceptableInput()) {
+			AppendInfoWithTime("本地IP地址格式不正确", "ERROR");
+			return false;
+		}
+		
+		if (LeLocalPort.text().isEmpty() || !LeLocalPort.hasAcceptableInput()) {
+			AppendInfoWithTime("本地端口格式不正确", "ERROR");
+			return false;
+		}
+		
+		if (LeDeviceIP.text().isEmpty() || !LeDeviceIP.hasAcceptableInput()) {
+			AppendInfoWithTime("设备IP地址格式不正确", "ERROR");
+			return false;
+		}
+		
+		if (LeDevicePort.text().isEmpty() || !LeDevicePort.hasAcceptableInput()) {
+			AppendInfoWithTime("设备端口格式不正确", "ERROR");
+			return false;
+		}
+		
+		return true;
+	}
+	
+	void CentralWidget::UpdateConnectionStatus(bool connected)
+	{
+		isConnected = connected;
+		
+		if (connected) {
+			BtnConnect.setText("断开");
+			BtnConnect.setStyleSheet(
+				"QPushButton {"
+				"    background-color: #f44336;"
+				"    color: white;"
+				"    border: none;"
+				"    border-radius: 3px;"
+				"    font-weight: bold;"
+				"}"
+				"QPushButton:hover {"
+				"    background-color: #da190b;"
+				"}"
+				"QPushButton:pressed {"
+				"    background-color: #b71c1c;"
+				"}"
+			);
+			
+			// 禁用输入框
+			LeLocalIP.setEnabled(false);
+			LeLocalPort.setEnabled(false);
+			LeDeviceIP.setEnabled(false);
+			LeDevicePort.setEnabled(false);
+		} else {
+			BtnConnect.setText("连接");
+			BtnConnect.setStyleSheet(
+				"QPushButton {"
+				"    background-color: #4CAF50;"
+				"    color: white;"
+				"    border: none;"
+				"    border-radius: 3px;"
+				"    font-weight: bold;"
+				"}"
+				"QPushButton:hover {"
+				"    background-color: #45a049;"
+				"}"
+				"QPushButton:pressed {"
+				"    background-color: #3d8b40;"
+				"}"
+			);
+			
+			// 启用输入框
+			LeLocalIP.setEnabled(true);
+			LeLocalPort.setEnabled(true);
+			LeDeviceIP.setEnabled(true);
+			LeDevicePort.setEnabled(true);
+		}
+	}
+	
+	void CentralWidget::OnConnectBtnClicked()
+	{
+		if (!isConnected) {
+			// 尝试连接
+			if (!ValidateNetworkInputs()) {
+				return;
+			}
+			
+			AppendInfoWithTime(QString("尝试连接到 %1:%2").arg(LeDeviceIP.text()).arg(LeDevicePort.text()), "INFO");
+			
+			// 调用Socket连接
+			if (SOCKWZ::SockGlob::Connect(LeLocalIP.text(), LeLocalPort.text(), 
+										 LeDeviceIP.text(), LeDevicePort.text())) {
+				// 连接成功
+				SaveNetworkConfig();  // 保存配置
+				UpdateConnectionStatus(true);
+				AppendInfoWithTime("网络连接成功", "SUCCESS");
+				
+				// 直接调用NetConnected方法，启动定时检测
+				NetConnected();
+				
+				// 同时发送信号通知其他组件
+				emit NetRecovery();
+			} else {
+				// 连接失败
+				AppendInfoWithTime("网络连接失败", "ERROR");
+			}
+		} else {
+			// 断开连接
+			AppendInfoWithTime("断开网络连接", "WARNING");
+			SOCKWZ::SockGlob::DisConnect();
+			UpdateConnectionStatus(false);
+			
+			// 直接调用NetDisconnected方法，停止定时检测
+			NetDisconnected();
+			
+			// 同时发送信号通知其他组件
+			emit NetLoss();
+		}
+	}
+	
+	void CentralWidget::OnNetworkInputChanged()
+	{
+		// 输入改变时验证按钮状态
+		bool isValid = !LeLocalIP.text().isEmpty() && !LeLocalPort.text().isEmpty() &&
+					   !LeDeviceIP.text().isEmpty() && !LeDevicePort.text().isEmpty();
+		BtnConnect.setEnabled(isValid || isConnected);
 	}
 
 	/************************* 全局信息管理器实现 *************************/

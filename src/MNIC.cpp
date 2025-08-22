@@ -1,4 +1,7 @@
-﻿#include "MNIC.h"
+﻿//UI界面文字添加
+//
+
+#include "MNIC.h"
 #include "LogWZ.hpp"
 
 MNIC::MNIC(QWidget* parent)
@@ -65,25 +68,6 @@ void MNIC::InitFileMenu()
     DlgMenuArgAdd = new DlgMenuARG::DlgARG(this);
 }
 
-void MNIC::InitConfigMenu()
-{
-    ConfigMenu = new QMenu("配置", this);
-    MenuBar->addMenu(ConfigMenu);
-
-    NetConfigAction = new QAction("网口配置", this);
-    ConfigMenu->addAction(NetConfigAction);
-    connect(NetConfigAction, &QAction::triggered, this, &MNIC::NetConfig);
-
-    //SinadConfigAction = new QAction("Sinad配置", this);
-    //ConfigMenu->addAction(SinadConfigAction);
-    //connect(SinadConfigAction, &QAction::triggered, this, &MNIC::SinadConfig);
-
-
-    DlgMenuSocketCFG = new MenuSocketCFG::DialogSockCFG(this);
-
-    //DlgMenuSinadCFG = new MenuSINADCFG::DialogSinadCFG(this);
-}
-
 void MNIC::InitLogMenu()
 {
     LogMenu = new QMenu("Log", this);
@@ -125,19 +109,13 @@ void MNIC::InitUI()
     setWindowTitle(VERSION_NUM);
     InitMenuBar();
     InitFileMenu();
-    InitConfigMenu();
     InitLogMenu();
     //InitHelpMenu();
     InitStatusBar();
     InitCentralWt();
 
-    connect(DlgMenuSocketCFG, &MenuSocketCFG::DialogSockCFG::SockConfigComplete,
-        CentralWt, &CWD::CentralWidget::UpdateSockInfo);
-    connect(DlgMenuSocketCFG, &MenuSocketCFG::DialogSockCFG::ConnectStatusChanged,
-        this, [this](bool b){ this->ModifyStatus(b); });
     connect(CentralWt, &CWD::CentralWidget::NetLoss, this, &MNIC::ResetNetStatus);
     connect(CentralWt, &CWD::CentralWidget::NetRecovery, this, &MNIC::NetRecovery);
-    connect(this, &MNIC::NetLoss, DlgMenuSocketCFG, &MenuSocketCFG::DialogSockCFG::NetLoss);
     connect(this, &MNIC::NetConnected, CentralWt, &CWD::CentralWidget::NetConnected);
     connect(this, &MNIC::NetDisconnected, CentralWt, &CWD::CentralWidget::NetDisconnected);
 }
@@ -150,11 +128,6 @@ void MNIC::InitUI()
 void MNIC::AddArg()
 {
     DlgMenuArgAdd->exec();
-}
-
-void MNIC::NetConfig()
-{
-    DlgMenuSocketCFG->exec();
 }
 
 //void MNIC::SinadConfig()
@@ -208,12 +181,11 @@ void MNIC::closeEvent(QCloseEvent* event)
 void MNIC::NetRecovery()
 {
     LabelStat->setText("网口已连接");
-    QMessageBox::information(this, "网口状态", "连接恢复", QMessageBox::Ok);
+    QMessageBox::information(this, "网口状态", "连接成功", QMessageBox::Ok);
 }
 
 void MNIC::ResetNetStatus()
 {
     LabelStat->setText("网口未连接");
     QMessageBox::critical(this, "网口状态", "连接断开", QMessageBox::Ok);
-    emit NetLoss();//msg to Dlg Sock CFG
 }

@@ -1,4 +1,7 @@
-﻿#include "FluidCtrl.hpp"
+﻿//流控相关函数的设计
+//
+
+#include "FluidCtrl.hpp"
 #include "LogWZ.hpp"
 namespace FCT{
     FluidCtrl::FluidCtrl(){}

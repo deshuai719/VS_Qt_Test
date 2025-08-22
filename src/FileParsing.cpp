@@ -1,3 +1,6 @@
+﻿//解析和管理特定格式数据文件
+//
+
 #include "FileParsing.hpp"
 
 FPWZ::AddrMif::AddrMif()

@@ -1,4 +1,7 @@
-﻿#include "DataConstruct.hpp"
+﻿//对发送包进行构造并创建相关链表
+//
+
+#include "DataConstruct.hpp"
 #include <cstdio>
 
 namespace DCWZ{

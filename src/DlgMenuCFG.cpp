@@ -1,4 +1,7 @@
-﻿#include "DlgMenuCFG.hpp"
+﻿//顶部菜单栏中网口配置以及条件设置的设计及功能实现
+//
+
+#include "DlgMenuCFG.hpp"
 
 namespace MenuSocketCFG {
     ModelItem::ModelItem()

@@ -1,3 +1,6 @@
+﻿//波形生成
+//
+
 #include "SamplingDataGenerate.hpp"
 
 namespace SDG{

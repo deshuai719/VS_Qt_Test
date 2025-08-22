@@ -1,3 +1,6 @@
+﻿//进制转换以及累加校验和计算
+//
+
 #include "ToolWZ.hpp"
 #include <vcruntime_string.h>
 

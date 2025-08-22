@@ -1,4 +1,7 @@
-﻿#include "SocketWZ.hpp"
+﻿//socket相关函数设计，如收发数据，队列进出，网络通断
+//
+
+#include "SocketWZ.hpp"
 #include <QDebug>
 #include "LogWZ.hpp"
 #include <winsock2.h>
@@ -188,6 +191,10 @@ int SOCKWZ::Socket::Recv(char* buf, int len)
     int ret = SOCKET_ERROR;
     auto t_if_check = std::chrono::steady_clock::now(); // select结束到if判断前时间
 
+    // 新增：连续高延迟监控与优先级自适应调整
+    static int high_latency_count = 0;
+    static bool priority_adjusted = false;
+
     if (sel > 0 && FD_ISSET(sock, &readfds)) {
         auto t_recvfrom_start = std::chrono::steady_clock::now(); // 记录开始时间
         auto select_to_if_cost = std::chrono::duration_cast<std::chrono::microseconds>(t_recvfrom_start - t_if_check).count();
@@ -202,6 +209,21 @@ int SOCKWZ::Socket::Recv(char* buf, int len)
             WRITE_TASK_DATA_SEND_DBG("!!!Socket Recv发送耗时超20ms: %lld us\n", recvfrom_cost);
         }
         WRITE_TASK_DATA_SEND_DBG("select1=%d, recvfrom ret=%d\n", sel, ret);
+        // 检测连续高延迟，自动降低优先级
+        if (recvfrom_cost > 20000) {
+            high_latency_count++;
+            if (high_latency_count > 3 && !priority_adjusted) {
+                SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
+                priority_adjusted = true;
+                WRITE_TASK_DATA_SEND_DBG("检测到连续高延迟，降低线程优先级\n");
+            }
+        } else {
+            high_latency_count = 0;
+            if (priority_adjusted) {
+                SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
+                priority_adjusted = false;
+            }
+        }
     }
     else {
         WRITE_TASK_DATA_SEND_DBG("select0=%d, recvfrom ret=%d\n", sel, ret);

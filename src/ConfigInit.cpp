@@ -1,4 +1,7 @@
-﻿#include "ConfigInit.hpp"
+﻿//对INI文件的初始化和管理进行封装，提供创建、读取、写入和清除功能
+//
+
+#include "ConfigInit.hpp"
 
 namespace CFGI{
     IniFileCFG::IniFileCFG(){

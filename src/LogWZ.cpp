@@ -1,4 +1,7 @@
-﻿#include "LogWZ.hpp"
+﻿//日志读写操作的封装与实现
+//
+
+#include "LogWZ.hpp"
 #include <cstdarg>
 
 LWZ::Log::Log(int LogNum)

@@ -44,7 +44,7 @@ public:
         std::string currentTimestamp;                                                              // 当前参数块的时标
 
         while (std::getline(inFile, line)) {                                                       // 逐行读取输入文件
-            if (line.find("组参数下发开始") != std::string::npos)                                      // 检查是否为参数块的开始
+            if (line.find("组参数与条件") != std::string::npos)                                      // 检查是否为参数块的开始
             {
                 inParameterBlock = true;                                                           // 进入参数块
                 outFile << line << "\n";                                                         // 原样输出该行并空一行

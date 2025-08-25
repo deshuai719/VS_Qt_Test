@@ -363,7 +363,7 @@ extern bool g_logOn;//定义全局日志开关变量
 #define WRITE_LOG_UP_PARAM_RECORD(...) do { if (g_logOn)LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  参数: dB=%.2f, Freq=%llu, Dur=%u, Digital=%d, PGA=%d, Playback=%d, Headset=%d\n", __VA_ARGS__); } while(0)//新增：日志写参数
 #define WRITE_LOG_UP_CODEC_COND_RECORD(...)  do { if (g_logOn)LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  Codec SINAD[%d,%d], VppPTP[%d,%d], VppRMS[%d,%d]\n", __VA_ARGS__); } while(0)//新增：日志写判定条件
 #define WRITE_LOG_UP_ADPOW_COND_RECORD(...)  do { if (g_logOn)LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  Adpow SINAD[%d,%d], VppPTP[%d,%d], VppRMS[%d,%d]\n", __VA_ARGS__); } while(0)//新增：日志写判定条件
-#define WRITE_LOG_UP_PACK_RECORD(...)   do { if (g_logOn)LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "\n测试次数：%4d, 时标:%5d\n", __VA_ARGS__); } while(0)
+#define WRITE_LOG_UP_PACK_RECORD(...)   do { if (g_logOn)LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "\n测试次数：%3d, 时标:%5d, dbg_dn_aic:%5d\n", __VA_ARGS__); } while(0)
 #define WRITE_LOG_UP_CHIP_RECORD(...)   do { if (g_logOn)LWZ::Log::LogInstance->Write(LOG_UP_RECORD_INDEX, "  芯片编号：J[%d]S[%d]\n    Codec Left [Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s],\n    Codec Right[Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s],\n    AdPow      [Sinad:%4d, Vpp:%5d, Rms:%5d, Res:%s]\n", __VA_ARGS__); } while(0)
 #define CLOSE_LOG_UP_RECORD()   do { if (g_logOn)LWZ::Log::LogInstance->Close(LOG_UP_RECORD_INDEX); } while(0)
 
@@ -373,7 +373,7 @@ extern bool g_logOn;//定义全局日志开关变量
 #define ASYNC_WRITE_LOG_UP_PACK_RECORD(...) \
     do { \
         if (g_logOn) { \
-            QString logLine = QString::asprintf("\n测试次数：%4d, 时标:%5d\n", __VA_ARGS__); \
+            QString logLine = QString::asprintf("\n测试次数：%4d, 时标:%5d, dbg_dn_aic:0x%04X\n", __VA_ARGS__); \
             std::lock_guard<std::mutex> lock(TaskChipStatParsing::ChipLogBufferMutex); \
             TaskChipStatParsing::ChipLogBuffer.push_back(logLine); \
         } \

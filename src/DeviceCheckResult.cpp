@@ -328,7 +328,7 @@ namespace DCR{
         CheckCompletedCount(0), CheckedGroupCount(0),
         ChipOnLineNum(0), ChipSatisfiedNum(0), 
         ChipUnSatisfiedNum(0), PassedGroupCount(0), TotalGroupCount(0),
-        TemperatureInner(0), TemperatureEnviroment(0),UpPackCount(0)
+        TemperatureInner(0), TemperatureEnviroment(0), UpPackCount(0)
     {}
 
     DeviceCheckResult::~DeviceCheckResult()
@@ -456,6 +456,11 @@ namespace DCR{
         UpPackCount = count;
     }
 
+    void DeviceCheckResult::SetDbgDnAicCount(unsigned short count)//新增：设置调试下发AIC包计数
+    {
+        DbgDnAicCount = count;
+    }
+
     int DeviceCheckResult::GetCheckCount() const
     {
         return CheckCount;
@@ -578,6 +583,11 @@ namespace DCR{
     int DeviceCheckResult::GetUpPackCount() const
     {
         return UpPackCount;
+    }
+
+    int DeviceCheckResult::GetDbgDnAicCount() const//新增：获取调试下发AIC包计数
+    {
+        return DbgDnAicCount;
     }
 
     std::unique_ptr<DeviceCheckResult> DeviceCheckResultGlobal(new DeviceCheckResult);

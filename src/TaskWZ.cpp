@@ -771,17 +771,19 @@ void TaskChipStatParsing::run()
 				DCR::DeviceCheckResultGlobal->SetTemperatureInner(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->fpga_heat ); // 更新芯片内部温度
 				DCR::DeviceCheckResultGlobal->SetTemperatureEnv(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->ds18b20_16b); // 更新环境温度
 				DCR::DeviceCheckResultGlobal->SetUpPackCount(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->timeStamp_8ms);  // 更新上行包计数
-
+				DCR::DeviceCheckResultGlobal->SetDbgDnAicCount(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->dbg_dn_aic);  // 新增：更新调试下发AIC包计数
+				unsigned short dbgDnAic = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->dbg_dn_aic;
+				qDebug() << QString::asprintf("dbg_dn_aic 原始值: 0x%04X", dbgDnAic);
 				/********************************直接读取缓存空间设置重发信号标志**********************************************/
 				static int lastFluidValue = -1;			// 记录上一次的流控值，替代cnt_dn_empty_start和cnt_dn_full_start
 				static bool lastPackLogRecord = false;			// 初始包记录关闭，不对开始测试前解析的数据包进行记录
 
 				if (bPackLogRecord)
 				{
-					ASYNC_WRITE_LOG_UP_PACK_RECORD(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1, DCR::DeviceCheckResultGlobal->GetUpPackCount());
+					ASYNC_WRITE_LOG_UP_PACK_RECORD(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1, DCR::DeviceCheckResultGlobal->GetUpPackCount(),DCR::DeviceCheckResultGlobal->GetDbgDnAicCount());
 					WRITE_TASK_DATA_SEND_DBG("记录0x28包, 时标: %d\n", DCR::DeviceCheckResultGlobal->GetUpPackCount());
 					auto up_mnic_sta = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN);
-					qDebug() << "free_codec_dac:" << up_mnic_sta->free_codec_dac;
+					//qDebug() << "free_codec_dac:" << up_mnic_sta->free_codec_dac;
 
 					// 新增：基于流控空间变化的重发机制，使用动态获取的硬件缓存空间大小
 					int currentFluidValue = up_mnic_sta->free_codec_dac; // 设置当前的缓存空间值
@@ -1228,9 +1230,9 @@ void TaskDataSend::run()
 		int time = 0;
 		time++;
 		WRITE_TASK_DATA_SEND_DBG("TestCount = %lld\n", time);                                              // 11. 记录当前测试次数
-		WRITE_LOG_UP_RECORD("\n[第%03d次参数下发开始]\n", time);                                           // 12. 记录本次参数下发开始
-		WRITE_LOG_SE_RECORD("\n[第%03d次参数下发开始]\n", time);
-		POST_INFO_WITH_TIME(QString::asprintf("\n[第%03d次参数下发开始]\n", time));
+		WRITE_LOG_UP_RECORD("[第%03d次参数下发开始]\n", time);                                           // 12. 记录本次参数下发开始
+		WRITE_LOG_SE_RECORD("[第%03d次参数下发开始]\n", time);
+		POST_INFO_WITH_TIME(QString::asprintf("[第%03d次参数下发开始]\n", time));
 		std::shared_ptr<DCWZ::DataNode> Node = DCWZ::DataMana::DataListGlobal.GetHead();                        // 13. 获取数据链表头节点
 		DCR::DeviceCheckResultGlobal->SetCheckedGroupCount(0);//新增：清空已测组数组数据
 		for (int i = 0; Node != nullptr && Loop; Node = Node->GetNext(), i++)                                   // 14. 遍历所有数据节点
@@ -1788,7 +1790,7 @@ void TaskDataSend::run()
 			}
 
 
-			WRITE_LOG_UP_RECORD("\n[第%03d组参数下发结束]\n", i + 1);                                          // 27. 记录本组参数下发结束
+			WRITE_LOG_UP_RECORD("[第%03d组参数下发结束]\n\n", i + 1);                                          // 27. 记录本组参数下发结束
 			//TaskChipStatParsing::bPackLogRecord = false;                                                        // 28. 关闭芯片包日志记录
 
 			WRITE_TASK_DATA_SEND_DBG("Fluid Buffer Empty\n");

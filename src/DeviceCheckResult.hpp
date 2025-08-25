@@ -83,6 +83,7 @@ namespace DCR{
         double TemperatureInner;//内部温度
         double TemperatureEnviroment;//环境温度
         int UpPackCount;//上报包计数
+        int DbgDnAicCount;//新增：调试下发AIC包计数
     public:
         DeviceCheckResult();
         ~DeviceCheckResult();
@@ -104,6 +105,7 @@ namespace DCR{
         void SetTemperatureInner(unsigned short t);
         void SetTemperatureEnv( short t);
         void SetUpPackCount(unsigned short count);
+        void SetDbgDnAicCount(unsigned short count);//新增：设置调试下发AIC包计数
         int GetCheckCount() const;
         int GetCheckCompletedCount() const;
         int GetCheckedGroupCount() const;
@@ -127,6 +129,7 @@ namespace DCR{
         double TemperatureTransferInner(unsigned short data);
         double TemperatureTransferEnv( short data);
         int GetUpPackCount() const;
+        int GetDbgDnAicCount() const;//新增：获取调试下发AIC包计数
     };
 
     extern std::unique_ptr<DeviceCheckResult> DeviceCheckResultGlobal;

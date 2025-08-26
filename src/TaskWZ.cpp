@@ -1835,14 +1835,24 @@ void TaskDataSend::run()
 		QString ts = LWZ::GetSeLogTimestamp();
 		if (ts.isEmpty()) ts = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
 
-		// 温度使用当前环境温度，并记录到LWZ里，以便其他地方对齐
-		double envTemp = DCR::DeviceCheckResultGlobal->GetTempeartureEnv();
-		LWZ::SetSeLogEnvTemp(envTemp);
-		QString tempSuffix = LWZ::GenerateTemperatureSuffix(envTemp); // 形如：_常温_30.0℃
+		// 温度：优先使用LWZ里缓存的（与LogSeRecord对齐），否则取当前环境温度
+		double envTemp = LWZ::GetSeLogEnvTemp();
+		if (envTemp == 0.0) envTemp = DCR::DeviceCheckResultGlobal->GetTempeartureEnv();
+		QString tempSuffix = LWZ::GenerateTemperatureSuffix(envTemp); // 形如：_常温_31.0℃
 		QString tempForHeader = tempSuffix.startsWith("_") ? tempSuffix.mid(1) : tempSuffix;
 
-		// 文件名：测试结果_<时间戳><温度后缀>.log
-		QString fileName = QString("测试结果_%1%2.log").arg(ts).arg(tempSuffix);
+		// 设备IP与端口（芯片侧）
+		QString ip = "unknown_ip";
+		QString port = "unknown_port";
+		if (SOCKWZ::SockGlob::Sock) {
+			const QString* addrs = SOCKWZ::SockGlob::Sock->GetAddr();
+			// SockAddr: [0]=本地IP, [1]=本地端口, [2]=芯片IP, [3]=芯片端口
+			ip = addrs[2];
+			port = addrs[3];
+		}
+
+		// 文件名：<ip>_<port>_<timestamp><温度后缀>.log
+		QString fileName = QString("%1_%2_%3%4.log").arg(ip, port, ts, tempSuffix);
 		QString resultPath = appDir + "/" + targetFolder + "/" + fileName;
 
 		QFile file(resultPath);
@@ -2009,7 +2019,7 @@ void TaskVersionParsing::close()
 {
 	Loop = false;
 	QueueVeriosnParsing.exit(); // 唤醒阻塞线程，确保安全退出
-}
+	}
 
 void TaskVersionParsing::clear()
 {}

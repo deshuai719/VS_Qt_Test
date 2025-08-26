@@ -844,12 +844,12 @@ namespace CWD {
 		HlLineFst.addWidget(&Lists[0]);
 		HlLineFst.addWidget(&Lists[1]);
 		HlLineFst.addWidget(&Lists[2]);
-		HlLineSec.addWidget(&Lists[7]);
-		HlLineSec.addWidget(&GbInstrumentBoard);
 		HlLineSec.addWidget(&Lists[3]);
-		HlLineThd.addWidget(&Lists[6]);
+		HlLineSec.addWidget(&GbInstrumentBoard);
+		HlLineSec.addWidget(&Lists[4]);
 		HlLineThd.addWidget(&Lists[5]);
-		HlLineThd.addWidget(&Lists[4]);
+		HlLineThd.addWidget(&Lists[6]);
+		HlLineThd.addWidget(&Lists[7]);
 		VlDevStatistics.addLayout(&HlLineFst);
 		VlDevStatistics.addLayout(&HlLineSec);
 		VlDevStatistics.addLayout(&HlLineThd);

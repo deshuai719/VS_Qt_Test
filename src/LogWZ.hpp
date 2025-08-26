@@ -13,6 +13,11 @@
 namespace LWZ {
     // 新增：根据温度生成后缀
     QString GenerateTemperatureSuffix(double temperature);
+    // 新增：记录并获取简要日志(LogSeRecord)关联的时间戳与温度，便于其他模块对齐
+    void SetSeLogTimestamp(const QString& ts);
+    QString GetSeLogTimestamp();
+    void SetSeLogEnvTemp(double t);
+    double GetSeLogEnvTemp();
 }
 
 #define LOG_NUM 50
@@ -110,7 +115,7 @@ extern bool g_logOn;//定义全局日志开关变量
 #define WRITE_DBG(Index, Format, ...)   LWZ::Log::LogInstance->Write(Index, Format, __VA_ARGS__)
 #define CLOSE_DBG(Index)   LWZ::Log::LogInstance->Close(Index)
 
-#define OPEN_VERIFY_MIF(Path)   LWZ::Log::LogInstance->Init(LOG_VERIFY_MIF_INDEX, Path)
+#define OPEN_VERIFY_MIF(Path)   LWZ::Log::LogInstance->Init(LOG_VERIFY_MIF_INDEX, QString(PRE_FILE_DBG + #Path).toStdString().c_str())
 #define WRITE_VERIFY_MIF(Format, ...)   LWZ::Log::LogInstance->Write(LOG_VERIFY_MIF_INDEX, Format, __VA_ARGS__)
 #define CLOSE_VERIFY_MIF()   LWZ::Log::LogInstance->Close(LOG_VERIFY_MIF_INDEX)
 
@@ -215,7 +220,7 @@ extern bool g_logOn;//定义全局日志开关变量
 #define OPEN_TASK_DATA_SEND_DBG(path)   LWZ::Log::LogInstance->Init(LOG_TASK_DATA_SEND_INDEX, QString(PRE_FILE_DBG + #path).toStdString().c_str())
 //#define OPEN_TASK_DATA_SEND_DBG(path) \
 //    do { \
-//        QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss"); \
+//        QString datetime = QDateTime::currentDateTime()->toString("yyyyMMdd_HHmmss"); \
 //        QString logPath = QString("%1LogTaskDataSend_%2.log").arg(PRE_FILE_DBG).arg(datetime); \
 //        LWZ::Log::LogInstance->Init(LOG_TASK_DATA_SEND_INDEX, logPath.toStdString().c_str()); \
 //    } while(0)
@@ -398,14 +403,16 @@ extern bool g_logOn;//定义全局日志开关变量
 
 #if defined LOG_SE_RECORD
 
-#define OPEN_LOG_SE_RECORD(path)   LWZ::Log::LogInstance->Init(LOG_SE_RECORD_INDEX, QString(PRE_FILE_DBG + #path).toStdString().c_str()); 
-
-//#define OPEN_LOG_SE_RECORD(path) \
-//    do { \
-//        QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss"); \
-//        QString logPath = QString("%1LogSeRecord_%2.log").arg(PRE_FILE_DBG).arg(datetime); \
-//        LWZ::Log::LogInstance->Init(LOG_SE_RECORD_INDEX, logPath.toStdString().c_str()); \
-//    } while(0)//新增：简要日志不覆盖
+//#define OPEN_LOG_SE_RECORD(path)   LWZ::Log::LogInstance->Init(LOG_SE_RECORD_INDEX, QString(PRE_FILE_DBG + #path).toStdString().c_str()); 
+#define OPEN_LOG_SE_RECORD(path) \
+    do { \
+        if (g_logOn) { \
+            QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss"); \
+            LWZ::SetSeLogTimestamp(datetime); \
+            QString logPath = QString("%1LogSeRecord_%2.log").arg(PRE_FILE_DBG).arg(datetime); \
+            LWZ::Log::LogInstance->Init(LOG_SE_RECORD_INDEX, logPath.toStdString().c_str()); \
+        } \
+    } while(0)
 #define WRITE_LOG_SE_RECORD(fmt, ...)   LWZ::Log::LogInstance->Write(LOG_SE_RECORD_INDEX, fmt, __VA_ARGS__); 
 #define WRITE_LOG_SE_PARAM_RECORD(...) LWZ::Log::LogInstance->Write(LOG_SE_RECORD_INDEX, "  参数: dB=%.2f, Freq=%llu, Dur=%u, Digital=%d, PGA=%d, Playback=%d, Headset=%d\n", __VA_ARGS__);//新增：日志写参数
 #define WRITE_LOG_SE_CODEC_COND_RECORD(...)  LWZ::Log::LogInstance->Write(LOG_SE_RECORD_INDEX, "  Codec SINAD[%d,%d], VppPTP[%d,%d], VppRMS[%d,%d]\n", __VA_ARGS__); //新增：日志写判定条件

@@ -4,6 +4,7 @@
 #include "GlobalConditionList.hpp"
 #include "DeviceCheckResult.hpp"
 #include "CentralWindow.hpp"
+#include "LogWZ.hpp" // 新增：用于日志路径宏与温度后缀
 #include <QDebug>
 #include <QThread>
 #include <atomic>
@@ -15,6 +16,12 @@
 #include <threadpoolapiset.h>
 #include <condition_variable>
 #include <mutex>
+// 新增：最终结果日志所需
+#include <QFile>
+#include <QTextStream>
+#include <QDateTime>
+#include <QDir>
+#include <QCoreApplication>
 
 
 
@@ -100,7 +107,7 @@ void worker::join()
 {
 	if (task.exist())                    // 1. 如果当前 worker 持有有效任务（task 不为空）
 	{
-		switch (type)                    // 2. 根据 worker 当前的类型，决定如何处理
+		switch (type)                    // 2. 根据 worker 当前的类型， decidir 如何处理
 		{
 		case ON_IDLE:
 			break;                       // 3. 如果是空闲状态，不做任何操作
@@ -203,7 +210,7 @@ void worker_manager::end_task_system()                             // UI线程�
 		stack_end.push(task_type::TASK_DISPATCH);
 		stack_end.push(task_type::TASK_RCV);
 		stack_end.push(task_type::TASK_CHIP_STAT_PARSING);
-		stack_end.push(task_type::TASK_RESULT_STATISTICS);
+	 stack_end.push(task_type::TASK_RESULT_STATISTICS);
 		stack_end.push(task_type::TASK_DATA_CONSTRUCT);
 		stack_end.push(task_type::TASK_DATA_SEND);
 		stack_end.push(task_type::TASK_VERSION_PARSING);
@@ -1216,30 +1223,30 @@ void TaskDataSend::run()
 	OPEN_CHECK_DELAY_DBG(CHECK_DELAY.txt);
 	OPEN_TASK_STATISTICS_DBG(LogTaskStatistics.log);
 
-	emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_START, StatisticMode::STATISTICS_A_MIF));                  // 4. 发送测试开始信号
-	SemaWaitForUI.acquire(1);                                                                                   // 5. 等待UI信号量，确保UI准备好
+    emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_START, StatisticMode::STATISTICS_A_MIF));                  // 4. 发送测试开始信号
+    SemaWaitForUI.acquire(1);                                                                                   // 5. 等待UI信号量，确保UI准备好
 
-	if (DCWZ::DataMana::DataListGlobal.GetHead() == nullptr)                                                    // 6. 如果数据链表为空
-	{
-		emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_OVER, StatisticMode::STATISTICS_A_MIF));               // 7. 发送测试结束信号
-		CLOSE_TASK_DATA_SEND_DBG();                                                                             // 8. 关闭调试日志
-		return;                                                                                                 // 9. 直接返回
-	}
+    if (DCWZ::DataMana::DataListGlobal.GetHead() == nullptr)                                                    // 6. 如果数据链表为空
+    {
+        emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_OVER, StatisticMode::STATISTICS_A_MIF));               // 7. 发送测试结束信号
+        CLOSE_TASK_DATA_SEND_DBG();                                                                             // 8. 关闭调试日志
+        return;                                                                                                 // 9. 直接返回
+    }
 
-	while (Loop && TestCount--)                                                                                   // 10. 主循环，Loop为true且TestCount大于0时循环
-	{
-		int time = 0;
-		time++;
-		WRITE_TASK_DATA_SEND_DBG("TestCount = %lld\n", time);                                              // 11. 记录当前测试次数
-		WRITE_LOG_UP_RECORD("[第%03d次参数下发开始]\n", time);                                           // 12. 记录本次参数下发开始
-		WRITE_LOG_SE_RECORD("[第%03d次参数下发开始]\n", time);
-		POST_INFO_WITH_TIME(QString::asprintf("[第%03d次参数下发开始]\n", time));
-		std::shared_ptr<DCWZ::DataNode> Node = DCWZ::DataMana::DataListGlobal.GetHead();                        // 13. 获取数据链表头节点
-		DCR::DeviceCheckResultGlobal->SetCheckedGroupCount(0);//新增：清空已测组数组数据
-		for (int i = 0; Node != nullptr && Loop; Node = Node->GetNext(), i++)                                   // 14. 遍历所有数据节点
-		{
-			//DCR::DeviceCheckResultGlobal->CheckedGroupCountInc();//新增：每循环一次增加测试组数
-			if (i < g_ConditionList.size()) //从文件中读取对应序号的条件设置为全局条件
+    while (Loop && TestCount--)                                                                                   // 10. 主循环，Loop为true且TestCount大于0时循环
+    {
+        int time = 0;
+        time++;
+        WRITE_TASK_DATA_SEND_DBG("TestCount = %lld\n", time);                                              // 11. 记录当前测试次数
+        WRITE_LOG_UP_RECORD("[第%03d次参数下发开始]\n", time);                                           // 12. 记录本次参数下发开始
+        WRITE_LOG_SE_RECORD("[第%03d次参数下发开始]\n", time);
+        POST_INFO_WITH_TIME(QString::asprintf("[第%03d次参数下发开始]\n", time));
+        std::shared_ptr<DCWZ::DataNode> Node = DCWZ::DataMana::DataListGlobal.GetHead();                        // 13. 获取数据链表头节点
+        DCR::DeviceCheckResultGlobal->SetCheckedGroupCount(0);//新增：清空已测组数组数据
+        for (int i = 0; Node != nullptr && Loop; Node = Node->GetNext(), i++)                                   // 14. 遍历所有数据节点
+        {
+            //DCR::DeviceCheckResultGlobal->CheckedGroupCountInc();//新增：每循环一次增加测试组数
+            if (i < g_ConditionList.size()) //从文件中读取对应序号的条件设置为全局条件
 			{
 		
 			Node->GetData()->UpdateCfgCMD();                                                                    // 16. 更新节点的配置命令
@@ -1335,7 +1342,7 @@ void TaskDataSend::run()
 
 			}// 15. 记录发送节点日志
 			
-			}
+		 }
 		
 			// cfgCmd: 指向GetRegCfgCMD()返回的字节流
 			const uint8_t* cfgCmd = reinterpret_cast<const uint8_t*>(DCWZ::DataConstruct::GetRegCfgCMD());
@@ -1354,7 +1361,7 @@ void TaskDataSend::run()
 
 			qDebug() << "配置参数Digital:" << 30-DL*1.5 << "PGA:" << DR*1.0-18 << "Playback:" << AL*1.5-126 << "Headset:" << AR*1.0-40 ;
 
-			///*****************************在每组参数下发前重置所有芯片的检查结果***********************************************/
+			///*****************************在每组参数下发前重置所有芯片的检查结果***********************************************
 			//for (int board = 0; board < 8; ++board) {
 			//	for (int chip = 0; chip < 4; ++chip) {
 			//		DCR::DeviceCheckResultGlobal->GetChipCheckResult(board, chip).SetCheckPacksOfMif(0, 0);
@@ -1804,7 +1811,7 @@ void TaskDataSend::run()
 			WRITE_TASK_DATA_SEND_DBG("Semaphore Release Statistics a mif\n");
 			SemaWaitForUI.acquire(1);                                                                           // 33. 等待UI信号量，等待统计完成
 			WRITE_TASK_DATA_SEND_DBG("Semaphore Acquire Statistics a mif\n");
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));                                         // 29. 等待100ms
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));                                                // 38. 等待100ms
 		}
                                                                                                                 // DCR::DeviceCheckResultGlobal->CheckCompletedCountInc();
 		StatisticMode Mode = TASKWZ::StatisticMode::STATISTICS_A_TIME;                                          // 34. 设置统计模式为A_TIME
@@ -1816,6 +1823,58 @@ void TaskDataSend::run()
 		WRITE_LOG_UP_RECORD("\n[第%03d次参数下发结束]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()+1);     // 37. 记录本次参数下发结束
 		WRITE_LOG_SE_RECORD("\n[第%03d次参数下发结束]\n", DCR::DeviceCheckResultGlobal->GetCheckCompletedCount()+1);
 	}
+
+	// 新增：在最终结束前生成结果日志（名称与LogSeRecord对齐）
+	{
+		// 目标目录：与exe同目录下的“打印窗口信息文件夹”
+		QString appDir = QCoreApplication::applicationDirPath();
+		QString targetFolder = QStringLiteral("打印窗口信息文件夹");
+		QDir(appDir).mkpath(targetFolder);
+
+		// 取LogSeRecord的时间戳；若为空则使用当前时间
+		QString ts = LWZ::GetSeLogTimestamp();
+		if (ts.isEmpty()) ts = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+
+		// 温度使用当前环境温度，并记录到LWZ里，以便其他地方对齐
+		double envTemp = DCR::DeviceCheckResultGlobal->GetTempeartureEnv();
+		LWZ::SetSeLogEnvTemp(envTemp);
+		QString tempSuffix = LWZ::GenerateTemperatureSuffix(envTemp); // 形如：_常温_30.0℃
+		QString tempForHeader = tempSuffix.startsWith("_") ? tempSuffix.mid(1) : tempSuffix;
+
+		// 文件名：测试结果_<时间戳><温度后缀>.log
+		QString fileName = QString("测试结果_%1%2.log").arg(ts).arg(tempSuffix);
+		QString resultPath = appDir + "/" + targetFolder + "/" + fileName;
+
+		QFile file(resultPath);
+		if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+			QTextStream out(&file);
+
+			// 头部信息：测试次数、每次组数（单位：组）、温度（去掉下划线）
+			out << QString("测试次数：%1，每次组数：%2组，环境温度：%3————测试结果如下：\n")
+					.arg(DCR::DeviceCheckResultGlobal->GetCheckCount())
+					.arg(DCR::DeviceCheckResultGlobal->GetTotalGroupCount())
+					.arg(tempForHeader);
+
+			int totalGroups = DCR::DeviceCheckResultGlobal->GetTotalGroupCount();
+			// 逐板卡输出，仅输出在线芯片；同一板卡内每个芯片单独一行，板卡之间空一行
+			for (int i = 0; i < 8; ++i) {
+				bool boardPrinted = false;
+				for (int j = 0; j < 4; ++j) {
+					const auto& chip = DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j);
+					if (!chip.GetIfOnline()) continue; // 仅输出在线芯片
+					bool ok = (chip.GetPassedGroupCount() == totalGroups);
+					QString res = ok ? QStringLiteral("OK") : QStringLiteral("■■NG■■");
+					out << QString("Chip[%1][%2] 测试结果:%3\n").arg(i + 1).arg(j + 1).arg(res);
+					boardPrinted = true;
+				}
+				if (boardPrinted && i != 7) {
+					out << "\n"; // 板卡之间空一行
+				}
+			}
+			file.close();
+		}
+	}
+
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));                                                // 38. 等待100ms
 	emit MsgOfStartEnd(MsgToCentralWt(TestStat::TEST_OVER, StatisticMode::STATISTICS_A_MIF));                   // 39. 发送测试结束信号
 	WRITE_TASK_DATA_SEND_DBG("emit MsgOfStartEnd(TEST_OVER)\n");

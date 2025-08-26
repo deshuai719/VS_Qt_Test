@@ -6,6 +6,9 @@
 
 // 新增：温度等级判断和后缀生成函数实现
 namespace LWZ {
+    static QString g_seLogTimestamp;
+    static double g_seLogEnvTemp = 0.0;
+
     QString GenerateTemperatureSuffix(double temperature) {
         QString tempLevel;
         if (temperature < 0) {
@@ -18,6 +21,12 @@ namespace LWZ {
         // 修改：正确格式化温度后缀，格式：_低温_-5.2℃，_常温_25.0℃，_高温_55.8℃
         return QString("_%1_%2℃").arg(tempLevel).arg(temperature, 0, 'f', 1);  // 修改：使用正确的QString格式化方法
     }
+
+    // 记录/获取LogSeRecord的时间戳，供最终结果命名使用
+    void SetSeLogTimestamp(const QString& ts) { g_seLogTimestamp = ts; }
+    QString GetSeLogTimestamp() { return g_seLogTimestamp; }
+    void SetSeLogEnvTemp(double t) { g_seLogEnvTemp = t; }
+    double GetSeLogEnvTemp() { return g_seLogEnvTemp; }
 }
 
 LWZ::Log::Log(int LogNum)

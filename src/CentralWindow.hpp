@@ -86,6 +86,7 @@ namespace CWD{
         OnLineStat OnLineStat;
         Range TestRes;
         Range SinadRang;
+        int BoardNum;                                           // 新增：板卡编号
 
         Item();
         Item(bool, Range, Range);
@@ -93,6 +94,7 @@ namespace CWD{
         ~Item();
 
         void operator=(const Item&);
+        void SetBoardNum(int boardNum);                         // 新增：设置板卡编号方法
         void RestOnLineStat();
         void Paint(QPainter*, const QStyleOptionViewItem&, int);
     };
@@ -300,4 +302,4 @@ namespace CWD{
 #define POST_ERROR(msg) CWD::InfoMessageManager::postInfo(msg, "ERROR")        //表现为红色
 #define POST_ERROR_WITH_TIME(msg) CWD::InfoMessageManager::postInfoWithTime(msg, "ERROR")
 
-#endif#endif
+#endif

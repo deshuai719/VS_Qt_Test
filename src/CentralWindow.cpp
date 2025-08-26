@@ -67,11 +67,11 @@ namespace CWD {
 
 	/************************* Item类：表示单个芯片状态项的实现 *************************/
 
-	Item::Item() :IfValid(false), OnLineStat(INITIAL_OFF_LINE), TestRes(), SinadRang() {}                                                     // 默认构造函数，初始化为离线无效状态
+	Item::Item() :IfValid(false), OnLineStat(INITIAL_OFF_LINE), TestRes(), SinadRang(), BoardNum(0) {}                                                     // 默认构造函数，初始化为离线无效状态
 
-	Item::Item(bool b, Range tr, Range sr) :IfValid(b), OnLineStat(INITIAL_OFF_LINE), TestRes(tr), SinadRang(sr) {}                           // 带参构造函数，初始化所有成员变量
+	Item::Item(bool b, Range tr, Range sr) :IfValid(b), OnLineStat(INITIAL_OFF_LINE), TestRes(tr), SinadRang(sr), BoardNum(0) {}                           // 带参构造函数，初始化所有成员变量
 
-	Item::Item(const Item& cp) :IfValid(cp.IfValid), OnLineStat(cp.OnLineStat), TestRes(cp.TestRes), SinadRang(cp.SinadRang) {}               // 拷贝构造函数，复制所有成员
+	Item::Item(const Item& cp) :IfValid(cp.IfValid), OnLineStat(cp.OnLineStat), TestRes(cp.TestRes), SinadRang(cp.SinadRang), BoardNum(cp.BoardNum) {}               // 拷贝构造函数，复制所有成员
 
 	Item::~Item() {}                                                                                                                          // 析构函数
 
@@ -81,6 +81,12 @@ namespace CWD {
 		OnLineStat = as.OnLineStat;                                                                                                           // 赋值在线状态
 		TestRes = as.TestRes;                                                                                                                 // 赋值测试结果范围
 		SinadRang = as.SinadRang;                                                                                                             // 赋值SINAD范围
+		BoardNum = as.BoardNum;                                                                                                               // 赋值板卡编号
+	}
+
+	void Item::SetBoardNum(int boardNum)
+	{
+		BoardNum = boardNum;                                                                                                                  // 设置板卡编号
 	}
 
 	void Item::RestOnLineStat()
@@ -106,11 +112,18 @@ namespace CWD {
                                                                                                                                               // QStyleOptionProgressBar ProgressBarOption;
                                                                                                                                               // QPalette palette = ProgressBarOption.palette;
 
-			QRect Rc[3] = {                                                                                                                   // 定义三个绘制矩形区域
+			//QRect Rc[3] = {                                                                                                                   // 定义三个绘制矩形区域
+			//	QRect(Left, Top, CellWidth - 3, Height - 2),                                                                                  // 芯片编号区域
+			//	QRect(Left + CellWidth, Top, CellWidth * 5 - 3, Height - 2),                                                                  // 进度条区域
+			//	QRect(Left + CellWidth * 6, Top, CellWidth * 2 - 3, Height - 2)                                                               // SINAD范围显示区域
+			//};
+			 
+			 QRect Rc[4] = {                                                                                                                   // 定义四个绘制矩形区域
 				QRect(Left, Top, CellWidth - 3, Height - 2),                                                                                  // 芯片编号区域
-				QRect(Left + CellWidth, Top, CellWidth * 5 - 3, Height - 2),                                                                  // 进度条区域
+				QRect(Left+ CellWidth, Top, CellWidth - 3, Height - 2),																					// 整体芯片编号区域
+				QRect(Left + CellWidth * 2, Top, CellWidth * 4 - 3, Height - 2),                                                                  // 进度条区域
 				QRect(Left + CellWidth * 6, Top, CellWidth * 2 - 3, Height - 2)                                                               // SINAD范围显示区域
-			};
+			 };
                                                                                                                                               // painter->setPen(QPen(Qt::black));
 			QFont font("Microsoft YaHei");                                                                                                    // 设置微软雅黑字体
 			painter->setFont(font);                                                                                                           // 应用字体设置
@@ -125,14 +138,15 @@ namespace CWD {
 				{
 					OnLineStat = NORMAL_ON_LINE;                                                                                              // 状态转换为正常在线
 					painter->fillRect(Rc[0], QColor(Qt::green));                                                                              // 状态指示区域填充绿色
+					painter->fillRect(Rc[1], QColor(Qt::green));
 					if (TestRes.GetLeft() == TestRes.GetRight() && TestRes.GetRight() != 0)                                                   // 测试完全通过
 					{
 						painter->setPen(QPen(QColor(Qt::green), 2));                                                                          // 设置绿色边框
 						painter->setBrush(QColor(Qt::white));                                                                                 // 设置白色填充
-						painter->drawRoundedRect(Rc[1].adjusted(1, 1, -1, -1), 2, 2);                                                         // 绘制圆角矩形
+						painter->drawRoundedRect(Rc[2].adjusted(1, 1, -1, -1), 2, 2);                                                         // 绘制圆角矩形
 
                                                                                                                                               // 绘制进度条
-						QRect progressRect = Rc[1].adjusted(2, 2, -2, -2);                                                                    // 进度条矩形
+						QRect progressRect = Rc[2].adjusted(2, 2, -2, -2);                                                                    // 进度条矩形
 						painter->fillRect(progressRect, QColor(Qt::green));                                                                   // 填充绿色表示成功
 					}
 
@@ -140,10 +154,10 @@ namespace CWD {
 					{
 						painter->setPen(QPen(QColor(Qt::cyan), 2));                                                                          // 设置蓝色边框
 						painter->setBrush(QColor(Qt::white));                                                                                 // 设置白色填充
-						painter->drawRoundedRect(Rc[1].adjusted(1, 1, -1, -1), 2, 2);                                                         // 绘制圆角矩形
+						painter->drawRoundedRect(Rc[2].adjusted(1, 1, -1, -1), 2, 2);                                                         // 绘制圆角矩形
 
 						// 绘制进度条
-						QRect progressRect = Rc[1].adjusted(2, 2, -2, -2);                                                                    // 进度条矩形
+						QRect progressRect = Rc[2].adjusted(2, 2, -2, -2);                                                                    // 进度条矩形
 						painter->fillRect(progressRect, QColor(Qt::cyan));                                                                   // 填充蓝色表示等待中
 					}
 
@@ -152,10 +166,10 @@ namespace CWD {
                                                                                                                                               // 绘制背景边框
 						painter->setPen(QPen(QColor(Qt::lightGray), 2));                                                                      // 设置浅灰色边框
 						painter->setBrush(QColor(Qt::lightGray));                                                                             // 设置浅灰色填充
-						painter->drawRoundedRect(Rc[1].adjusted(1, 1, -1, -1), 2, 2);
+						painter->drawRoundedRect(Rc[2].adjusted(1, 1, -1, -1), 2, 2);
 
                                                                                                                                                // 绘制进度条
-						QRect progressRect = Rc[1].adjusted(2, 2, -2, -2);                                                                   // 进度条矩形
+						QRect progressRect = Rc[2].adjusted(2, 2, -2, -2);                                                                   // 进度条矩形
 						painter->fillRect(progressRect, QColor(Qt::red));                                                                   // 塕充红色表示异常
 					}
 					else                                                                                                                      // 测试未完全通过
@@ -163,15 +177,15 @@ namespace CWD {
                                                                                                                                               //绘制背景边框
 						painter->setPen(QPen(QColor(Qt::red), 2));                                                                            // 设置红色边框
 						painter->setBrush(QColor(Qt::white));                                                                                 // 设置白色填充
-						painter->drawRoundedRect(Rc[1].adjusted(1, 1, -1, -1), 2, 2);
+						painter->drawRoundedRect(Rc[2].adjusted(1, 1, -1, -1), 2, 2);
 
                                                                                                                                               // 绘制进度条
-						QRect progressRect = Rc[1].adjusted(2, 2, -2, -2);
+						QRect progressRect = Rc[2].adjusted(2, 2, -2, -2);
 						painter->fillRect(progressRect, QColor(Qt::red));                                                                     // 填充红色表示失败
 					}
 
 					painter->setPen(Qt::black);                                                                                               // 设置黑色文字
-					painter->drawText(Rc[1], Qt::AlignCenter, QString("%1\%(%2/%3)").                                                         // 绘制测试进度文本
+					painter->drawText(Rc[2], Qt::AlignCenter, QString("%1\%(%2/%3)").                                                         // 绘制测试进度文本
 						arg((TestRes.GetLeft() * 100) / (TestRes.GetRight() + ((TestRes.GetRight() == 0) ? 1 : 0)), 3, 10).
 						arg(TestRes.GetLeft(), 3, 10).arg(TestRes.GetRight(), 3, 10));
 				}
@@ -181,19 +195,20 @@ namespace CWD {
 				{
 					OnLineStat = ABNORMAL_ON_LINE;                                                                                            // 状态转换为异常在线
 					painter->fillRect(Rc[0], QColor(Qt::yellow));                                                                             // 状态指示区域填充黄色
+					painter->fillRect(Rc[1], QColor(Qt::yellow));
                                                                                                                                               // painter->fillRect(Rc[0], QColor(Qt::green));
                                                                                                                                               // palette.setColor(QPalette::ColorRole::Highlight, QColor(Qt::red));
                                                                                                                                               // 绘制背景边框
 					painter->setPen(QPen(QColor(Qt::red), 2));                                                                                // 设置红色边框
 					painter->setBrush(QColor(Qt::white));                                                                                     // 设置白色填充
-					painter->drawRoundedRect(Rc[1].adjusted(1, 1, -1, -1), 2, 2);
+					painter->drawRoundedRect(Rc[2].adjusted(1, 1, -1, -1), 2, 2);
 
                                                                                                                                               //绘制进度条
-					QRect progressRect = Rc[1].adjusted(2, 2, -2, -2);
+					QRect progressRect = Rc[2].adjusted(2, 2, -2, -2);
                                                                                                                                               // progressRect.setWidth(progressRect.width() * TestRes.GetLeft() / TestRes.GetRight());
 					painter->fillRect(progressRect, QColor(Qt::red));                                                                         // 填充红色表示异常
 					painter->setPen(Qt::black);                                                                                               // 设置黑色文字
-					painter->drawText(Rc[1], Qt::AlignCenter, QString("%1\%(%2/%3)").                                                         // 绘制测试进度文本
+					painter->drawText(Rc[2], Qt::AlignCenter, QString("%1\%(%2/%3)").                                                         // 绘制测试进度文本
 						arg((TestRes.GetLeft() * 100) / (TestRes.GetRight() + ((TestRes.GetRight() == 0) ? 1 : 0)), 3, 10).
 						arg(TestRes.GetLeft(), 3, 10).arg(TestRes.GetRight(), 3, 10));
 				}
@@ -201,6 +216,7 @@ namespace CWD {
 				case NORMAL_ON_LINE:                                                                                                          // 正常在线状态
 				{
 					painter->fillRect(Rc[0], QColor(Qt::green));                                                                              // 状态指示区域填充绿色
+					painter->fillRect(Rc[1], QColor(Qt::green));
 					if (TestRes.GetLeft() == TestRes.GetRight())                                                                              // 测试完全通过
 					{
                                                                                                                                               // painter->fillRect(Rc[0], QColor(Qt::green));
@@ -208,25 +224,25 @@ namespace CWD {
                                                                                                                                               // 绘制背景边框
 						painter->setPen(QPen(QColor(Qt::green), 2));                                                                          // 设置绿色边框
 						painter->setBrush(QColor(Qt::white));                                                                                 // 设置白色填充
-						painter->drawRoundedRect(Rc[1].adjusted(1, 1, -1, -1), 2, 2);
+						painter->drawRoundedRect(Rc[2].adjusted(1, 1, -1, -1), 2, 2);
 
                                                                                                                                               //绘制进度条
-						QRect progressRect = Rc[1].adjusted(2, 2, -2, -2);
+						QRect progressRect = Rc[2].adjusted(2, 2, -2, -2);
 						painter->fillRect(progressRect, QColor(Qt::green));                                                                   // 填充绿色表示成功
 					}
 					else                                                                                                                      // 测试未完全通过
 					{
 						painter->setPen(QPen(QColor(Qt::red), 2));                                                                            // 设置红色边框
 						painter->setBrush(QColor(Qt::white));                                                                                 // 设置白色填充
-						painter->drawRoundedRect(Rc[1].adjusted(1, 1, -1, -1), 2, 2);
+						painter->drawRoundedRect(Rc[2].adjusted(1, 1, -1, -1), 2, 2);
 
                                                                                                                                               //绘制进度条
-						QRect progressRect = Rc[1].adjusted(2, 2, -2, -2);
+						QRect progressRect = Rc[2].adjusted(2, 2, -2, -2);
                                                                                                                                               // progressRect.setWidth(progressRect.width() * TestRes.GetLeft() / TestRes.GetRight());
 						painter->fillRect(progressRect, QColor(Qt::red));                                                                     // 填充红色表示失败
 					}
 					painter->setPen(Qt::black);                                                                                               // 设置黑色文字
-					painter->drawText(Rc[1], Qt::AlignCenter, QString("%1\%(%2/%3)").                                                         // 绘制测试进度文本
+					painter->drawText(Rc[2], Qt::AlignCenter, QString("%1\%(%2/%3)").                                                         // 绘制测试进度文本
 						arg((TestRes.GetLeft() * 100) / (TestRes.GetRight() + ((TestRes.GetRight() == 0) ? 1 : 0)), 3, 10).
 						arg(TestRes.GetLeft(), 3, 10).arg(TestRes.GetRight(), 3, 10));
 				}
@@ -236,17 +252,18 @@ namespace CWD {
 				case ABNORMAL_ON_LINE:                                                                                                        // 异常在线状态
 				{
 					painter->fillRect(Rc[0], QColor(Qt::yellow));                                                                             // 状态指示区域填充黄色
+					painter->fillRect(Rc[1], QColor(Qt::yellow));
                                                                                                                                               // 绘制背景边框
 					painter->setPen(QPen(QColor(Qt::red), 2));                                                                                // 设置红色边框
 					painter->setBrush(QColor(Qt::white));                                                                                     // 设置白色填充
-					painter->drawRoundedRect(Rc[1].adjusted(1, 1, -1, -1), 2, 2);
+					painter->drawRoundedRect(Rc[2].adjusted(1, 1, -1, -1), 2, 2);
 
                                                                                                                                               //绘制进度条
-					QRect progressRect = Rc[1].adjusted(2, 2, -2, -2);
+					QRect progressRect = Rc[2].adjusted(2, 2, -2, -2);
                                                                                                                                               // progressRect.setWidth(progressRect.width() * TestRes.GetLeft() / TestRes.GetRight());
 					painter->fillRect(progressRect, QColor(Qt::red));                                                                         // 填充红色表示异常
 					painter->setPen(Qt::black);                                                                                               // 设置黑色文字
-					painter->drawText(Rc[1], Qt::AlignCenter, QString("%1\%(%2/%3)").                                                         // 绘制测试进度文本
+					painter->drawText(Rc[2], Qt::AlignCenter, QString("%1\%(%2/%3)").                                                         // 绘制测试进度文本
 						arg((TestRes.GetLeft() * 100) / (TestRes.GetRight() + ((TestRes.GetRight() == 0) ? 1 : 0)), 3, 10).
 						arg(TestRes.GetLeft(), 3, 10).arg(TestRes.GetRight(), 3, 10));
 				}
@@ -264,13 +281,14 @@ namespace CWD {
 				case NORMAL_OFF_LINE:                                                                                                         // 正常离线状态
 				{
 					painter->fillRect(Rc[0], QColor(Qt::gray));                                                                               // 状态指示区域填充灰色
+					painter->fillRect(Rc[1], QColor(Qt::gray));
                                                                                                                                               //绘制背景边框
 					painter->setPen(QPen(QColor(Qt::gray), 2));                                                                               // 设置灰色边框
 					painter->setBrush(QColor(Qt::gray));                                                                                      // 设置灰色填充
-					painter->drawRoundedRect(Rc[1].adjusted(1, 1, -1, -1), 2, 2);
+					painter->drawRoundedRect(Rc[2].adjusted(1, 1, -1, -1), 2, 2);
 
 					painter->setPen(Qt::black);                                                                                               // 设置黑色文字
-					painter->drawText(Rc[1], Qt::AlignCenter, QString("%1\%(%2/%3)").                                                         // 绵制测试进度文本
+					painter->drawText(Rc[2], Qt::AlignCenter, QString("%1\%(%2/%3)").                                                         // 绵制测试进度文本
 						arg((TestRes.GetLeft() * 100) / (TestRes.GetRight() + ((TestRes.GetRight() == 0) ? 1 : 0)), 3, 10).
 						arg(TestRes.GetLeft(), 3, 10).arg(TestRes.GetRight(), 3, 10));
 				}
@@ -280,17 +298,18 @@ namespace CWD {
 				case ABNORMAL_OFF_LINE:                                                                                                       // 异常离线状态
 				{
 					painter->fillRect(Rc[0], QColor(Qt::red));                                                                                // 状态指示区域填充红色
+					painter->fillRect(Rc[1], QColor(Qt::red));
                                                                                                                                               //绘制背景边框
 					painter->setPen(QPen(QColor(Qt::red), 2));                                                                                // 设置红色边框
 					painter->setBrush(QColor(Qt::white));                                                                                     // 设置白色填充
-					painter->drawRoundedRect(Rc[1].adjusted(1, 1, -1, -1), 2, 2);
+					painter->drawRoundedRect(Rc[2].adjusted(1, 1, -1, -1), 2, 2);
 
                                                                                                                                               //绘制进度条
-					QRect progressRect = Rc[1].adjusted(2, 2, -2, -2);
+					QRect progressRect = Rc[2].adjusted(2, 2, -2, -2);
                                                                                                                                               // progressRect.setWidth(progressRect.width() * TestRes.GetLeft() / TestRes.GetRight());
 					painter->fillRect(progressRect, QColor(Qt::red));                                                                         // 填充红色表示异常
 					painter->setPen(Qt::black);                                                                                               // 设置黑色文字
-					painter->drawText(Rc[1], Qt::AlignCenter, QString("%1\%(%2/%3)").                                                         // 绘制测试进度文本
+					painter->drawText(Rc[2], Qt::AlignCenter, QString("%1\%(%2/%3)").                                                         // 绘制测试进度文本
 						arg((TestRes.GetLeft() * 100) / (TestRes.GetRight() + ((TestRes.GetRight() == 0) ? 1 : 0)), 3, 10).
 						arg(TestRes.GetLeft(), 3, 10).arg(TestRes.GetRight(), 3, 10));
 				}
@@ -299,17 +318,18 @@ namespace CWD {
 				{
 					OnLineStat = ABNORMAL_OFF_LINE;                                                                                           // 状态转换
 					painter->fillRect(Rc[0], QColor(Qt::red));                                                                                // 状态指示区域填充红色
+					painter->fillRect(Rc[1], QColor(Qt::red));
                                                                                                                                               //绘制背景边框
 					painter->setPen(QPen(QColor(Qt::red), 2));                                                                                // 设置红色边框
 					painter->setBrush(QColor(Qt::white));                                                                                     // 设置白色填充
-					painter->drawRoundedRect(Rc[1].adjusted(1, 1, -1, -1), 2, 2);
+					painter->drawRoundedRect(Rc[2].adjusted(1, 1, -1, -1), 2, 2);
 
                                                                                                                                               //绘制进度条
-					QRect progressRect = Rc[1].adjusted(2, 2, -2, -2);
+					QRect progressRect = Rc[2].adjusted(2, 2, -2, -2);
                                                                                                                                               // progressRect.setWidth(progressRect.width() * TestRes.GetLeft() / TestRes.GetRight());
 					painter->fillRect(progressRect, QColor(Qt::red));                                                                         // 填充红色表示异常
 					painter->setPen(Qt::black);                                                                                               // 设置黑色文字
-					painter->drawText(Rc[1], Qt::AlignCenter, QString("%1\%(%2/%3)").                                                         // 绘制测试进度文本
+					painter->drawText(Rc[2], Qt::AlignCenter, QString("%1\%(%2/%3)").                                                         // 绘制测试进度文本
 						arg((TestRes.GetLeft() * 100) / (TestRes.GetRight() + ((TestRes.GetRight() == 0) ? 1 : 0)), 3, 10).
 						arg(TestRes.GetLeft(), 3, 10).arg(TestRes.GetRight(), 3, 10));
 				}
@@ -320,23 +340,11 @@ namespace CWD {
 			}
                                                                                                                                               // palette.setColor(QPalette::Text, Qt::black);
 
+			painter->setPen(Qt::black);                                                                                                       // 设置黑色文字绘制
 			painter->drawText(Rc[0], Qt::AlignCenter, QString("S%1").arg(row));                                                               // 在第一个区域绘制芯片编号
-
-                                                                                                                                              // ProgressBarOption.rect = Rc[1];
-                                                                                                                                              // ProgressBarOption.minimum = 0;
-                                                                                                                                              // ProgressBarOption.maximum = (TestRes.GetRight() == 0) ? 1 : TestRes.GetRight();
-// ProgressBarOption.progress = TestRes.GetLeft();                                                                                            // QRandomGenerator::global()->bounded(0, 100);
-                                                                                                                                              // WRITE_CENTRAL_WIDGET_DBG("Item::Paint(), TestRes.GetLeft() = %d, TestRes.GetRight() = %lld\n", TestRes.GetLeft(), TestRes.GetRight());
-                                                                                                                                              // ProgressBarOption.text = QString("%1\%(%2/%3)").arg((TestRes.GetLeft() * 100) / (TestRes.GetRight() + ((TestRes.GetRight() == 0) ? 1 : 0)), 3, 10).arg(TestRes.GetLeft(), 3, 10).arg(TestRes.GetRight(), 3, 10);
-                                                                                                                                              // ProgressBarOption.textAlignment = Qt::AlignCenter;
-                                                                                                                                              // ProgressBarOption.textVisible = true;
-
-                                                                                                                                              // ProgressBarOption.palette = palette;
-
-                                                                                                                                              // QApplication::style()->drawControl(QStyle::CE_ProgressBar, &ProgressBarOption, painter);
-
-			painter->fillRect(Rc[2], Qt::gray);                                                                                               // 第三个区域填充灰色
-			painter->drawText(Rc[2], Qt::AlignCenter, QString("[%1, %2]").arg(SinadRang.GetLeft(), 2, 10).arg(SinadRang.GetRight(), 2, 10));  // 显示SINAD范围
+			painter->drawText(Rc[1], Qt::AlignCenter, QString("%1").arg((BoardNum - 1) * 4 + row));                                          // 在第二个区域绘制整体芯片编号(1-32)
+			painter->fillRect(Rc[3], Qt::gray);                                                                                               // 第四个区域填充灰色
+			painter->drawText(Rc[3], Qt::AlignCenter, QString("[%1, %2]").arg(SinadRang.GetLeft(), 2, 10).arg(SinadRang.GetRight(), 2, 10));  // 显示SINAD范围
 
 			painter->restore();                                                                                                               // 恢复画笔状态
 
@@ -354,12 +362,14 @@ namespace CWD {
 	void Model::AddItem(Item i)
 	{
 		beginInsertRows(QModelIndex(), rowCount(), rowCount());                                                                               // 通知视图开始插入行
+		i.SetBoardNum(BoardNum);                                                                                                              // 设置板卡编号
 		Items.push_back(i);                                                                                                                   // 添加项目到容器
 		endInsertRows();                                                                                                                      // 通知视图结束插入行
 	}
 
 	void Model::UpdateItem(int row, Item i)
 	{
+		i.SetBoardNum(BoardNum);                                                                                                              // 设置板卡编号
 		Items[row - 1] = i;                                                                                                                   // 更新指定行的项目数据
 		QModelIndex index = createIndex(row, 0);                                                                                              // 创建模型索引
 		dataChanged(index, index);                                                                                                            // 通知视图数据已改变
@@ -558,7 +568,7 @@ namespace CWD {
 			}
 		}
 		
-		AppendInfoWithTime("在线芯片界面已重置为蓝色显示", "INFO");
+		//AppendInfoWithTime("在线芯片界面已重置为蓝色显示", "INFO");
 	}
 
 	/************************* 芯片在线状态更新方法：定时刷新所有芯片的在线状态 *************************/
@@ -944,7 +954,7 @@ namespace CWD {
 			// 新增：添加测试开始信息
 			AppendInfoWithTime(QString("开始测试，计划测试 %1 次").arg(PTestNum.toPlainText()), "INFO");
 			AppendInfoWithTime(QString("简要日志文件: %1").arg(currentLogSePath), "INFO");
-			AppendInfoWithTime(QString("开始测试时环境温度: %.1f℃").arg(testSessionTemperature), "INFO");  // 使用保存的温度值
+			AppendInfoWithTime(QString("开始测试时环境温度: %1℃").arg(testSessionTemperature), "INFO");  // 使用保存的温度值
 
 			// 新增：重置在线芯片界面为蓝色显示
 			ResetOnlineChipsToBlue();
@@ -1094,7 +1104,7 @@ namespace CWD {
                                                                                                                                               //PTestedNum.setText(QString("%1(%2/%3)")
                                                                                                                                               //    .arg(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1)
                                                                                                                                               //    .arg(DCR::DeviceCheckResultGlobal->GetCheckedGroupCount() + 1)
-//    .arg(CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, "NUMBER/rowCount").toInt()));                                      // 更新已测试次数
+                                                                                                                                              //    .arg(CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, "NUMBER/rowCount").toInt()));                                      // 更新已测试次数
 				POnlineChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipOnLineNum()));                                  // 更新在线芯片数
 				//PSatisfiedChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipSatisfiedNum()));                          // 更新通过芯片数
 				//PRejectionChipNum.setText(QString("%1").arg(DCR::DeviceCheckResultGlobal->GetChipUnSatisfiedNum()));                        // 更新失败芯片数

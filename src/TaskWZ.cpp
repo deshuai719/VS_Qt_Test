@@ -773,7 +773,7 @@ void TaskChipStatParsing::run()
 				DCR::DeviceCheckResultGlobal->SetUpPackCount(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->timeStamp_8ms);  // 更新上行包计数
 				DCR::DeviceCheckResultGlobal->SetDbgDnAicCount(PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->dbg_dn_aic);  // 新增：更新调试下发AIC包计数
 				unsigned short dbgDnAic = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN)->dbg_dn_aic;
-				qDebug() << QString::asprintf("dbg_dn_aic 原始值: 0x%04X", dbgDnAic);
+				//qDebug() << QString::asprintf("dbg_dn_aic 原始值: 0x%04X", dbgDnAic);
 				/********************************直接读取缓存空间设置重发信号标志**********************************************/
 				static int lastFluidValue = -1;			// 记录上一次的流控值，替代cnt_dn_empty_start和cnt_dn_full_start
 				static bool lastPackLogRecord = false;			// 初始包记录关闭，不对开始测试前解析的数据包进行记录
@@ -783,6 +783,7 @@ void TaskChipStatParsing::run()
 					ASYNC_WRITE_LOG_UP_PACK_RECORD(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount() + 1, DCR::DeviceCheckResultGlobal->GetUpPackCount(),DCR::DeviceCheckResultGlobal->GetDbgDnAicCount());
 					WRITE_TASK_DATA_SEND_DBG("记录0x28包, 时标: %d\n", DCR::DeviceCheckResultGlobal->GetUpPackCount());
 					auto up_mnic_sta = PTR_UP_MNIC_STA(Data.GetData().get() + HEAD_DATA_LEN);
+					qDebug() << QString::asprintf("dbg_dn_aic 原始值: 0x%04X", dbgDnAic);
 					//qDebug() << "free_codec_dac:" << up_mnic_sta->free_codec_dac;
 
 					// 新增：基于流控空间变化的重发机制，使用动态获取的硬件缓存空间大小
@@ -1699,6 +1700,7 @@ void TaskDataSend::run()
 							FCT::FluidCtrlGlob->FluidFetchSub(0, 512);
 							DCWZ::PackInfo& Pack = Node->GetData()->GetPackInfo(sendIdx);
 							SOCKWZ::SockGlob::Send(Pack.GetPackData(), Pack.GetSegAll().GetLen());
+							HighPrecisionWait_High(1);
 						}
 					}
 				}

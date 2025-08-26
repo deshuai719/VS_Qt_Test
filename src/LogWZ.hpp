@@ -6,8 +6,14 @@
 #include <QDir>
 #include <QDateTime>
 
-#define DEFAULT_LOG_PATH "./LOG/"
+#define DEFAULT_LOG_PATH "./日志文件夹/" // 修改：将日志路径更改为"日志文件夹"
 #define PRE_FILE_DBG QString(DEFAULT_LOG_PATH)
+
+// 新增：温度等级判断和后缀生成函数声明
+namespace LWZ {
+    // 新增：根据温度生成后缀
+    QString GenerateTemperatureSuffix(double temperature);
+}
 
 #define LOG_NUM 50
 #define LOG_DEBUG_INDEX 0

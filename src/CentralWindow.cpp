@@ -13,7 +13,9 @@
 #include <QTextStream>
 #include <QFile>
 
-/************************* CWD命名空间：中央窗口相关类的实现 *************************/
+// 新增：包含DeviceCheckResult以获取温度信息
+#include "DeviceCheckResult.hpp"
+
 namespace CWD {
 
 	/************************* Range类：表示一个范围区间的实现 *************************/
@@ -508,7 +510,7 @@ namespace CWD {
 	/************************* CentralWidget类：中央窗口主控件实现 *************************/
 
 	CentralWidget::CentralWidget(QWidget* parent)
-		:QWidget(parent), isConnected(false)                                                                                                 // 继承自QWidget，初始化连接状态为false
+		:QWidget(parent), isConnected(false), testSessionTemperature(0.0)                                                                    // 继承自QWidget，初始化连接状态为false，温度初始化为0.0
 	{
 		OPEN_CENTRAL_WIDGWT_DBG(LogCenTralWidget.txt);                                                                                        // 打开调试日志
 
@@ -751,9 +753,9 @@ namespace CWD {
 		QVBoxLayout* statLayout = new QVBoxLayout;
 		statLayout->addLayout(row1);
 		statLayout->addLayout(row2);
-		statLayout->addLayout(row3);
-		statLayout->setContentsMargins(8, 8, 8, 8);  
-		statLayout->setSpacing(6);  // 行间距
+	 statLayout->addLayout(row3);
+	 statLayout->setContentsMargins(8, 8, 8, 8);  
+	 statLayout->setSpacing(6);  // 行间距
 
 		GbStat.setLayout(statLayout);
 
@@ -924,10 +926,16 @@ namespace CWD {
 		{
                                                                                                                                               // 只在测试开始时生成一次时间戳
 			testSessionTime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
-			currentLogSePath = QCoreApplication::applicationDirPath() + "/LOG/LogSeRecord_" + testSessionTime + ".log";
-			LWZ::Log::LogInstance->Init(LOG_SE_RECORD_INDEX, currentLogSePath.toStdString().c_str());
+			
+			// 新增：获取并保存测试会话开始时的环境温度，确保整个会话使用同一温度值
+			testSessionTemperature = DCR::DeviceCheckResultGlobal->GetTempeartureEnv();  // 获取开始测试时的环境温度
+			QString tempSuffix = LWZ::GenerateTemperatureSuffix(testSessionTemperature);  // 生成温度后缀
+			
+			// 修改：在时间戳后加入温度后缀生成日志文件路径
+			currentLogSePath = QString(PRE_FILE_DBG + "LogSeRecord_" + testSessionTime + tempSuffix + ".log");
 
 			LWZ::Log::LogInstance->Init(LOG_SE_RECORD_INDEX, currentLogSePath.toStdString().c_str());                                         //新增：生成并记录日志文件名
+			qDebug() << "日志路径:" << currentLogSePath;
 
 		//	DCR::DeviceCheckResultGlobal->SetCheckedGroupCount(0);
 		///*	DCR::DeviceCheckResultGlobal->SetPassedGroupCount(0);
@@ -936,6 +944,7 @@ namespace CWD {
 			// 新增：添加测试开始信息
 			AppendInfoWithTime(QString("开始测试，计划测试 %1 次").arg(PTestNum.toPlainText()), "INFO");
 			AppendInfoWithTime(QString("简要日志文件: %1").arg(currentLogSePath), "INFO");
+			AppendInfoWithTime(QString("开始测试时环境温度: %.1f℃").arg(testSessionTemperature), "INFO");  // 使用保存的温度值
 
 			// 新增：重置在线芯片界面为蓝色显示
 			ResetOnlineChipsToBlue();
@@ -982,12 +991,21 @@ namespace CWD {
 			BtnStartTest.setText("开始测试");                                                                                                     // 按钮文本切换为"开始测试"
 
                                                                                                                                               // 结束时用同一个时间戳生成处理后日志名
-			QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(testSessionTime);
-			LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", processedLogPath.toStdString());
-			
-			// 新增：添加日志处理完成信息
-			AppendInfoWithTime(QString("日志处理完成: %1").arg(processedLogPath), "SUCCESS");
+/* QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+ QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(datetime);*/
+			if (g_logOn) {                                                                                                                             // 结束时用同一个时间戳生成处理后日志名
+				// 修改：使用测试会话开始时保存的温度值，确保与LogSeRecord文件名中的温度一致
+				QString tempSuffix = LWZ::GenerateTemperatureSuffix(testSessionTemperature);  // 使用保存的会话温度
+				QString processedLogPath = QString("%1LogUpRecordProcessed_%2%3.log").arg(PRE_FILE_DBG).arg(testSessionTime).arg(tempSuffix); // 修改：使用PRE_FILE_DBG替代硬编码路径，并加入温度后缀
+				LPWZ::LogProcessor().processLog((QString(PRE_FILE_DBG) + "LogUpRecord.log").toStdString(), processedLogPath.toStdString()); // 修改：使用PRE_FILE_DBG替代硬编码路径
+				// 新增：添加测试完成信息
+				AppendInfoWithTime("测试流程全部完成", "SUCCESS");
+				AppendInfoWithTime(QString("处理后日志: %1").arg(processedLogPath), "INFO");
+			}
+			//                                                                                                                                // 调用日志处理
+                                                                                                                                              //LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", processedLogPath.toStdString());
 
+			//LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", "./LOG/LogUpRecordProcessed.log");                                     // 处理日志文件
 			lock.unlock();                                                                                                                    // 解锁
 		}
 		WRITE_CENTRAL_WIDGET_DBG("StartTest(), End\n");                                                                                       // 写调试日志，记录离开StartTest函数
@@ -1110,12 +1128,14 @@ namespace CWD {
 			StatOfBtnStart = true;                                                                                                            // 状态切换为"未测试"
 			BtnStartTest.setText("开始测试");                                                                                                     // 按钮文本切换为"开始测试"
 
-                                                                                                                                              // 生成带日期时间后缀的输出文件名
+                                                                                                                                              // 结束时用同一个时间戳生成处理后日志名
 /* QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
  QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(datetime);*/
 			if (g_logOn) {                                                                                                                             // 结束时用同一个时间戳生成处理后日志名
-				QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(testSessionTime);
-				LPWZ::LogProcessor().processLog("./LOG/LogUpRecord.log", processedLogPath.toStdString());
+				// 修改：使用测试会话开始时保存的温度值，确保与LogSeRecord文件名中的温度一致
+				QString tempSuffix = LWZ::GenerateTemperatureSuffix(testSessionTemperature);  // 使用保存的会话温度
+				QString processedLogPath = QString("%1LogUpRecordProcessed_%2%3.log").arg(PRE_FILE_DBG).arg(testSessionTime).arg(tempSuffix); // 修改：使用PRE_FILE_DBG替代硬编码路径，并加入温度后缀
+				LPWZ::LogProcessor().processLog((QString(PRE_FILE_DBG) + "LogUpRecord.log").toStdString(), processedLogPath.toStdString()); // 修改：使用PRE_FILE_DBG替代硬编码路径
 				// 新增：添加测试完成信息
 				AppendInfoWithTime("测试流程全部完成", "SUCCESS");
 				AppendInfoWithTime(QString("处理后日志: %1").arg(processedLogPath), "INFO");
@@ -1358,7 +1378,7 @@ namespace CWD {
 		QString fileName = QFileDialog::getSaveFileName(
 			this,
 			"保存测试信息",
-			QString("./LOG/TestInfo_%1.txt").arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")),
+			QString("%1TestInfo_%2.txt").arg(PRE_FILE_DBG).arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")), // 修改：使用PRE_FILE_DBG替代硬编码路径
 			"文本文件 (*.txt);;所有文件 (*.*)"
 		);
 		

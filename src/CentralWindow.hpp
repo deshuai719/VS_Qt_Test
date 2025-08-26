@@ -97,8 +97,6 @@ namespace CWD{
         void Paint(QPainter*, const QStyleOptionViewItem&, int);
     };
 
-    Q_DECLARE_METATYPE(CWD::Item)
-
     class Model: public QAbstractListModel{
         Q_OBJECT
     public:
@@ -160,16 +158,17 @@ namespace CWD{
         QLabel TemperatureEnv;
         QString currentLogSePath; 
         QString testSessionTime; // 新增：测试会话时间戳
-        
-        // 网络配置相关控件
-        QLineEdit LeLocalIP;          // 本地IP输入框
-        QLineEdit LeLocalPort;        // 本地端口输入框
-        QLineEdit LeDeviceIP;         // 设备IP输入框  
-        QLineEdit LeDevicePort;       // 设备端口输入框
-        QPushButton BtnConnect;       // 连接按钮
-        QRegularExpressionValidator* ValidatorIP;  // IP地址验证器
-        QRegularExpressionValidator* ValidatorPort; // 端口验证器
-        bool isConnected;             // 连接状态标志
+        double testSessionTemperature; // 新增：测试会话开始时的环境温度，确保整个会话使用同一温度
+		
+		// 网络配置相关控件
+		QLineEdit LeLocalIP;          // 本地IP输入框
+		QLineEdit LeLocalPort;        // 本地端口输入框
+		QLineEdit LeDeviceIP;         // 设备IP输入框  
+		QLineEdit LeDevicePort;       // 设备端口输入框
+		QPushButton BtnConnect;       // 连接按钮
+		QRegularExpressionValidator* ValidatorIP;  // IP地址验证器
+		QRegularExpressionValidator* ValidatorPort; // 端口验证器
+		bool isConnected;             // 连接状态标志
     
         Model Models[8];//8个
         Delegate Delegates[8];//8个

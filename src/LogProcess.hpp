@@ -5,6 +5,7 @@
 #include <map>
 #include <sstream>
 #include <algorithm>
+#include <QString> // 新增：支持中文路径处理
 
 #ifdef min
 #undef min
@@ -24,8 +25,12 @@ class LogProcessor {
 public:
     // 处理日志文件
     void processLog(const std::string& inputFile, const std::string& outputFile) {
-        std::ifstream inFile(inputFile);
-        std::ofstream outFile(outputFile);
+        // 修改：支持中文文件路径的文件流打开
+        QString qInputFile = QString::fromUtf8(inputFile.c_str());
+        QString qOutputFile = QString::fromUtf8(outputFile.c_str());
+        
+        std::ifstream inFile(qInputFile.toLocal8Bit().constData()); // 修改：使用本地编码打开文件
+        std::ofstream outFile(qOutputFile.toLocal8Bit().constData()); // 修改：使用本地编码打开文件
         
         if (!inFile.is_open() || !outFile.is_open()) {
             std::cerr << "Error opening files!" << std::endl;

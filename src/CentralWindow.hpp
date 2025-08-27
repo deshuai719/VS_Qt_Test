@@ -257,7 +257,6 @@ namespace CWD{
         void LoadNetworkConfig();              // 从配置文件加载网络设置
         void SaveNetworkConfig();              // 保存网络设置到配置文件
         bool ValidateNetworkInputs();          // 验证网络输入
-        void OnNetworkConnect();               // 处理连接/断开操作
         void UpdateConnectionStatus(bool connected); // 更新连接状态显示
     
     public slots:

@@ -934,6 +934,21 @@ namespace CWD {
 
 		if (StatOfBtnStart)                                                                                                                   // 如果当前是"开始测试"状态（按钮未被按下，准备开始测试）
 		{
+			// 新增：检查网络连接状态
+			if (!isConnected) {
+				QMessageBox::warning(this, "网络连接错误", "网口未连接，无法开始测试！\n请先连接设备网络再进行测试。");
+				AppendInfoWithTime("测试启动失败：网口未连接", "ERROR");
+				return;
+			}
+
+			// 新增：检查在线芯片数量
+			int onlineChipCount = DCR::DeviceCheckResultGlobal->GetChipOnLineNum();
+			if (onlineChipCount == 0) {
+				QMessageBox::warning(this, "设备状态错误", "没有检测到在线芯片，无法开始测试！\n请检查设备连接状态。");
+				AppendInfoWithTime("测试启动失败：无在线芯片", "ERROR");
+				return;
+			}
+
                                                                                                                                               // 只在测试开始时生成一次时间戳
 			testSessionTime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
 			

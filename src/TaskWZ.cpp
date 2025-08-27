@@ -1862,7 +1862,7 @@ void TaskDataSend::run()
 			// 头部信息：测试次数、每次组数（单位：组）、温度（去掉下划线）
 			out << QString("测试次数：%1，每次组数：%2组，环境温度：%3————测试结果如下：\n")
 					.arg(DCR::DeviceCheckResultGlobal->GetCheckCount())
-					.arg(DCR::DeviceCheckResultGlobal->GetTotalGroupCount())
+					.arg(CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, "NUMBER/rowCount").toInt())
 					.arg(tempForHeader);
 
 			int totalGroups = DCR::DeviceCheckResultGlobal->GetTotalGroupCount();

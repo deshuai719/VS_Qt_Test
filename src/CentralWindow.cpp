@@ -341,8 +341,8 @@ namespace CWD {
                                                                                                                                               // palette.setColor(QPalette::Text, Qt::black);
 
 			painter->setPen(Qt::black);                                                                                                       // 设置黑色文字绘制
-			painter->drawText(Rc[0], Qt::AlignCenter, QString("S%1").arg(row));                                                               // 在第一个区域绘制芯片编号
-			painter->drawText(Rc[1], Qt::AlignCenter, QString("%1").arg((BoardNum - 1) * 4 + row));                                          // 在第二个区域绘制整体芯片编号(1-32)
+			painter->drawText(Rc[0], Qt::AlignCenter, QString("%1").arg((BoardNum - 1) * 4 + row));                                           // 在第一个区域绘制整体芯片编号(1-32)
+			painter->drawText(Rc[1], Qt::AlignCenter, QString("S%1").arg(row));                                                               // 在第二个区域绘制芯片编号
 			painter->fillRect(Rc[3], Qt::gray);                                                                                               // 第四个区域填充灰色
 			painter->drawText(Rc[3], Qt::AlignCenter, QString("[%1, %2]").arg(SinadRang.GetLeft(), 2, 10).arg(SinadRang.GetRight(), 2, 10));  // 显示SINAD范围
 

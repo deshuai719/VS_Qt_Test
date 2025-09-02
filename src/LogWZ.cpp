@@ -12,14 +12,15 @@ namespace LWZ {
     QString GenerateTemperatureSuffix(double temperature) {
         QString tempLevel;
         if (temperature < 0) {
-            tempLevel = "低温";  // 小于0为低温
-        } else if (temperature >= 0 && temperature <= 40) {
-            tempLevel = "常温";  // 0-40为常温
+            tempLevel = "低温_-55";  // 小于0为低温
+        } else if (temperature >= 0 && temperature <= 50) {
+            tempLevel = "常温_25";  // 0-50为常温
         } else {
-            tempLevel = "高温";  // 大于40为高温
+            tempLevel = "高温_85";  // 大于50为高温
         }
         // 修改：正确格式化温度后缀，格式：_低温_-5.2℃，_常温_25.0℃，_高温_55.8℃
-        return QString("_%1_%2℃").arg(tempLevel).arg(temperature, 0, 'f', 1);  // 修改：使用正确的QString格式化方法
+        return QString("_%1℃").arg(tempLevel);  // 修改：使用正确的QString格式化方法
+        //return QString("_%1_%2℃").arg(tempLevel).arg(temperature, 0, 'f', 1);  // 修改：使用正确的QString格式化方法
     }
 
     // 记录/获取LogSeRecord的时间戳，供最终结果命名使用

@@ -27,6 +27,7 @@
 #include <QDateTime>
 #include <QLineEdit>
 #include <QRegularExpressionValidator>
+#include <QMessageBox>
 #include <memory>
 #include "TestCondition.hpp"
 #include "TaskWZ.hpp"
@@ -238,6 +239,11 @@ namespace CWD{
 
         bool IfNoticeMNICWhenDisconnect{ true };//网络断开时是否通知MNIC窗口
 
+        // 新增：网络断开计时与状态（用于超过3秒自动停止测试）
+        bool NetDisconnecting{ false };
+        QDateTime NetDisconnectStart;
+        QTimer* NetLossTimer{ nullptr }; // 新增：断网超时定时器
+
         void InitUI();
         void InitThread();
         void Connect();
@@ -251,6 +257,7 @@ namespace CWD{
         void InitInfoArea();                   // 初始化信息显示区域
         void AppendInfo(const QString& message, const QString& level = "INFO"); // 添加信息
         void AppendInfoWithTime(const QString& message, const QString& level = "INFO"); // 添加带时间戳的信息
+        void ShowNonBlockingPopup(const QString& title, const QString& message, QMessageBox::Icon icon = QMessageBox::Information, int durationMs = 2000); // 新增：非阻塞弹窗
         
         // 网络配置相关方法
         void InitNetworkConfig();              // 初始化网络配置控件
@@ -282,6 +289,9 @@ namespace CWD{
         void OnConnectBtnClicked();            // 连接按钮点击槽函数
         void OnNetworkInputChanged();          // 网络输入改变槽函数
 
+        // 新增：断网超时处理槽
+        void OnNetLossTimeout();
+
     signals:
         void NetRecovery();//msg to MNIC
         void NetLoss();//msg to MNIC
@@ -289,6 +299,15 @@ namespace CWD{
         CentralWidget(QWidget* parent = nullptr);
         ~CentralWidget();
     };
+
+    // 内联定义：避免链接器找不到OnNetLossTimeout
+    inline void CentralWidget::OnNetLossTimeout()
+    {
+        if (NetDisconnecting && !StatOfBtnStart) {
+            AppendInfoWithTime("网络断开超过3秒，自动停止测试", "ERROR");
+            StartTest();
+        }
+    }
 };
 
 // 全局快捷宏定义：其他文档可以直接使用

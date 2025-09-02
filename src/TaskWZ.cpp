@@ -1826,7 +1826,7 @@ void TaskDataSend::run()
 
 	// 新增：在最终结束前生成结果日志（名称与LogSeRecord对齐）
 	{
-		// 目标目录：与exe同目录下的“打印窗口信息文件夹”
+		// 目标目录：与exe同目录下的"打印窗口信息文件夹"
 		QString appDir = QCoreApplication::applicationDirPath();
 		QString targetFolder = QStringLiteral("打印窗口信息文件夹");
 		QDir(appDir).mkpath(targetFolder);
@@ -1860,21 +1860,38 @@ void TaskDataSend::run()
 			QTextStream out(&file);
 
 			// 头部信息：测试次数、每次组数（单位：组）、温度（去掉下划线）
-			out << QString("测试次数：%1，每次组数：%2组，环境温度：%3————测试结果如下：\n")
+			QString headerInfo = QString("测试次数：%1，每次组数：%2组，环境温度：%3————测试结果如下：\n")
 					.arg(DCR::DeviceCheckResultGlobal->GetCheckCount())
 					.arg(CFGI::IniFileCFGGlobal->ReadINI(CFGI::INI_TYPE::INI_CENTRALIZE, "NUMBER/rowCount").toInt())
 					.arg(tempForHeader);
+			
+			out << headerInfo ;
+			
+			// 在底部信息栏显示头部信息
+			POST_INFO_WITH_TIME(headerInfo);
 
 			int totalGroups = DCR::DeviceCheckResultGlobal->GetTotalGroupCount();
+			
 			// 逐板卡输出，仅输出在线芯片；同一板卡内每个芯片单独一行，板卡之间空一行
 			for (int i = 0; i < 8; ++i) {
 				bool boardPrinted = false;
 				for (int j = 0; j < 4; ++j) {
 					const auto& chip = DCR::DeviceCheckResultGlobal->GetChipCheckResult(i, j);
 					if (!chip.GetIfOnline()) continue; // 仅输出在线芯片
+					
 					bool ok = (chip.GetPassedGroupCount() == totalGroups);
 					QString res = ok ? QStringLiteral("OK") : QStringLiteral("■■NG■■");
-					out << QString("Chip[%1][%2] 测试结果:%3\n").arg(i + 1).arg(j + 1).arg(res);
+					QString chipResult = QString("Chip[%1][%2] 测试结果:%3\n").arg(i + 1).arg(j + 1).arg(res);
+					
+					out << chipResult ;
+					
+					// 在底部信息栏显示芯片测试结果，使用对应的颜色
+					if (ok) {
+						POST_SUCCESS_WITH_TIME(chipResult);
+					} else {
+						POST_ERROR_WITH_TIME(chipResult);
+					}
+					
 					boardPrinted = true;
 				}
 				if (boardPrinted && i != 7) {
@@ -1882,6 +1899,9 @@ void TaskDataSend::run()
 				}
 			}
 			file.close();
+			POST_SUCCESS_WITH_TIME(QString("最终测试结果已保存到: %1").arg(resultPath));
+		} else {
+			POST_ERROR_WITH_TIME(QString("无法创建最终测试结果文件: %1").arg(resultPath));
 		}
 	}
 

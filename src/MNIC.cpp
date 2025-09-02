@@ -181,11 +181,11 @@ void MNIC::closeEvent(QCloseEvent* event)
 void MNIC::NetRecovery()
 {
     LabelStat->setText("网口已连接");
-    QMessageBox::information(this, "网口状态", "连接成功", QMessageBox::Ok);
+    // 非阻塞提示已在底部信息栏显示，这里不再弹窗
 }
 
 void MNIC::ResetNetStatus()
 {
     LabelStat->setText("网口未连接");
-    QMessageBox::critical(this, "网口状态", "连接断开", QMessageBox::Ok);
+    // 非阻塞提示已在底部信息栏显示，这里不再弹窗
 }

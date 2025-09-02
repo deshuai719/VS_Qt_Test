@@ -12,11 +12,23 @@
 #include <QFileDialog>
 #include <QTextStream>
 #include <QFile>
+#include <QPointer>
 
 // 新增：包含DeviceCheckResult以获取温度信息
 #include "DeviceCheckResult.hpp"
 
 namespace CWD {
+
+    void CentralWidget::ShowNonBlockingPopup(const QString& title, const QString& message, QMessageBox::Icon icon, int durationMs)
+    {
+        QPointer<QMessageBox> box = new QMessageBox(icon, title, message, QMessageBox::NoButton, this);
+        box->setWindowModality(Qt::NonModal);
+        box->setAttribute(Qt::WA_DeleteOnClose);
+        box->show();
+        QTimer::singleShot(durationMs, this, [box]() {
+            if (box) box->close();
+        });
+    }
 
 	/************************* Range类：表示一个范围区间的实现 *************************/
 	Range::Range()
@@ -97,7 +109,7 @@ namespace CWD {
 	/************************* Item绘制方法：负责在界面上绘制芯片状态 *************************/
 	void Item::Paint(QPainter* painter, const QStyleOptionViewItem& option, int row)
 	{
-                                                                                                                                              // WRITE_CENTRAL_WIDGET_DBG("Item::Paint(), Enter\n");
+	                                                                                                                                              // WRITE_CENTRAL_WIDGET_DBG("Item::Paint(), Enter\n");
 		if (row > 0)                                                                                                                          // 只绘制数据行，不绘制表头
 		{
 
@@ -936,7 +948,7 @@ namespace CWD {
 		{
 			// 新增：检查网络连接状态
 			if (!isConnected) {
-				QMessageBox::warning(this, "网络连接错误", "网口未连接，无法开始测试！\n请先连接设备网络再进行测试。");
+				ShowNonBlockingPopup("网络连接错误", "网口未连接，无法开始测试！\n请先连接设备网络再进行测试。", QMessageBox::Warning, 2000);
 				AppendInfoWithTime("测试启动失败：网口未连接", "ERROR");
 				return;
 			}
@@ -944,7 +956,7 @@ namespace CWD {
 			// 新增：检查在线芯片数量
 			int onlineChipCount = DCR::DeviceCheckResultGlobal->GetChipOnLineNum();
 			if (onlineChipCount == 0) {
-				QMessageBox::warning(this, "设备状态错误", "没有检测到在线芯片，无法开始测试！\n请检查设备连接状态。");
+				ShowNonBlockingPopup("设备状态错误", "没有检测到在线芯片，无法开始测试！\n请检查设备连接状态。", QMessageBox::Warning, 2000);
 				AppendInfoWithTime("测试启动失败：无在线芯片", "ERROR");
 				return;
 			}
@@ -994,7 +1006,7 @@ namespace CWD {
 		else
 		{
 			// 新增：添加测试结束信息
-			AppendInfoWithTime("用户手动结束测试", "WARNING");
+			AppendInfoWithTime("测试异常结束", "WARNING");
 			
 			std::unique_lock lock(mtx);                                                                                                       // 加锁，保证线程安全
 			Clock->stop();                                                                                                                    // 停止计时器
@@ -1016,7 +1028,7 @@ namespace CWD {
 			BtnStartTest.setText("开始测试");                                                                                                     // 按钮文本切换为"开始测试"
 
                                                                                                                                               // 结束时用同一个时间戳生成处理后日志名
-/* QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+/* QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmms");
  QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(datetime);*/
 			if (g_logOn) {                                                                                                                             // 结束时用同一个时间戳生成处理后日志名
 				// 修改：使用测试会话开始时保存的温度值，确保与LogSeRecord文件名中的温度一致
@@ -1024,7 +1036,7 @@ namespace CWD {
 				QString processedLogPath = QString("%1LogUpRecordProcessed_%2%3.log").arg(PRE_FILE_DBG).arg(testSessionTime).arg(tempSuffix); // 修改：使用PRE_FILE_DBG替代硬编码路径，并加入温度后缀
 				LPWZ::LogProcessor().processLog((QString(PRE_FILE_DBG) + "LogUpRecord.log").toStdString(), processedLogPath.toStdString()); // 修改：使用PRE_FILE_DBG替代硬编码路径
 				// 新增：添加测试完成信息
-				AppendInfoWithTime("测试流程全部完成", "SUCCESS");
+				//AppendInfoWithTime("测试流程全部完成", "SUCCESS");
 				AppendInfoWithTime(QString("处理后日志: %1").arg(processedLogPath), "INFO");
 			}
 			//                                                                                                                                // 调用日志处理
@@ -1137,7 +1149,7 @@ namespace CWD {
 			break;
 		case TASKWZ::TestStat::TEST_OVER:
 		{
-			WRITE_CENTRAL_WIDGET_DBG("TEST OVER\n");                                                                                          // 记录调试信息
+					WRITE_CENTRAL_WIDGET_DBG("TEST OVER\n");                                                                                          // 记录调试信息
 			std::unique_lock lock(mtx);                                                                                                       // 加锁，保证线程安全
 			ClockEvent();                                                                                                                     // 最后强制刷新一次
 			Clock->stop();                                                                                                                    // 停止计时器
@@ -1152,9 +1164,9 @@ namespace CWD {
 			CREATE_TASK_END(stack_end);                                                                                                       // 批量关闭任务
 			StatOfBtnStart = true;                                                                                                            // 状态切换为"未测试"
 			BtnStartTest.setText("开始测试");                                                                                                     // 按钮文本切换为"开始测试"
-
+			AppendInfoWithTime("测试流程全部完成", "SUCCESS");
                                                                                                                                               // 结束时用同一个时间戳生成处理后日志名
-/* QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+/* QString datetime = QDateTime::currentDateTime().toString("yyyyMMdd_HHmms");
  QString processedLogPath = QString("./LOG/LogUpRecordProcessed_%1.log").arg(datetime);*/
 			if (g_logOn) {                                                                                                                             // 结束时用同一个时间戳生成处理后日志名
 				// 修改：使用测试会话开始时保存的温度值，确保与LogSeRecord文件名中的温度一致
@@ -1162,7 +1174,7 @@ namespace CWD {
 				QString processedLogPath = QString("%1LogUpRecordProcessed_%2%3.log").arg(PRE_FILE_DBG).arg(testSessionTime).arg(tempSuffix); // 修改：使用PRE_FILE_DBG替代硬编码路径，并加入温度后缀
 				LPWZ::LogProcessor().processLog((QString(PRE_FILE_DBG) + "LogUpRecord.log").toStdString(), processedLogPath.toStdString()); // 修改：使用PRE_FILE_DBG替代硬编码路径
 				// 新增：添加测试完成信息
-				AppendInfoWithTime("测试流程全部完成", "SUCCESS");
+				//AppendInfoWithTime("测试流程全部完成", "SUCCESS");
 				AppendInfoWithTime(QString("处理后日志: %1").arg(processedLogPath), "INFO");
 			}
 			//                                                                                                                                // 调用日志处理
@@ -1207,7 +1219,7 @@ namespace CWD {
 		ClockVal++;
 
 
-		PTestedNum.setText(QString("%1(%2/%3)")                                                                                               // 新增：每秒刷新已测试次数/组数
+		PTestedNum.setText(QString("%1(%2/%3)")                                                                                               // 新增：每秒刷新 已测试次数/组数
 			.arg(DCR::DeviceCheckResultGlobal->GetCheckCompletedCount())                                                                      // 传输已测试的次数
 			.arg(DCR::DeviceCheckResultGlobal->GetCheckedGroupCount())                                                                        // 传输已测试的组值
 			.arg(TotalGroupCount));                                                                                                           // 从文件中读取总的测试组数，只读取一次缓存值，不会每秒重复读取文件
@@ -1217,8 +1229,13 @@ namespace CWD {
 	{
 		TimingDetection->start(1000);
 		IfNoticeMNICWhenDisconnect = true;
+		NetDisconnecting = false; // 恢复连接，清除断线状态
+		if (NetLossTimer) {
+			NetLossTimer->stop();
+		}
 		// 新增：添加网络连接信息
 		AppendInfoWithTime("设备网络连接已建立", "SUCCESS");
+		ShowNonBlockingPopup("网口状态", "连接成功", QMessageBox::Information, 2000);
 		}
 
 	void CentralWidget::NetDisconnected()
@@ -1226,8 +1243,20 @@ namespace CWD {
 		TimingDetection->stop();
 		// 新增：添加网络断开信息
 		AppendInfoWithTime("设备网络连接已断开", "ERROR");
-		//UpdateChipOnlineStatus();                                                                                                           // 新增：定时刷新芯片在线状态
+		ShowNonBlockingPopup("网口状态", "连接断开", QMessageBox::Critical, 2000);
 		ResetModelItemStat();
+		// 标记断线开始时间（若尚未标记）
+		if (!NetDisconnecting) {
+			NetDisconnecting = true;
+			NetDisconnectStart = QDateTime::currentDateTime();
+		}
+		// 启动3秒超时定时器，非阻塞，无需用户点击弹窗
+		if (!NetLossTimer) {
+			NetLossTimer = new QTimer(this);
+			NetLossTimer->setSingleShot(true);
+			connect(NetLossTimer, &QTimer::timeout, this, &CentralWidget::OnNetLossTimeout);
+		}
+		NetLossTimer->start(3000);
 	}
 
 	void CentralWidget::TimingDetectionEvent()
@@ -1246,9 +1275,23 @@ namespace CWD {
 				IfNoticeMNICWhenDisconnect = false;
 				ResetModelItemStat();
 				AppendInfoWithTime("检测到网络连接中断", "WARNING");
+				ShowNonBlockingPopup("网口状态", "连接断开", QMessageBox::Critical, 2000);
 				// 更新界面状态为断开
 				UpdateConnectionStatus(false);
 				emit NetLoss();
+				// 记录断线时间
+				NetDisconnecting = true;
+				NetDisconnectStart = QDateTime::currentDateTime();
+				// 启动3秒超时定时器
+				if (!NetLossTimer) {
+					NetLossTimer = new QTimer(this);
+					NetLossTimer->setSingleShot(true);
+					connect(NetLossTimer, &QTimer::timeout, this, &CentralWidget::OnNetLossTimeout);
+				}
+				NetLossTimer->start(3000);
+			}
+			else {
+				// 已经处于断线通知状态，计时交由单次定时器处理，无需忙等
 			}
 		}
 		else
@@ -1259,9 +1302,15 @@ namespace CWD {
 			{
 				IfNoticeMNICWhenDisconnect = true;
 				AppendInfoWithTime("网络连接已恢复", "SUCCESS");
+				ShowNonBlockingPopup("网口状态", "连接成功", QMessageBox::Information, 2000);
 				// 更新界面状态为已连接
 				UpdateConnectionStatus(true);
 				emit NetRecovery();
+			}
+			// 连接恢复后，清空断线计时状态并停止超时定时器
+			NetDisconnecting = false;
+			if (NetLossTimer) {
+				NetLossTimer->stop();
 			}
 		}
 	}
